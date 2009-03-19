@@ -1,0 +1,13 @@
+list process
+
+!process 0 0
+
+PROCESS 85999d90  SessionId: 0  Cid: 02a0    Peb: 7ffdf000  ParentCid: 022c
+    DirBase: 4ec800e0  ObjectTable: 972afd98  HandleCount: 512.
+    Image: lsass.exe
+
+switch
+
+.process /i 85999d90  
+
+.reload

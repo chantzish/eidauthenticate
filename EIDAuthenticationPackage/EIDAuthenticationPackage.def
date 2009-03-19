@@ -1,0 +1,12 @@
+EXPORTS
+DllRegister
+DllUnRegister
+DllEnableLogging
+DllDisableLogging
+LsaApCallPackage
+LsaApCallPackagePassthrough
+LsaApCallPackageUntrusted
+LsaApInitializePackage
+LsaApLogonTerminated
+LsaApLogonUserEx2
+

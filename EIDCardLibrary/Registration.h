@@ -1,0 +1,10 @@
+void EIDAuthenticationPackageDllRegister();
+void EIDAuthenticationPackageDllUnRegister();
+void EIDPasswordChangeNotificationDllRegister();
+void EIDPasswordChangeNotificationDllUnRegister();
+void EIDCredentialProviderDllRegister();
+void EIDCredentialProviderDllUnRegister();
+void EIDConfigurationWizardDllRegister();
+void EIDConfigurationWizardDllUnRegister();
+void EnableLogging();
+void DisableLogging();

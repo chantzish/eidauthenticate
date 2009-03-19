@@ -1,0 +1,300 @@
+#include <windows.h>
+#include <tchar.h>
+#include <Cryptuiapi.h>
+#include <shobjidl.h>
+#include "global.h"
+#include "EIDConfigurationWizard.h"
+#include "../EIDCardLibrary/CertificateUtilities.h"
+#include "../EIDCardLibrary/Tracing.h"
+
+// used to know what root certicate we are refering
+// null = unknown
+PCCERT_CONTEXT pRootCertificate = NULL;
+
+BOOL SelectFile(HWND hWnd)
+{
+	// select file to open
+	IFileDialog *pfd;
+	PWSTR szFileName = NULL;
+	COMDLG_FILTERSPEC rgSpec[] =
+	{ 
+		{ TEXT("Container Files"), L"*.pfx;*.p12" },
+		{ TEXT("All Files"), L"*.*" },
+	};
+    CoInitialize(NULL);
+    // CoCreate the dialog object.
+    HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, 
+                                  NULL, 
+                                  CLSCTX_INPROC_SERVER, 
+								  IID_IFileDialog,
+                                  (void**)&pfd);
+    
+    if (SUCCEEDED(hr))
+    {
+		pfd->SetFileTypes(ARRAYSIZE(rgSpec), rgSpec);
+		// Show the dialog
+        hr = pfd->Show(hWnd);
+        
+        if (SUCCEEDED(hr))
+        {
+            // Obtain the result of the user's interaction with the dialog.
+            IShellItem *psiResult;
+            hr = pfd->GetResult(&psiResult);
+            
+            if (SUCCEEDED(hr))
+            {
+				hr = psiResult->GetDisplayName( SIGDN_FILESYSPATH, &szFileName);
+				if (SUCCEEDED(hr))
+				{
+					SetWindowText(GetDlgItem(hWnd,IDC_03FILENAME),szFileName);
+					CoTaskMemFree(szFileName);
+				}
+				// Do something with the result.
+                psiResult->Release();
+            }
+        }
+        pfd->Release();
+    }
+    return SUCCEEDED(hr);
+
+}
+
+BOOL CreateRootCertificate()
+{
+	BOOL fReturn;
+	TCHAR szComputerName[MAX_COMPUTERNAME_LENGTH + 1 ];
+	TCHAR szSubject[MAX_COMPUTERNAME_LENGTH + 4];
+	DWORD dwSize = ARRAYSIZE(szComputerName);
+	GetComputerName(szComputerName, &dwSize);
+	_stprintf_s(szSubject,ARRAYSIZE(szSubject),TEXT("CN=%s"),szComputerName);
+	UI_CERTIFICATE_INFO CertificateInfo;
+	memset(&CertificateInfo, 0, sizeof(CertificateInfo));
+	CertificateInfo.dwSaveon = UI_CERTIFICATE_INFO_SAVEON_SYSTEMSTORE;
+	CertificateInfo.dwKeyType = AT_SIGNATURE;
+	CertificateInfo.bIsSelfSigned = TRUE;
+	CertificateInfo.bHasSmartCardAuthentication = TRUE;
+	CertificateInfo.bIsCA = TRUE;
+	GetSystemTime(&(CertificateInfo.StartTime));
+	GetSystemTime(&(CertificateInfo.EndTime));
+	CertificateInfo.EndTime.wYear += 10;
+	CertificateInfo.fReturnCerticateContext = TRUE;
+	CertificateInfo.szSubject = szSubject;
+	fReturn = CreateCertificate(&CertificateInfo);
+	if (fReturn)
+	{
+		pRootCertificate = CertificateInfo.pNewCertificate;
+	}
+	return fReturn;
+}
+
+BOOL CreateSmartCardCertificate(PCCERT_CONTEXT pRootCertificate, PWSTR szReader, PWSTR szCard)
+{
+	BOOL fReturn;
+	UI_CERTIFICATE_INFO CertificateInfo;
+	TCHAR szUserName[256];
+	TCHAR szSubject[256];
+	DWORD dwSize = ARRAYSIZE(szUserName);
+	GetUserName(szUserName, &dwSize);
+	_stprintf_s(szSubject,ARRAYSIZE(szSubject),TEXT("CN=%s"),szUserName);
+	memset(&CertificateInfo, 0, sizeof(CertificateInfo));
+	CertificateInfo.dwSaveon = UI_CERTIFICATE_INFO_SAVEON_SMARTCARD;
+	CertificateInfo.szReader = szReader;
+	CertificateInfo.szCard = szCard;
+	CertificateInfo.dwKeyType = AT_KEYEXCHANGE;
+	CertificateInfo.bHasSmartCardAuthentication = TRUE;
+	CertificateInfo.pRootCertificate = pRootCertificate;
+	CertificateInfo.szSubject = szSubject;
+	GetSystemTime(&(CertificateInfo.StartTime));
+	GetSystemTime(&(CertificateInfo.EndTime));
+	CertificateInfo.EndTime.wYear += 10;
+	fReturn = CreateCertificate(&CertificateInfo);
+	return fReturn;
+}
+
+VOID UpdateCertificatePanel(HWND hWnd)
+{
+	TCHAR szBuffer[1024];
+	TCHAR szBuffer2[1024];
+	TCHAR szLocalDate[255], szLocalTime[255];
+	SYSTEMTIME st;
+	SendDlgItemMessage(hWnd,IDC_03CERTIFICATEPANEL,LB_RESETCONTENT,0,0);
+	// object : 
+	CertGetNameString(pRootCertificate,CERT_NAME_SIMPLE_DISPLAY_TYPE,0,NULL,szBuffer2,ARRAYSIZE(szBuffer2));
+	_stprintf_s(szBuffer, ARRAYSIZE(szBuffer), _T("%s : %s"), _T("Object"), szBuffer2);
+	SendDlgItemMessage(hWnd,IDC_03CERTIFICATEPANEL,LB_ADDSTRING,0,(LPARAM) szBuffer);
+	// delivered :
+	FileTimeToSystemTime( &(pRootCertificate->pCertInfo->NotAfter), &st );
+	GetDateFormat( LOCALE_USER_DEFAULT, DATE_LONGDATE, &st, NULL, szLocalDate, ARRAYSIZE(szLocalDate));
+    GetTimeFormat( LOCALE_USER_DEFAULT, 0, &st, NULL, szLocalTime, ARRAYSIZE(szLocalTime) );
+
+	_stprintf_s(szBuffer, ARRAYSIZE(szBuffer), _T("%s : %s %s"), _T("Delivered"), szLocalDate, szLocalTime);
+	SendDlgItemMessage(hWnd,IDC_03CERTIFICATEPANEL,LB_ADDSTRING,0,(LPARAM) szBuffer);
+
+	// expires :
+	FileTimeToSystemTime( &(pRootCertificate->pCertInfo->NotAfter), &st );
+	GetDateFormat( LOCALE_USER_DEFAULT, DATE_LONGDATE, &st, NULL, szLocalDate, ARRAYSIZE(szLocalDate));
+    GetTimeFormat( LOCALE_USER_DEFAULT, 0, &st, NULL, szLocalTime, ARRAYSIZE(szLocalTime) );
+
+	_stprintf_s(szBuffer, ARRAYSIZE(szBuffer), _T("%s : %s %s"), _T("Expires"), szLocalDate, szLocalTime);
+	SendDlgItemMessage(hWnd,IDC_03CERTIFICATEPANEL,LB_ADDSTRING,0,(LPARAM) szBuffer);
+}
+
+BOOL CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	int wmId;
+	int wmEvent;
+	LPNMHDR pnmh;
+	CRYPTUI_VIEWCERTIFICATE_STRUCT certViewInfo;
+	BOOL fPropertiesChanged = FALSE;
+	WCHAR szReader[256];
+	WCHAR szCard[256];
+	switch(message)
+	{
+		case WM_NOTIFY :
+        pnmh = (LPNMHDR)lParam;
+        switch(pnmh->code)
+        {
+			case PSN_SETACTIVE :
+				//this is an interior page
+				PropSheet_SetWizButtons(hWnd, PSWIZB_BACK | PSWIZB_NEXT);
+				if (pRootCertificate)
+				{
+					CertFreeCertificateContext(pRootCertificate);
+					pRootCertificate = NULL;
+				}
+				pRootCertificate = SelectFirstCertificateWithPrivateKey();
+				if (pRootCertificate)
+				{
+					CheckDlgButton(hWnd,IDC_03USETHIS,BST_CHECKED);
+					UpdateCertificatePanel(hWnd);
+				}
+				else
+				{
+					CheckDlgButton(hWnd,IDC_03_CREATE,BST_CHECKED);
+				}
+				break;
+			case PSN_WIZBACK:
+				if (pRootCertificate)
+				{
+					CertFreeCertificateContext(pRootCertificate);
+					pRootCertificate = NULL;
+				}
+				break;
+			case PSN_WIZNEXT:
+				if (AskForCard(szReader,ARRAYSIZE(szReader),szCard,ARRAYSIZE(szCard)))
+				{
+					if (IsDlgButtonChecked(hWnd,IDC_03DELETE))
+					{
+						// delete all data
+						if (!ClearCard(szReader, szCard))
+						{
+							MessageBoxWin32(GetLastError());
+							return -1;
+						}
+					}
+					if (IsDlgButtonChecked(hWnd,IDC_03_CREATE))
+					{
+						DWORD dwReturn = -1;
+						if (CreateRootCertificate())
+						{
+							if (CreateSmartCardCertificate(pRootCertificate, szReader, szCard))
+							{
+								dwReturn = 0;
+							}
+							else
+							{
+								MessageBoxWin32(GetLastError());
+								dwReturn = -1;
+							}
+						}
+						// cancel
+						return dwReturn;
+					}
+					else if (IsDlgButtonChecked(hWnd,IDC_03USETHIS))
+					{
+						WCHAR szReader[256];
+						WCHAR szCard[256];
+						if (!pRootCertificate)
+						{
+							return -1;
+						}
+						if (!CreateSmartCardCertificate(pRootCertificate, szReader, szCard))
+						{
+							MessageBoxWin32(GetLastError());
+							return -1;
+						}
+					}
+					else if (IsDlgButtonChecked(hWnd,IDC_03IMPORT))
+					{
+						TCHAR szFileName[1024] = TEXT("");
+						TCHAR szPassword[1024] = TEXT("");
+						GetWindowText(GetDlgItem(hWnd,IDC_03FILENAME),szFileName,ARRAYSIZE(szFileName));
+						GetWindowText(GetDlgItem(hWnd,IDC_03IMPORTPASSWORD),szPassword,ARRAYSIZE(szPassword));
+						if (!ImportFileToSmartCard(szFileName, szPassword, szReader, szCard))
+						{
+							MessageBoxWin32(GetLastError());
+							return -1;
+						}
+
+					}
+				}
+				else
+				{
+					// cancel
+					return -1;
+				}
+				break;
+		}
+		break;
+		case WM_COMMAND:
+		wmId    = LOWORD(wParam);
+		wmEvent = HIWORD(wParam);
+		// Analyse les sélections de menu :
+		switch (wmId)
+		{	
+			case IDC_03SELECT:
+				if (pRootCertificate)
+				{
+						CertFreeCertificateContext(pRootCertificate);
+						pRootCertificate = NULL;
+				}
+				pRootCertificate = SelectCertificateWithPrivateKey(hWnd);
+				if (pRootCertificate)
+				{
+					UpdateCertificatePanel(hWnd);
+				}
+				break;
+			case IDC_03SHOW:
+				if (pRootCertificate)
+				{
+					certViewInfo.dwSize = sizeof(CRYPTUI_VIEWCERTIFICATE_STRUCT);
+					certViewInfo.hwndParent = hWnd;
+					certViewInfo.dwFlags = CRYPTUI_DISABLE_EDITPROPERTIES | CRYPTUI_DISABLE_ADDTOSTORE | CRYPTUI_DISABLE_EXPORT | CRYPTUI_DISABLE_HTMLLINK;
+					certViewInfo.szTitle = TEXT("Info");
+					certViewInfo.pCertContext = pRootCertificate;
+					certViewInfo.cPurposes = 0;
+					certViewInfo.rgszPurposes = 0;
+					certViewInfo.pCryptProviderData = NULL;
+					certViewInfo.hWVTStateData = NULL;
+					certViewInfo.fpCryptProviderDataTrustedUsage = FALSE;
+					certViewInfo.idxSigner = 0;
+					certViewInfo.idxCert = 0;
+					certViewInfo.fCounterSigner = FALSE;
+					certViewInfo.idxCounterSigner = 0;
+					certViewInfo.cStores = 0;
+					certViewInfo.rghStores = NULL;
+					certViewInfo.cPropSheetPages = 0;
+					certViewInfo.rgPropSheetPages = NULL;
+					certViewInfo.nStartPage = 0;
+
+					CryptUIDlgViewCertificate(&certViewInfo,&fPropertiesChanged);
+				}
+				break;
+			case IDC_03SELECTFILE:
+				SelectFile(hWnd);
+				break;
+		}
+		break;
+    }
+	return FALSE;
+}
