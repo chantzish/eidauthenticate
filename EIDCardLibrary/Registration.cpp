@@ -52,7 +52,9 @@ void AppendValueToMultiSz(HKEY hKey,PTSTR szKey, PTSTR szValue, PTSTR szData)
 	}
 	if (bFound == FALSE) {
 		// add the data
-		_tcscat_s(Pointer, _tcslen(szData) + 1, szData);
+		_tcscpy_s(Pointer, _tcslen(szData) + 1, szData);
+		Pointer[_tcslen(szData) + 1] = 0;
+		RegSize += (_tcslen(szData) + 1 ) * sizeof(TCHAR);
 		Status = RegSetValueEx(hkResult, szValue, 0, RegType, (PBYTE) Buffer, RegSize);
 		if (Status != ERROR_SUCCESS) {
 			MessageBoxWin32(Status);
@@ -73,7 +75,7 @@ void RemoveValueFromMultiSz(HKEY hKey, PTSTR szKey, PTSTR szValue, PTSTR szData)
 		return;
 	}
 	DWORD RegType;
-	DWORD RegSize;
+	DWORD RegSize, RegSizeOut;
 	PTSTR BufferIn = NULL;
 	PTSTR BufferOut = NULL;
 	PTSTR PointerIn;
@@ -93,7 +95,7 @@ void RemoveValueFromMultiSz(HKEY hKey, PTSTR szKey, PTSTR szValue, PTSTR szData)
 		return;
 	}
 	BufferOut = (PTSTR) malloc(RegSize);
-	if (!BufferIn)
+	if (!BufferOut)
 	{
 		MessageBoxWin32(GetLastError());
 		free(BufferIn);
@@ -111,18 +113,29 @@ void RemoveValueFromMultiSz(HKEY hKey, PTSTR szKey, PTSTR szValue, PTSTR szData)
 
 	PointerIn = BufferIn;
 	PointerOut = BufferOut;
+	RegSizeOut = 0;
+	
 	while (*PointerIn) 
 	{
-		if (_tcscmp(PointerIn,szData)!=0) {
-			_tcscpy_s(PointerOut,RegSize, PointerIn);
-			PointerOut = PointerOut + _tcslen(PointerOut) + 1;
+		// copy string if <> szData
+		
+		if (_tcscmp(PointerIn,szData)!=0) {			
+			_tcscpy_s(PointerOut,(RegSize - RegSizeOut) /sizeof(TCHAR), PointerIn);
+			RegSizeOut += (_tcslen(PointerOut) + 1) * sizeof(TCHAR);
+			PointerOut += _tcslen(PointerOut) + 1;
 		}
-		PointerIn = PointerIn + _tcslen(PointerIn) + 1;
+		PointerIn += _tcslen(PointerIn) + 1;
 	}
-	Status = RegSetValueEx(hkResult, szValue, 0, RegType, (PBYTE) PointerOut, RegSize);
+	
+	// last null char
+	*PointerOut = 0;
+	RegSizeOut += sizeof(TCHAR);
+	
+	Status = RegSetValueEx(hkResult, szValue, 0, RegType, (PBYTE) BufferOut, RegSizeOut);
 	if (Status != ERROR_SUCCESS) {
 		MessageBoxWin32(Status);
 	}
+	
 	free(BufferIn);
 	free(BufferOut);
 	RegCloseKey(hkResult);
@@ -188,7 +201,7 @@ void EIDConfigurationWizardDllRegister()
 		TEXT("System.ApplicationName"),REG_SZ, TEXT("EID.EIDConfigurationWizard"),sizeof(TEXT("EID.EIDConfigurationWizard")));
 	RegSetKeyValue(	HKEY_CLASSES_ROOT, 
 		TEXT("CLSID\\{F5D846B4-14B0-11DE-B23C-27A355D89593}"),
-		TEXT("System.ControlPanel.Category"),REG_SZ, TEXT("9.1"),sizeof(TEXT("9.1")));
+		TEXT("System.ControlPanel.Category"),REG_SZ, TEXT("10"),sizeof(TEXT("10")));
 	RegSetKeyValue(	HKEY_CLASSES_ROOT, 
 		TEXT("CLSID\\{F5D846B4-14B0-11DE-B23C-27A355D89593}"),
 		TEXT("LocalizedString"),REG_EXPAND_SZ, TEXT("Smart Card Logon"),sizeof(TEXT("Smart Card Logon")));
