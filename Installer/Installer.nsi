@@ -1,6 +1,3 @@
-;NSIS Modern User Interface
-;Basic Example Script
-;Written by Joost Verburg
 
 ;--------------------------------
 ;Include Modern UI
@@ -29,7 +26,7 @@
 ;--------------------------------
 ;Pages
 
-  !insertmacro MUI_PAGE_LICENSE "${NSISDIR}\Docs\Modern UI\License.txt"
+  !insertmacro MUI_PAGE_LICENSE "License.txt"
   !insertmacro MUI_PAGE_COMPONENTS
   !insertmacro MUI_PAGE_INSTFILES
   
@@ -54,6 +51,8 @@ Section "Core" SecCore
   ;ADD YOUR OWN FILES HERE...
   FILE "..\Release\EIDAuthenticationPackage.dll"
   FILE "..\Release\EIDCredentialProvider.dll"
+  FILE "..\Release\EIDPasswordChangeNotification.dll"
+  FILE "..\Release\EIDConfigurationWizard.exe"
 
  
   ;Create uninstaller
@@ -63,8 +62,7 @@ Section "Core" SecCore
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\EIDAuthentication" "DisplayName" "EID Authentication"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\EIDAuthentication" "UninstallString" "$INSTDIR\EIDUninstall.exe"
 
-  System::Call "EIDAuthenticationPackage::DllRegister()"
-  System::Call "EIDCredentialProvider::DllRegister()"
+  System::Call "EIDAuthenticationPackage.dll::DllRegister()"
  
  
   SetPluginUnload manual
@@ -90,12 +88,13 @@ SectionEnd
 Section "Uninstall"
 
 
-  System::Call "EIDAuthenticationPackage::DllUnRegister()"
-  System::Call "EIDCredentialProvider::DllUnRegister()"
+  System::Call "EIDAuthenticationPackage.dll::DllUnRegister()"
 
   Delete /REBOOTOK "$INSTDIR\EIDUninstall.exe"
   Delete /REBOOTOK "$INSTDIR\EIDAuthenticationPackage.dll"
   Delete /REBOOTOK "$INSTDIR\EIDCredentialProvider.dll"
+  Delete /REBOOTOK "$INSTDIR\EIDPasswordChangeNotification.dll"
+  Delete /REBOOTOK "$INSTDIR\EIDConfigurationWizard.dll"
 
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\EIDAuthentication"
 
