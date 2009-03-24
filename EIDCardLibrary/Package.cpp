@@ -27,6 +27,7 @@
 
 #include "EIDCardLibrary.h"
 #include "Tracing.h"
+#include "StoredCredentialManagement.h"
 
 #pragma comment(lib, "Secur32.lib")
 #pragma comment(lib, "Netapi32.lib")
@@ -597,8 +598,10 @@ DWORD GetRidFromUsername(LPTSTR szUsername)
 	return dwRid;
 }
 
-BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPassword, __in PWSTR szProvider, 
-								  __in PWSTR szContainer, __in DWORD dwKeySpec)
+//BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPassword, __in PWSTR szProvider, 
+//								  __in PWSTR szContainer, __in DWORD dwKeySpec)
+BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPassword, __in PBYTE pbPublicKey, 
+								  __in USHORT dwPublicKeySize, __in BOOL fEncryptPassword)
 {
 	BOOL fReturn = FALSE;
 	PEID_CALLPACKAGE_BUFFER pBuffer;
@@ -607,15 +610,15 @@ BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPasswo
 	NTSTATUS status;
 	PBYTE pPointer;
 	DWORD dwPasswordSize;
-	DWORD dwProviderSize;
-	DWORD dwContainerSize;
-
+//	DWORD dwProviderSize;
+//	DWORD dwContainerSize;
+	DWORD dwError;
 	if (!szPassword) 
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"szPassword null");
 		return FALSE;
 	}
-	if (!szProvider) 
+/*	if (!szProvider) 
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"szProvider null");
 		return FALSE;
@@ -624,12 +627,12 @@ BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPasswo
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"szContainer null");
 		return FALSE;
-	}
+	}*/
 
 	dwPasswordSize = (wcslen(szPassword) + 1) * sizeof(WCHAR);
-	dwProviderSize = (wcslen(szProvider) + 1) * sizeof(WCHAR);
-	dwContainerSize = (wcslen(szContainer) + 1) * sizeof(WCHAR);
-	dwSize = sizeof(EID_CALLPACKAGE_BUFFER) + dwPasswordSize + dwProviderSize + dwContainerSize;
+	//dwProviderSize = (wcslen(szProvider) + 1) * sizeof(WCHAR);
+	//dwContainerSize = (wcslen(szContainer) + 1) * sizeof(WCHAR);
+	dwSize = sizeof(EID_CALLPACKAGE_BUFFER) + dwPasswordSize + dwPublicKeySize; //+ dwProviderSize + dwContainerSize;
 
 	pBuffer = (PEID_CALLPACKAGE_BUFFER) malloc(dwSize);
 	if( !pBuffer) 
@@ -647,20 +650,28 @@ BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPasswo
 	}
 	pBuffer->MessageType = EIDCMCreateStoredCredential;
 	pBuffer->usPasswordLen = 0;
-	pBuffer->dwKeySpec = dwKeySpec;
+	//pBuffer->dwKeySpec = dwKeySpec;
 	pPointer = (PBYTE) &(pBuffer[1]);
 
 	pBuffer->szPassword = (PWSTR) pPointer;
 	memcpy(pPointer, szPassword, dwPasswordSize);
 	pPointer += dwPasswordSize;
 
-	pBuffer->szProvider = (PWSTR) pPointer;
+	/*pBuffer->szProvider = (PWSTR) pPointer;
 	memcpy(pPointer, szProvider, dwProviderSize);
 	pPointer += dwProviderSize;
 
 	pBuffer->szContainer = (PWSTR) pPointer;
 	memcpy(pPointer, szContainer, dwContainerSize);
-	pPointer += dwContainerSize;
+	pPointer += dwContainerSize;*/
+	
+	pBuffer->dwPublicKeySize = dwPublicKeySize;
+	pBuffer->fEncryptPassword = fEncryptPassword;
+
+	pBuffer->pbPublicKey = (PBYTE) pPointer;
+	memcpy(pPointer, pbPublicKey, dwPublicKeySize);
+	pPointer += dwPublicKeySize;
+
 
 	if (!pBuffer->dwRid)
 	{
@@ -701,7 +712,9 @@ BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPasswo
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaConnectUntrusted 0x%08x",status);
 	}
 	LsaClose(hLsa);
+	dwError = pBuffer->dwError;
 	free(pBuffer);
+	SetLastError(dwError);
 	return fReturn;
 }
 
@@ -860,12 +873,77 @@ BOOL LsaEIDHasStoredCredential(__in_opt PWSTR szUsername)
 	return fReturn;
 }
 
-BOOL MatchUserOrIsAdmin(__in DWORD dwRid, __in PLUID LogonId)
+BOOL LsaEIDCreateStoredCredential(__in PWSTR szUsername, __in PWSTR szPassword, __in PCCERT_CONTEXT pCertContext)
+{
+	BOOL fStatus, fFreeProv;
+	BOOL fEncryptPassword;
+	PBYTE pbPublicKey = NULL;
+	DWORD dwKeySpec;
+	DWORD dwPublicKeySize;
+	HCRYPTPROV hProv = NULL;
+	HCRYPTKEY hKey = NULL;
+	DWORD dwError = 0;
+	BOOL fReturn = FALSE;
+	__try
+	{
+		fStatus = CryptAcquireCertificatePrivateKey(pCertContext, 0, NULL, &hProv, &dwKeySpec, &fFreeProv);
+		if (!fStatus)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireCertificatePrivateKey 0x%08x",GetLastError());
+			__leave;
+		}
+		fStatus = CryptGetUserKey(hProv, dwKeySpec, &hKey);
+		if (!fStatus)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptGetUserKey 0x%08x",GetLastError());
+			__leave;
+		}
+		fStatus = CryptExportKey( hKey, NULL, PUBLICKEYBLOB, 0, NULL, &dwPublicKeySize);
+		if (!fStatus)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptExportKey 0x%08x",GetLastError());
+			__leave;
+		}
+		pbPublicKey = (PBYTE) malloc(dwPublicKeySize);
+		if (!pbPublicKey)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"malloc 0x%08x",GetLastError());
+			__leave;
+		}
+		fStatus = CryptExportKey( hKey, NULL, PUBLICKEYBLOB, 0, pbPublicKey, &dwPublicKeySize);
+		if (!fStatus)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptExportKey 0x%08x",GetLastError());
+			__leave;
+		}
+		fEncryptPassword = CanEncryptPassword(hProv, dwKeySpec, NULL);
+		fReturn = LsaEIDCreateStoredCredential(szUsername, szPassword, pbPublicKey, (USHORT) dwPublicKeySize, fEncryptPassword);
+	}
+	__finally
+	{
+		if (hKey)
+			CryptDestroyKey(hKey);
+		if (pbPublicKey)
+			free(pbPublicKey);
+		if (hProv)
+			CryptReleaseContext(hProv, 0);
+	}
+	SetLastError(dwError);
+	return fReturn;
+}
+
+BOOL MatchUserOrIsAdmin(__in DWORD dwRid, __in PVOID pClientInfo)
 {
 	BOOL fReturn = FALSE;
+	LUID LogonId = ((SECPKG_CLIENT_INFO*)pClientInfo)->LogonId;
 	NTSTATUS status;
 	PSECURITY_LOGON_SESSION_DATA pLogonSessionData = NULL;
-	status = LsaGetLogonSessionData(LogonId, &pLogonSessionData);
+	status = LsaGetLogonSessionData(&LogonId, &pLogonSessionData);
 	if (status != STATUS_SUCCESS)
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaGetLogonSessionData 0x%08x",status);
@@ -878,7 +956,7 @@ BOOL MatchUserOrIsAdmin(__in DWORD dwRid, __in PLUID LogonId)
 		}
 		else
 		{
-			// match admin group
+			/*// match admin group
 			////////////////////
 			DWORD dwEntries, dwTotalEntries;
 			PLOCALGROUP_USERS_INFO_0 GroupInfo;
@@ -923,6 +1001,24 @@ BOOL MatchUserOrIsAdmin(__in DWORD dwRid, __in PLUID LogonId)
 				NetApiBufferFree(GroupInfo);
 			}
 			free(szUserName);
+			*/
+			SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
+			PSID AdministratorsGroup; 
+			fReturn = AllocateAndInitializeSid(&NtAuthority,
+				2,
+				SECURITY_BUILTIN_DOMAIN_RID,
+				DOMAIN_ALIAS_RID_ADMINS,
+				0, 0, 0, 0, 0, 0,
+				&AdministratorsGroup); 
+			if(fReturn) 
+			{
+				if (!CheckTokenMembership( NULL, AdministratorsGroup, &fReturn)) 
+				{
+					 fReturn = FALSE;
+				} 
+				FreeSid(AdministratorsGroup); 
+			}
+
 		}
 		LsaFreeReturnBuffer(pLogonSessionData);
 	}

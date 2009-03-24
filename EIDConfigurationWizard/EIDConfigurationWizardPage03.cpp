@@ -48,8 +48,10 @@ BOOL SelectFile(HWND hWnd)
 				{
 					SetWindowText(GetDlgItem(hWnd,IDC_03FILENAME),szFileName);
 					CoTaskMemFree(szFileName);
+					CheckDlgButton(hWnd,IDC_03IMPORT,BST_CHECKED);
+					CheckDlgButton(hWnd,IDC_03USETHIS,BST_UNCHECKED);
+					CheckDlgButton(hWnd,IDC_03_CREATE,BST_UNCHECKED);
 				}
-				// Do something with the result.
                 psiResult->Release();
             }
         }
@@ -123,7 +125,7 @@ VOID UpdateCertificatePanel(HWND hWnd)
 	_stprintf_s(szBuffer, ARRAYSIZE(szBuffer), _T("%s : %s"), _T("Object"), szBuffer2);
 	SendDlgItemMessage(hWnd,IDC_03CERTIFICATEPANEL,LB_ADDSTRING,0,(LPARAM) szBuffer);
 	// delivered :
-	FileTimeToSystemTime( &(pRootCertificate->pCertInfo->NotAfter), &st );
+	FileTimeToSystemTime( &(pRootCertificate->pCertInfo->NotBefore), &st );
 	GetDateFormat( LOCALE_USER_DEFAULT, DATE_LONGDATE, &st, NULL, szLocalDate, ARRAYSIZE(szLocalDate));
     GetTimeFormat( LOCALE_USER_DEFAULT, 0, &st, NULL, szLocalTime, ARRAYSIZE(szLocalTime) );
 
@@ -137,6 +139,11 @@ VOID UpdateCertificatePanel(HWND hWnd)
 
 	_stprintf_s(szBuffer, ARRAYSIZE(szBuffer), _T("%s : %s %s"), _T("Expires"), szLocalDate, szLocalTime);
 	SendDlgItemMessage(hWnd,IDC_03CERTIFICATEPANEL,LB_ADDSTRING,0,(LPARAM) szBuffer);
+
+	// select option
+	CheckDlgButton(hWnd,IDC_03IMPORT,BST_UNCHECKED);
+	CheckDlgButton(hWnd,IDC_03USETHIS,BST_CHECKED);
+	CheckDlgButton(hWnd,IDC_03_CREATE,BST_UNCHECKED);
 }
 
 BOOL CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -189,26 +196,29 @@ BOOL CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 						if (!ClearCard(szReader, szCard))
 						{
 							MessageBoxWin32(GetLastError());
-							return -1;
+							SetWindowLong(hWnd,DWL_MSGRESULT,-1);
+							return TRUE;
 						}
 					}
 					if (IsDlgButtonChecked(hWnd,IDC_03_CREATE))
 					{
+						// create self signed certificate as root
 						DWORD dwReturn = -1;
 						if (CreateRootCertificate())
 						{
 							if (CreateSmartCardCertificate(pRootCertificate, szReader, szCard))
 							{
-								dwReturn = 0;
+								//  OK
 							}
 							else
 							{
 								MessageBoxWin32(GetLastError());
-								dwReturn = -1;
+								SetWindowLong(hWnd,DWL_MSGRESULT,-1);
+								return TRUE;
 							}
 						}
 						// cancel
-						return dwReturn;
+						break;
 					}
 					else if (IsDlgButtonChecked(hWnd,IDC_03USETHIS))
 					{
@@ -216,12 +226,14 @@ BOOL CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 						WCHAR szCard[256];
 						if (!pRootCertificate)
 						{
-							return -1;
+							SetWindowLong(hWnd,DWL_MSGRESULT,-1);
+							return TRUE;
 						}
 						if (!CreateSmartCardCertificate(pRootCertificate, szReader, szCard))
 						{
 							MessageBoxWin32(GetLastError());
-							return -1;
+							SetWindowLong(hWnd,DWL_MSGRESULT,-1);
+							return TRUE;
 						}
 					}
 					else if (IsDlgButtonChecked(hWnd,IDC_03IMPORT))
@@ -233,7 +245,8 @@ BOOL CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 						if (!ImportFileToSmartCard(szFileName, szPassword, szReader, szCard))
 						{
 							MessageBoxWin32(GetLastError());
-							return -1;
+							SetWindowLong(hWnd,DWL_MSGRESULT,-1);
+							return TRUE;
 						}
 
 					}
@@ -241,7 +254,8 @@ BOOL CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 				else
 				{
 					// cancel
-					return -1;
+					SetWindowLong(hWnd,DWL_MSGRESULT,-1);
+					return TRUE;
 				}
 				break;
 		}

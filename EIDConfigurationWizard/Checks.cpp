@@ -13,18 +13,19 @@
 #pragma comment(lib,"Winscard")
 #pragma comment(lib,"Scarddlg")
 
-PTSTR szAction = TEXT("Double click to solve");
+PTSTR szAction = TEXT("Solve");
 
 #define EnableAction(INDEX) rgCheckInfo[INDEX].szAction = szAction;
 
 CHECKINFO rgCheckInfo[ ] = 
 {
     {TEXT("Card contains certificate"), NULL, CHECK_FAILED, NULL},
-	{TEXT("Username"), NULL, CHECK_FAILED, NULL},
+	{TEXT("Certificate match username"), NULL, CHECK_FAILED, NULL},
     {TEXT("Certificate Validation"), NULL, CHECK_FAILED, NULL},
 	{TEXT("Crypto"), NULL, CHECK_FAILED, NULL},
-	{TEXT("Account has password"), NULL, CHECK_FAILED, NULL},
+	{TEXT("Account a has password"), NULL, CHECK_FAILED, NULL},
 	{TEXT("Remove Policy"), NULL, CHECK_FAILED, NULL},
+	{TEXT("Require Smart Card Logon Policy"), NULL, CHECK_FAILED, NULL},
 };
 
 DWORD dwCheckInfoNum = ARRAYSIZE(rgCheckInfo);
@@ -221,11 +222,8 @@ void DoChecks()
 							dwLevel = 3;
 							dwBestId = dwI;
 							rgCheckInfo[CHECK_CRYPTO].dwStatus = CHECK_SUCCESS;
-							if (!rgCheckInfo[CHECK_CRYPTO].szComment)
-							{
-								rgCheckInfo[CHECK_CRYPTO].szComment = (PTSTR) malloc(sizeof(TCHAR)*100);
-								_stprintf_s(rgCheckInfo[CHECK_CRYPTO].szComment, 100, TEXT("Card supports encryption"));
-							}
+							rgCheckInfo[CHECK_CRYPTO].szComment = (PTSTR) malloc(sizeof(TCHAR)*100);
+							_stprintf_s(rgCheckInfo[CHECK_CRYPTO].szComment, 100, TEXT("Card supports encryption"));
 						}
 					}					
 				}
@@ -251,9 +249,18 @@ void DoChecks()
 			rgCheckInfo[CHECK_USERNAME].dwStatus = CHECK_FAILED;
 			EnableAction(CHECK_USERNAME);
 		}
-		rgCheckInfo[CHECK_USERNAME].szComment = (PTSTR) malloc(sizeof(TCHAR)*100);
-		_stprintf_s(rgCheckInfo[CHECK_USERNAME].szComment, 100, TEXT("Username found : %s"),
-						MyTest->GetContainer()->GetUserName());
+		rgCheckInfo[CHECK_USERNAME].szComment = (PTSTR) malloc(sizeof(TCHAR)*200);
+		_stprintf_s(rgCheckInfo[CHECK_USERNAME].szComment, 100, TEXT("Username(s) found : %s"),
+						MyCredentialList.GetContainerHolderAt(0)->GetContainer()->GetUserName());
+		DWORD dwRemainingChar = 200 - _tcsclen(rgCheckInfo[CHECK_USERNAME].szComment) - 1;
+		DWORD dwMax = MyCredentialList.ContainerHolderCount();
+		for (DWORD dwI = 1; dwI < dwMax; dwI++)
+		{
+			_tcscat_s(rgCheckInfo[CHECK_USERNAME].szComment,dwRemainingChar,TEXT(", "));
+			dwRemainingChar = 200 - _tcsclen(rgCheckInfo[CHECK_USERNAME].szComment) - 1;
+			_tcscat_s(rgCheckInfo[CHECK_USERNAME].szComment,dwRemainingChar,MyCredentialList.GetContainerHolderAt(dwI)->GetContainer()->GetUserName());
+			dwRemainingChar = 200 - _tcsclen(rgCheckInfo[CHECK_USERNAME].szComment) - 1;
+		}
 		rgCheckInfo[CHECK_USERNAME].pCustomInfo = malloc(sizeof(TCHAR)*100);
 		_stprintf_s((PTSTR) rgCheckInfo[CHECK_USERNAME].pCustomInfo, 100, TEXT("%s"),
 						MyTest->GetContainer()->GetUserName());
@@ -261,9 +268,30 @@ void DoChecks()
 	// certificate validation
 	if (dwLevel < 1)
 	{			
-		rgCheckInfo[CHECK_VALIDATION].dwStatus = CHECK_FAILED;
-		rgCheckInfo[CHECK_VALIDATION].szComment = (PTSTR) malloc(sizeof(TCHAR)*100);
-		_stprintf_s(rgCheckInfo[CHECK_VALIDATION].szComment, 100, TEXT("Not tested"));
+		if (MyCredentialList.HasContainerHolder())
+		{
+			CContainerHolderTest* MyTest = MyCredentialList.GetContainerHolderAt(dwBestId);
+			PCCERT_CONTEXT pCertContext = MyTest->GetContainer()->GetContainer();
+			if (IsTrustedCertificate(pCertContext,&dwTrustError))
+			{
+				rgCheckInfo[CHECK_VALIDATION].dwStatus = CHECK_SUCCESS;
+				rgCheckInfo[CHECK_VALIDATION].szComment = (PTSTR) malloc(sizeof(TCHAR)*100);
+				_stprintf_s(rgCheckInfo[CHECK_VALIDATION].szComment, 100, TEXT("Success"));
+			}
+			else
+			{
+				rgCheckInfo[CHECK_VALIDATION].dwStatus = CHECK_FAILED;
+				rgCheckInfo[CHECK_VALIDATION].szComment = (PTSTR) malloc(sizeof(TCHAR)*100);
+				_stprintf_s(rgCheckInfo[CHECK_VALIDATION].szComment, 100, TEXT("Failure (%s)"),GetTrustErrorText(dwTrustError));
+				EnableAction(CHECK_VALIDATION);
+			}
+		}
+		else
+		{
+			rgCheckInfo[CHECK_VALIDATION].dwStatus = CHECK_FAILED;
+			rgCheckInfo[CHECK_VALIDATION].szComment = (PTSTR) malloc(sizeof(TCHAR)*100);
+			_stprintf_s(rgCheckInfo[CHECK_VALIDATION].szComment, 100, TEXT("Not tested"));
+		}
 	}
 	if (dwLevel == 1)
 	{
@@ -287,16 +315,37 @@ void DoChecks()
 	}
 	if (dwLevel < 2)
 	{				
-		rgCheckInfo[CHECK_CRYPTO].dwStatus = CHECK_FAILED;
-		rgCheckInfo[CHECK_CRYPTO].szComment = (PTSTR) malloc(sizeof(TCHAR)*100);
-		_stprintf_s(rgCheckInfo[CHECK_CRYPTO].szComment, 100, TEXT("Not tested"));
+		if (MyCredentialList.HasContainerHolder())
+		{
+			CContainerHolderTest* MyTest = MyCredentialList.GetContainerHolderAt(dwBestId);
+			PCCERT_CONTEXT pCertContext = MyTest->GetContainer()->GetContainer();
+			if (CanEncryptPassword(NULL,0, pCertContext))
+			{
+				rgCheckInfo[CHECK_CRYPTO].dwStatus = CHECK_SUCCESS;
+				rgCheckInfo[CHECK_CRYPTO].szComment = (PTSTR) malloc(sizeof(TCHAR)*100);
+				_stprintf_s(rgCheckInfo[CHECK_CRYPTO].szComment, 100, TEXT("Card supports encryption"));
+			}
+			else
+			{
+				rgCheckInfo[CHECK_CRYPTO].dwStatus = CHECK_WARNING;
+				rgCheckInfo[CHECK_CRYPTO].szComment = (PTSTR) malloc(sizeof(TCHAR)*100);
+				_stprintf_s(rgCheckInfo[CHECK_CRYPTO].szComment, 100, TEXT("Card does not support encryption"));
+			}
+		}
+		else
+		{
+			rgCheckInfo[CHECK_CRYPTO].dwStatus = CHECK_FAILED;
+			rgCheckInfo[CHECK_CRYPTO].szComment = (PTSTR) malloc(sizeof(TCHAR)*100);
+			_stprintf_s(rgCheckInfo[CHECK_CRYPTO].szComment, 100, TEXT("Not tested"));
+		}
 	}	
 	// password
 	if (HasEmptyPasswordAccount(szUserName))
 	{
 		rgCheckInfo[CHECK_HASPASSWORD].dwStatus = CHECK_WARNING;
 		rgCheckInfo[CHECK_HASPASSWORD].szComment = (PTSTR) malloc(sizeof(TCHAR)*100);
-		_stprintf_s(rgCheckInfo[CHECK_HASPASSWORD].szComment, 100, TEXT("Account doesn't have a password"));					
+		_stprintf_s(rgCheckInfo[CHECK_HASPASSWORD].szComment, 100, TEXT("Account doesn't have a password"));	
+		rgCheckInfo[CHECK_HASPASSWORD].szAction = szAction;
 	}
 	else
 	{
@@ -305,4 +354,16 @@ void DoChecks()
 		_stprintf_s(rgCheckInfo[CHECK_HASPASSWORD].szComment, 100, TEXT("Success"));						
 	}
 	CheckRemovePolicy();
+	rgCheckInfo[CHECK_REQUIRESCLOGON].dwStatus = CHECK_INFO;
+	if (GetPolicyValue(scforceoption))
+	{
+		rgCheckInfo[CHECK_REQUIRESCLOGON].szComment = (PTSTR) malloc(sizeof(TCHAR)*100);
+		_stprintf_s(rgCheckInfo[CHECK_REQUIRESCLOGON].szComment, 100, TEXT("Enabled"));
+	}
+	else
+	{
+		rgCheckInfo[CHECK_REQUIRESCLOGON].szComment = (PTSTR) malloc(sizeof(TCHAR)*100);
+		_stprintf_s(rgCheckInfo[CHECK_REQUIRESCLOGON].szComment, 100, TEXT("Disabled"));
+	}
+	
 }

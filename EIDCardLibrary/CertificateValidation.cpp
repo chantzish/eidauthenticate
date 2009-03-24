@@ -17,7 +17,7 @@ LPTSTR GetUserNameFromCertificate(__in PCCERT_CONTEXT pCertContext)
 	{
 		szReturnedName = (LPTSTR) new TCHAR[cbSize];
 		cbSize = CertGetNameString(pCertContext,CERT_NAME_SIMPLE_DISPLAY_TYPE,0,NULL,szReturnedName,cbSize);
-		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"GetUserNameFromCertificate = %s",szReturnedName);
+		
 		// check if the user exists on the system
 		DWORD dwSize = 0;
 		PCRYPT_KEY_PROV_INFO pKeyProvInfo = NULL;
@@ -54,6 +54,7 @@ LPTSTR GetUserNameFromCertificate(__in PCCERT_CONTEXT pCertContext)
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CertGetNameString error = %d",GetLastError());
 	}
+	EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"GetUserNameFromCertificate = %s",szReturnedName);
 	return szReturnedName;
 }
 

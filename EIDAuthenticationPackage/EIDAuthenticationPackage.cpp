@@ -112,11 +112,17 @@ extern "C"
 	void NTAPI DllRegister()
 	{
 		EIDAuthenticationPackageDllRegister();
+		EIDCredentialProviderDllRegister();
+		EIDPasswordChangeNotificationDllRegister();
+		EIDConfigurationWizardDllRegister();
 	}
 
 	void NTAPI DllUnRegister()
 	{
 		EIDAuthenticationPackageDllUnRegister();
+		EIDCredentialProviderDllUnRegister();
+		EIDPasswordChangeNotificationDllUnRegister();
+		EIDConfigurationWizardDllUnRegister();
 	}
 
 	void NTAPI DllEnableLogging()
@@ -156,6 +162,7 @@ extern "C"
 		{
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
 			PEID_CALLPACKAGE_BUFFER pBuffer = (PEID_CALLPACKAGE_BUFFER) ProtocolSubmitBuffer;
+			pBuffer->dwError = 0;
 			switch (pBuffer->MessageType)
 			{
 			case EIDCMCreateStoredCredential:
@@ -165,21 +172,31 @@ extern "C"
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetClientInfo");
 					break;
 				}
-				if (!MatchUserOrIsAdmin(pBuffer->dwRid, &(ClientInfo.LogonId)))
+				if (!MatchUserOrIsAdmin(pBuffer->dwRid, &(ClientInfo)))
 				{
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Not autorized");
 					break;
 				}
 				pPointer = (PBYTE) pBuffer->szPassword - (ULONG) ClientBufferBase + (ULONG) pBuffer;
 				pBuffer->szPassword = (PWSTR) pPointer;
-				pPointer = (PBYTE) pBuffer->szProvider - (ULONG) ClientBufferBase + (ULONG) pBuffer;
-				pBuffer->szProvider = (PWSTR) pPointer;
-				pPointer = (PBYTE) pBuffer->szContainer - (ULONG) ClientBufferBase + (ULONG) pBuffer;
-				pBuffer->szContainer = (PWSTR) pPointer;
-				fStatus = CreateStoredCredential(pBuffer->dwRid, pBuffer->szPassword, 0, pBuffer->szProvider,
-						pBuffer->szContainer, pBuffer->dwKeySpec);
-				if (fStatus)
+				//pPointer = (PBYTE) pBuffer->szProvider - (ULONG) ClientBufferBase + (ULONG) pBuffer;
+				//pBuffer->szProvider = (PWSTR) pPointer;
+				//pPointer = (PBYTE) pBuffer->szContainer - (ULONG) ClientBufferBase + (ULONG) pBuffer;
+				//pBuffer->szContainer = (PWSTR) pPointer;
+				pPointer = (PBYTE) pBuffer->pbPublicKey - (ULONG) ClientBufferBase + (ULONG) pBuffer;
+				pBuffer->pbPublicKey = (PBYTE) pPointer;
+				//fStatus = CreateStoredCredential(pBuffer->dwRid, pBuffer->szPassword, 0, pBuffer->szProvider,
+				//		pBuffer->szContainer, pBuffer->dwKeySpec);
+				fStatus = UpdateStoredCredentialEx(pBuffer->dwRid, pBuffer->szPassword, 0, pBuffer->pbPublicKey, 
+					pBuffer->dwPublicKeySize, pBuffer->fEncryptPassword);
+				if (!fStatus)
+				{
+					pBuffer->dwError = GetLastError();
+				}
+				else
+				{
 					status = STATUS_SUCCESS;
+				}
 				break;
 			case EIDCMRemoveStoredCredential:
 				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"EIDCMRemoveStoredCredential");
@@ -188,14 +205,20 @@ extern "C"
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetClientInfo");
 					break;
 				}
-				if (!MatchUserOrIsAdmin(pBuffer->dwRid, &(ClientInfo.LogonId)))
+				if (!MatchUserOrIsAdmin(pBuffer->dwRid, &(ClientInfo)))
 				{
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Not autorized");
 					break;
 				}
 				fStatus = RemoveStoredCredential(pBuffer->dwRid);
-				if (fStatus)
+				if (!fStatus)
+				{
+					pBuffer->dwError = GetLastError();
+				}
+				else
+				{
 					status = STATUS_SUCCESS;
+				}
 				break;
 			case EIDCMHasStoredCredential:
 				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"EIDCMHasStoredCredential");
@@ -204,17 +227,81 @@ extern "C"
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetClientInfo");
 					break;
 				}
-				if (!MatchUserOrIsAdmin(pBuffer->dwRid, &(ClientInfo.LogonId)))
+				if (!MatchUserOrIsAdmin(pBuffer->dwRid, &(ClientInfo)))
 				{
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Not autorized");
 					break;
 				}
 				fStatus = HasStoredCredential(pBuffer->dwRid);
-				if (fStatus)
+				if (!fStatus)
+				{
+					pBuffer->dwError = GetLastError();
+				}
+				else
+				{
 					status = STATUS_SUCCESS;
+				}
+				break;
+			case EIDCMTest:
+				HANDLE hLsa;
+				if (LsaConnectUntrusted(&hLsa) == STATUS_SUCCESS)
+				{
+
+					ULONG ulAuthPackage;
+					LSA_STRING lsaszPackageName;
+					LsaInitString(&lsaszPackageName, "Negotiate");
+
+					status = LsaLookupAuthenticationPackage(hLsa, &lsaszPackageName, &ulAuthPackage);
+					if (STATUS_SUCCESS != status)
+					{
+						EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaLookupAuthenticationPackage 0x%08X",status);
+						break;
+					}
+					CHAR PrimaryKeyBuffer[1000];
+					LSA_STRING PrimaryKey = {ARRAYSIZE(PrimaryKeyBuffer),ARRAYSIZE(PrimaryKeyBuffer),PrimaryKeyBuffer};
+					ULONG QueryContext = 0;
+					LSA_STRING Credentials;
+					EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"EIDCMTest");
+					status = MyLsaDispatchTable->GetClientInfo(&ClientInfo);
+					if (STATUS_SUCCESS != status)
+					{
+						EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetClientInfo 0x%08X",status);
+						break;
+					}
+					status = STATUS_SUCCESS;
+					while(status == STATUS_SUCCESS)
+					{
+						ULONG PrimaryKeyLength = PrimaryKey.MaximumLength;
+						Credentials.Buffer = NULL;
+						Credentials.Length = 0;
+						Credentials.MaximumLength = 0;
+						status = MyLsaDispatchTable->GetCredentials(&(ClientInfo.LogonId), ulAuthPackage, &QueryContext, TRUE, &PrimaryKey, &PrimaryKeyLength, &Credentials);
+						if (status == STATUS_SUCCESS)
+						{
+							EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Key = %Z",PrimaryKey);	
+							EIDCardLibraryDumpMemory((PUCHAR) Credentials.Buffer,Credentials.Length);
+							MyLsaDispatchTable->FreeLsaHeap(Credentials.Buffer);
+						}
+						else
+						{
+							EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetCredentials 0x%08X",status);
+						}
+					}
+					LsaClose(hLsa);
+				}
+				else
+				{
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaConnectUntrusted 0x%08X",status);
+					break;
+				}
 				break;
 			default:
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Invalid message %d",pBuffer->MessageType);
+			}
+			// copy error back to original buffer
+			if ( STATUS_SUCCESS != MyLsaDispatchTable->CopyToClientBuffer(ClientRequest, sizeof(DWORD), &(pBuffer->dwError)  + (ULONG) ClientBufferBase - (ULONG) pBuffer, &(pBuffer->dwError)))
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CopyToClientBuffer failed");
 			}
 			return status;
 		}

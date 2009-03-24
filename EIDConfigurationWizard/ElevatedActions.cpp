@@ -41,7 +41,7 @@ DWORD RenameAccount(__in_opt PTSTR szFromAccount, __in PTSTR szToAccount)
 	
 	__try
 	{
-		if (!szFromAccount)
+		/*if (!szFromAccount)
 		{
 			GetUserName(szUserName, &dwSize);
 			szFromAccount = szUserName;
@@ -56,6 +56,7 @@ DWORD RenameAccount(__in_opt PTSTR szFromAccount, __in PTSTR szToAccount)
 			{
 				__leave;
 			}
+			//LRESULT lStatus = SendMessage(HWND_BROADCAST,WM_SETTINGCHANGE,0,(LPARAM) "Environment");
 		}
 		else
 		{
@@ -77,7 +78,19 @@ DWORD RenameAccount(__in_opt PTSTR szFromAccount, __in PTSTR szToAccount)
 			shExecInfo.hInstApp = NULL;
 
 			dwError = ShellExecuteEx(&shExecInfo);
-		}
+		}*/
+		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+		SHELLEXECUTEINFO shExecInfo;
+		shExecInfo.fMask = NULL;
+		shExecInfo.hwnd = NULL;
+		shExecInfo.lpVerb = NULL;
+		shExecInfo.lpFile = TEXT("control");
+		shExecInfo.lpParameters = TEXT("/name Microsoft.UserAccounts");
+		shExecInfo.lpDirectory = NULL;
+		shExecInfo.nShow = SW_NORMAL;
+		shExecInfo.hInstApp = NULL;
+
+		dwError = ShellExecuteEx(&shExecInfo);
 	}
 	__finally
 	{

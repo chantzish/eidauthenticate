@@ -9,16 +9,6 @@ The InitializeChangeNotify function is implemented by a password filter DLL.
 This function initializes the DLL.
 */
 
-void NTAPI DllRegister()
-{
-	EIDPasswordChangeNotificationDllRegister();
-}
-
-void NTAPI DllUnRegister()
-{
-	EIDPasswordChangeNotificationDllUnRegister();
-}
-
 BOOL WINAPI InitializeChangeNotify()
 {
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");

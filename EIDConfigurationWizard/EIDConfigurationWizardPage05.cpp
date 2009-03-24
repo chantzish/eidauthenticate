@@ -125,8 +125,9 @@ BOOL WizardFinishButton(PTSTR szPassword)
 	{
 		CContainerHolderTest* MyTest = MyCredentialList.GetContainerHolderAt(dwBestId);
 		CContainer* container = MyTest->GetContainer();
-		fReturn = LsaEIDCreateStoredCredential(szUserName, szPassword, container->GetProviderName(), container->GetContainerName(), container->GetKeySpec());
+		fReturn = LsaEIDCreateStoredCredential(szUserName, szPassword, container->GetContainer());
 	}
+	SetLastError(dwError);
 	return fReturn;
 }
 

@@ -30,6 +30,7 @@
 #include "EIDTestInfo.h"
 #include "CertificateValidationTest.h"
 #include "StoredCredentialManagementTest.h"
+#include "../EIDCardLibrary/Registration.h"
 
 // Variables globales :
 HINSTANCE hInst;								// instance actuelle
@@ -189,11 +190,38 @@ BOOL CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case IDM_PASS_RETRIEVE:
 			menu_CREDMGMT_RetrieveStoredCredential();
 			break;
+		case IDM_REG_AP:
+			EIDAuthenticationPackageDllRegister();
+			break;
+		case IDM_UNREG_AP:
+			EIDAuthenticationPackageDllUnRegister();
+			break;
+		case IDM_REG_CP:
+			EIDCredentialProviderDllRegister();
+			break;
+		case IDM_UNREG_CP:
+			EIDCredentialProviderDllUnRegister();
+			break;
+		case IDM_REG_PF:
+			EIDPasswordChangeNotificationDllRegister();
+			break;
+		case IDM_UNREG_PF:
+			EIDPasswordChangeNotificationDllUnRegister();
+			break;
+		case IDM_REG_WIZ:
+			EIDConfigurationWizardDllRegister();
+			break;
+		case IDM_UNREG_WIZ:
+			EIDConfigurationWizardDllUnRegister();
+			break;
 		case IDM_UTIL_LIST:
 			menu_UTIL_ListCertificates();
 			break;
 		case IDM_UTIL_CERT:
 			menu_UTIL_CreateCert();
+			break;
+		case IDM_UTIL_SHOWSD:
+			menu_UTIL_ShowSecurityDescriptor();
 			break;
 		case IDM_UTIL_DELETE:
 			menu_UTIL_DeleteOneCertificate();

@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <tchar.h>
 #include <Cryptuiapi.h>
+#include <Sddl.h>
 #include "EIDTestUIUtil.h"
 
 
@@ -108,4 +109,64 @@ void menu_UTIL_CreateCert()
 		}
 	}
 	FreeCertificateInfo(&CertificateInfo);
+}
+
+void menu_UTIL_ShowSecurityDescriptor()
+{
+	PCCERT_CONTEXT pCertContext = SelectCertificateWithPrivateKey(hMainWnd);
+	HCRYPTPROV hProv = NULL;
+	DWORD dwKeyType;
+	BOOL fCallerFreeProvOrNCryptKey;
+	DWORD dwError = 0;
+	PSECURITY_DESCRIPTOR pSD = NULL;
+	DWORD dwSize = 0;
+	PTSTR szSD = NULL;
+	if (!pCertContext) return;
+	__try
+	{
+		if (!CryptAcquireCertificatePrivateKey(pCertContext,0,NULL,
+					&hProv,&dwKeyType,&fCallerFreeProvOrNCryptKey))
+		{
+			dwError = GetLastError();
+			__leave;
+		}
+		if (!CryptGetProvParam(hProv,PP_KEYSET_SEC_DESCR,(BYTE*)pSD,&dwSize, 
+			OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION))
+		{
+			dwError = GetLastError();
+			__leave;
+		}
+		pSD = (PSECURITY_DESCRIPTOR) malloc(dwSize);
+		if (!pSD)
+		{
+			dwError = GetLastError();
+			__leave;
+		}
+		if (!CryptGetProvParam(hProv,PP_KEYSET_SEC_DESCR,(BYTE*)pSD,&dwSize, 
+			OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION))
+		{
+			dwError = GetLastError();
+			__leave;
+		}
+		if (!ConvertSecurityDescriptorToStringSecurityDescriptor(pSD, SDDL_REVISION_1, 
+			OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION,&szSD,NULL))
+		{
+			dwError = GetLastError();
+			__leave;
+		}
+		MessageBox(hMainWnd, szSD, TEXT("Security Descriptor"),0);
+	}
+	__finally
+	{
+		if (szSD)
+			LocalFree(szSD);
+		if (pSD)
+			free(pSD);
+		if (hProv)
+			CryptReleaseContext(hProv, 0);
+		if (pCertContext)
+			CertFreeCertificateContext(pCertContext);
+	}
+	if (dwError)
+		MessageBoxWin32(dwError);
 }

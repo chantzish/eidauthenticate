@@ -32,6 +32,8 @@ void Menu_CREDENTIALUID_GENERIC(DWORD dwFlag)
 	NTSTATUS err,stat;
 	HANDLE Token;
 
+	CoInitializeEx(NULL,COINIT_APARTMENTTHREADED); 
+
   credUiInfo.pszCaptionText = TEXT("My caption");
   credUiInfo.pszMessageText = TEXT("My message");
   credUiInfo.cbSize = sizeof(credUiInfo);

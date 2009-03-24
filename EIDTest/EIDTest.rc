@@ -40,10 +40,21 @@ BEGIN
   END
   POPUP "EID&PasswordChangeNotification",IDM_
   BEGIN
-    MENUITEM "Create Stored Credential",IDM_PASS_CREATE
-    MENUITEM "Update Credential",IDM_PASS_UPDATE
-    MENUITEM "Delete Credential",IDM_PASS_DELETE
-    MENUITEM "Retrieve Credential",IDM_PASS_RETRIEVE
+    MENUITEM "Create Stored Credential (Direct)",IDM_PASS_CREATE
+    MENUITEM "Update Credential (Direct)",IDM_PASS_UPDATE
+    MENUITEM "Delete Credential (Direct)",IDM_PASS_DELETE
+    MENUITEM "Retrieve Credential (Direct)",IDM_PASS_RETRIEVE
+  END
+  POPUP "Registration",143
+  BEGIN
+    MENUITEM "Authentication Package Register",IDM_REG_AP
+    MENUITEM "Authentication Package UnRegister",IDM_UNREG_AP
+    MENUITEM "Credential Provider Register",IDM_REG_CP
+    MENUITEM "Credential Provider UnRegister",IDM_UNREG_CP
+    MENUITEM "Password Filter Register",IDM_REG_PF
+    MENUITEM "Password Filter UnRegister",IDM_UNREG_PF
+    MENUITEM "Wizard Register",IDM_REG_WIZ
+    MENUITEM "Wizard UnRegister",IDM_UNREG_WIZ
   END
   POPUP "Logon Scenarios",127
   BEGIN
@@ -55,6 +66,7 @@ BEGIN
     MENUITEM "&Create test certificates",IDM_UTIL_CERT
     MENUITEM "Import certificate",IDM_UTIL_IMPORT
     MENUITEM "&List certificates",IDM_UTIL_LIST
+    MENUITEM "Show Security Descriptor",IDM_UTIL_SHOWSD
     MENUITEM "Delete certificate",IDM_UTIL_DELETE
     MENUITEM "Clear all data on the card",IDM_UTIL_CLEAR
   END
