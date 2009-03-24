@@ -246,7 +246,7 @@ BOOL UpdateStoredCredentialEx(__in DWORD dwRid, __in PWSTR szPassword, __in_opt 
 			fStatus = CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,0);
 			if(!fStatus)
 			{
-				DWORD dwError = GetLastError();
+				dwError = GetLastError();
 				if (dwError == NTE_BAD_KEYSET)
 				{
 					fStatus = CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,CRYPT_NEWKEYSET);
@@ -1141,6 +1141,7 @@ BOOL StorePrivateData(__in DWORD dwRid, __in_opt PBYTE pbSecret, __in_opt USHORT
 		SetLastError(LsaNtStatusToWinError(ntsResult));
         return FALSE;
     } 
+	SetLastError(0);
     return TRUE;
 
 }
@@ -1197,6 +1198,7 @@ BOOL RetrievePrivateData(__in DWORD dwRid, __out PEID_PRIVATE_DATA *ppPrivateDat
 	}
 	memcpy(*ppPrivateData, pData->Buffer, pData->Length);
 	LsaFreeMemory(pData);
+	SetLastError(0);
 	return TRUE;
 }
 
@@ -1204,12 +1206,15 @@ BOOL HasStoredCredential(__in DWORD dwRid)
 {
 	BOOL fReturn = FALSE;
 	PEID_PRIVATE_DATA pSecret;
+	DWORD dwError = 0;
 	if (RetrievePrivateData(dwRid, &pSecret))
 	{
+		dwError = GetLastError();
 		fReturn = TRUE;
 		LocalFree(pSecret);
 	}
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"%s",(fReturn?L"TRUE":L"FALSE"));
+	SetLastError(dwError);
 	return fReturn;
 }
 //////////////////////////////////////////////////////////////

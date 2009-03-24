@@ -10,6 +10,7 @@
 #define CHECK_CRYPTO 3
 #define CHECK_HASPASSWORD 4
 #define CHECK_REMOVEPOLICY 5
+#define CHECK_REQUIRESCLOGON 6
 
 typedef struct tagCHECKINFO
 {

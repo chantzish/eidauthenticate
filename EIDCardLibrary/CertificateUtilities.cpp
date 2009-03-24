@@ -107,8 +107,11 @@ PCCERT_CONTEXT SelectCertificateWithPrivateKey(HWND hWnd)
 PCCERT_CONTEXT SelectFirstCertificateWithPrivateKey()
 {
 	PCCERT_CONTEXT returnedContext = NULL;
-		
+	TCHAR szCertName[1024] = TEXT("");
+	TCHAR szComputerName[257];
+	DWORD dwSize = ARRAYSIZE(szComputerName);
 	HCERTSTORE hCertStore = NULL;
+	GetComputerName(szComputerName,&dwSize);
 	// open trusted root store
 	hCertStore = CertOpenStore(CERT_STORE_PROV_SYSTEM,0,NULL,CERT_SYSTEM_STORE_CURRENT_USER,_T("Root"));
 	if (hCertStore)
@@ -123,8 +126,23 @@ PCCERT_CONTEXT SelectFirstCertificateWithPrivateKey()
 			if (CertGetCertificateContextProperty(pCertContext,CERT_KEY_PROV_INFO_PROP_ID,KeySpec,&dwSize))
 			{
 				//The certificate has a private key
-				returnedContext = pCertContext;
-				break;
+				if (returnedContext) 
+					CertFreeCertificateContext(returnedContext);
+				// get the subject details for the cert
+				CertGetNameString(pCertContext,CERT_NAME_SIMPLE_DISPLAY_TYPE,0,NULL,szCertName,ARRAYSIZE(szCertName));
+				// match computer name ?
+				if (_tcscmp(szCertName, szComputerName) == 0)
+				{
+					returnedContext = pCertContext;
+					// return
+					break;
+				}
+				else
+				{
+					returnedContext = CertDuplicateCertificateContext(pCertContext);
+					// continue the loop
+				}
+				
 			}
 			pCertContext = CertEnumCertificatesInStore(hCertStore,pCertContext);
 		}
@@ -785,8 +803,6 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 				dwError = GetLastError();
 				__leave;
 			}
-			
-
 			hCertStore = CertOpenStore(CERT_STORE_PROV_SYSTEM,0,NULL,CERT_SYSTEM_STORE_LOCAL_MACHINE,_T("Root"));
 			if (!hCertStore)
 			{
@@ -932,6 +948,7 @@ BOOL ClearCard(PTSTR szReaderName, PTSTR szCardName)
 				CRYPT_DELETEKEYSET))
 		{
 			dwError = GetLastError();
+			break;
 		}
 		dwFlags = CRYPT_NEXT;
 		dwContainerNameLen = 1024;
@@ -955,11 +972,12 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 	HCRYPTPROV hCardProv = NULL, hProv = NULL;
 	PCCERT_CONTEXT pCertContext = NULL;
 	BOOL fFreeProv;
-	DWORD dwKeySpec;
-	HCRYPTKEY hKey = NULL, hSessionKey = NULL, hCardKey = NULL;
+	DWORD dwKeySpec = AT_KEYEXCHANGE;
+	HCRYPTKEY hKey = NULL, hCardKey = NULL;
 	PBYTE pbData = NULL;
 	DWORD dwSize = 0;
 	DWORD dwError = 0;
+	BOOL fSetBackMSBaseSCCryptoFlagImport = FALSE;
 	__try
 	{
 		hFile = CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL);
@@ -1016,14 +1034,47 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 		pCertContext = CertEnumCertificatesInStore(hCS, NULL);
 		while( pCertContext )
 		{
-			if (CertGetCertificateContextProperty(pCertContext,CERT_KEY_PROV_INFO_PROP_ID, pbData, &dwSize))
-			{
-				
-				if (! CryptAcquireCertificatePrivateKey(pCertContext, CRYPT_ACQUIRE_SILENT_FLAG, NULL, &hProv, &dwKeySpec, &fFreeProv))
+			dwSize = 0;
+			if (CertGetCertificateContextProperty(pCertContext,CERT_KEY_PROV_INFO_PROP_ID, NULL, &dwSize))
+			{	
+				if (! CryptAcquireCertificatePrivateKey(pCertContext, 0, NULL, &hProv, &dwKeySpec, &fFreeProv))
 				{
 					dwError = GetLastError();
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireCertificatePrivateKey 0x%08x",dwError);
 					__leave;
+				}
+				if (_tcscmp(szProviderName,MS_SCARD_PROV) == 0)
+				{
+					// check if MS Base crypto allow the import. If not, enable it
+					HKEY hKey;
+					DWORD dwKeyData = 0;
+					DWORD dwSize = sizeof(DWORD);
+					if (RegOpenKey(HKEY_CLASSES_ROOT, TEXT("SOFTWARE\\Microsoft\\Cryptography\\Defaults\\Provider\\Microsoft Base Smart Card Crypto Provider"), &hKey))
+					{
+						if (dwKeySpec == AT_SIGNATURE)
+						{
+							RegQueryValueEx(hKey,TEXT("AllowPrivateSignatureKeyImport"),NULL, NULL,(PBYTE)&dwKeyData,&dwSize);
+						}
+						else
+						{
+							RegQueryValueEx(hKey,TEXT("AllowPrivateExchangeKeyImport"),NULL, NULL,(PBYTE)&dwKeyData,&dwSize);
+						}
+						if (!dwKeyData)
+						{
+							fSetBackMSBaseSCCryptoFlagImport = TRUE;
+							dwKeyData = 1;
+							if (dwKeySpec == AT_SIGNATURE)
+							{
+								RegSetValueEx(hKey,TEXT("AllowPrivateSignatureKeyImport"),NULL, REG_DWORD,(PBYTE)&dwKeyData,dwSize);
+							}
+							else
+							{
+								RegSetValueEx(hKey,TEXT("AllowPrivateExchangeKeyImport"),NULL, REG_DWORD,(PBYTE)&dwKeyData,dwSize);
+							}
+						}
+						RegCloseKey(hKey);
+					}
+
 				}
 				if (!CryptGetUserKey(hProv, dwKeySpec, &hKey))
 				{
@@ -1031,13 +1082,7 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptGetUserKey 0x%08x",dwError);
 					__leave;
 				}
-				if (!CryptGenKey(hProv, CALG_3DES, CRYPT_EXPORTABLE,&hSessionKey))
-				{
-					dwError = GetLastError();
-					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptGenKey 0x%08x",dwError);
-					__leave;
-				}
-				if (!CryptExportKey(hKey, hSessionKey, PRIVATEKEYBLOB, 0, NULL, &dwSize))
+				if (!CryptExportKey(hKey, NULL, PRIVATEKEYBLOB, 0, NULL, &dwSize))
 				{
 					dwError = GetLastError();
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptExportKey 0x%08x",dwError);
@@ -1050,7 +1095,7 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"malloc 0x%08x",dwError);
 					__leave;
 				}
-				if (!CryptExportKey(hKey, hSessionKey, PRIVATEKEYBLOB, 0, pbData, &dwSize))
+				if (!CryptExportKey(hKey, NULL, PRIVATEKEYBLOB, 0, pbData, &dwSize))
 				{
 					dwError = GetLastError();
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptExportKey 0x%08x",dwError);
@@ -1062,19 +1107,20 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireContext 0x%08x",dwError);
 					__leave;
 				}
-				if (!CryptImportKey(hCardProv, pbData, dwSize, hSessionKey, 0, &hCardKey))
+				if (!CryptImportKey(hCardProv, pbData, dwSize, NULL, 0, &hCardKey))
 				{
 					dwError = GetLastError();
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptImportKey 0x%08x",dwError);
 					__leave;
 				}
-				if (!CryptSetKeyParam(hCardKey, KP_CERTIFICATE, pbData, 0))
+				if (!CryptSetKeyParam(hCardKey, KP_CERTIFICATE, pCertContext->pbCertEncoded, 0))
 				{
 					dwError = GetLastError();
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptSetKeyParam 0x%08x",dwError);
 					__leave;
 				}
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"OK");
+				fReturn = TRUE;
 				__leave;
 			}
 			pCertContext = CertEnumCertificatesInStore(hCS, pCertContext);
@@ -1087,8 +1133,6 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 			CryptDestroyKey(hCardKey);
 		if (pbData)
 			free(pbData);
-		if (hSessionKey)
-			CryptDestroyKey(hSessionKey);
 		if (hKey)
 			CryptDestroyKey(hKey);
 		if (hProv)
@@ -1105,6 +1149,24 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 			free(DataBlob.pbData);
 		if (hFile != INVALID_HANDLE_VALUE)
 			CloseHandle(hFile);
+		if (fSetBackMSBaseSCCryptoFlagImport)
+		{
+			HKEY hKey;
+			DWORD dwKeyData = 0;
+			DWORD dwSize = sizeof(DWORD);
+			if (RegOpenKey(HKEY_CLASSES_ROOT, TEXT("SOFTWARE\\Microsoft\\Cryptography\\Defaults\\Provider\\Microsoft Base Smart Card Crypto Provider"), &hKey))
+			{
+				if (dwKeySpec == AT_SIGNATURE)
+				{
+					RegSetValueEx(hKey,TEXT("AllowPrivateSignatureKeyImport"),NULL, REG_DWORD,(PBYTE)&dwKeyData,dwSize);
+				}
+				else
+				{
+					RegSetValueEx(hKey,TEXT("AllowPrivateExchangeKeyImport"),NULL, REG_DWORD,(PBYTE)&dwKeyData,dwSize);
+				}
+				RegCloseKey(hKey);
+			}
+		}
 	}
 	SetLastError(dwError);
 	return fReturn;

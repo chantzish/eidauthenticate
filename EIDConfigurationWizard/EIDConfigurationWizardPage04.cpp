@@ -8,7 +8,7 @@
 
 #include "Checks.h"
 
-PTSTR Columns[] = {TEXT("Name"),TEXT("Comment"), TEXT("Action")};
+PTSTR Columns[] = {TEXT("Comment")};
 #define COLUMN_NUM ARRAYSIZE(Columns)
 
 void DoChecks();
@@ -21,7 +21,7 @@ BOOL InitListViewColumns(HWND hWndListView)
     // Initialize the LVCOLUMN structure.
     // The mask specifies that the format, width, text, and subitem members
     // of the structure are valid. 
-    lvc.mask = LVCF_FMT | LVCF_TEXT | LVCF_SUBITEM; 
+    lvc.mask = LVCF_FMT | LVCF_TEXT | LVCF_SUBITEM | LVCF_WIDTH; 
 	  
     // Add the columns
     for (iCol = 0; iCol < COLUMN_NUM; iCol++) 
@@ -29,6 +29,7 @@ BOOL InitListViewColumns(HWND hWndListView)
         lvc.iSubItem = iCol;
         lvc.pszText = Columns[iCol];	
         lvc.fmt = LVCFMT_LEFT;
+		lvc.cx = 500;
 
         if (ListView_InsertColumn(hWndListView, iCol, &lvc) == -1) 
             return FALSE; 
@@ -42,9 +43,24 @@ BOOL InitListViewData(HWND hWndListView)
 	UINT ColumnsToDisplay[] = {1,2,3};
 	// Some code to create the list-view control.
 	// Initialize LVITEM members that are common to all items.
-	lvI.mask = LVIF_TEXT | LVIF_IMAGE | LVIF_PARAM | LVIF_STATE | LVIF_COLUMNS; 
+	lvI.mask = LVIF_TEXT | LVIF_IMAGE | LVIF_PARAM | LVIF_STATE | LVIF_COLUMNS | LVIF_GROUPID; 
 	lvI.state = 0; 
 	lvI.stateMask = 0; 
+
+	LVGROUP grp;
+
+
+//GRP
+	for (DWORD index = 0; index < dwCheckInfoNum; index++)
+	{
+		grp.cbSize = sizeof(grp);
+		grp.iGroupId = index;
+		grp.pszHeader = rgCheckInfo[dwCheckInfoNum -1 - index].szName;
+		grp.cchHeader = wcslen(grp.pszHeader);
+		grp.pszTask = rgCheckInfo[dwCheckInfoNum -1 - index].szAction;
+		grp.mask = LVGF_HEADER | LVGF_GROUPID | LVGF_TASK;
+		ListView_InsertGroup(hWndListView, 0, &grp);
+	}
 
 	// Initialize LVITEM members that are different for each item. 
 	for (DWORD index = 0; index < dwCheckInfoNum; index++)
@@ -56,8 +72,11 @@ BOOL InitListViewData(HWND hWndListView)
 		lvI.pszText = LPSTR_TEXTCALLBACK; // sends an LVN_GETDISP message.
 		lvI.cColumns = ARRAYSIZE(ColumnsToDisplay);
 		lvI.puColumns = ColumnsToDisplay;
+		lvI.iGroupId = dwCheckInfoNum -1 - index;
 		ListView_InsertItem(hWndListView, &lvI);
 	}
+	
+
 	return TRUE;
 }
 
@@ -112,16 +131,17 @@ BOOL InitListViewIcon(HWND hWndListView)
 
 BOOL InitListViewView(HWND hWndListView)
 {
-	LVTILEVIEWINFO tileViewInfo;
+	/*LVTILEVIEWINFO tileViewInfo;
 	tileViewInfo.cbSize = sizeof(LVTILEVIEWINFO);
-	tileViewInfo.dwFlags = LVTVIF_FIXEDSIZE;  
+	tileViewInfo.dwFlags = LVTVIF_AUTOSIZE;  
 	tileViewInfo.dwMask = LVTVIM_COLUMNS | LVTVIF_FIXEDSIZE ;
-	tileViewInfo.cLines = 3;
+	tileViewInfo.cLines = 2;
 	tileViewInfo.sizeTile.cx = 400;
 	tileViewInfo.sizeTile.cy = 50;
 	ListView_SetTileViewInfo(hWndListView, &tileViewInfo);
-	ListView_SetView(hWndListView, LV_VIEW_TILE);
-	//ListView_SetExtendedListViewStyle(hWndListView, LVS_EX_AUTOCHECKSELECT );
+	//ListView_SetView(hWndListView, LV_VIEW_TILE);*/
+	ListView_SetExtendedListViewStyle(hWndListView, LVS_EX_JUSTIFYCOLUMNS   );
+	ListView_EnableGroupView(hWndListView, TRUE);
 	return TRUE;
 }
 
@@ -143,11 +163,7 @@ BOOL CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 			break;
     case WM_SIZE:
         hwndList = GetDlgItem(hWnd, IDC_04CHECKS);
-		MoveWindow(hwndList, 
-           5, 100,                  // starting x- and y-coordinates 
-           LOWORD(lParam)-5,        // width of client area 
-           HIWORD(lParam)-100,        // height of client area 
-           TRUE); 
+		MoveWindow(hwndList, 5, 100, LOWORD(lParam)-5, HIWORD(lParam)-100, TRUE); 
 		break;
 	case WM_NOTIFY :
         LPNMHDR pnmh = (LPNMHDR)lParam;
@@ -188,25 +204,22 @@ BOOL CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 				switch (plvdi->item.iSubItem)
 				{
 					case 0:
-						plvdi->item.pszText = rgCheckInfo[plvdi->item.iItem].szName;
-						break;
-	            	  
-					case 1:
 						plvdi->item.pszText = rgCheckInfo[plvdi->item.iItem].szComment;
-						break;
-					case 2:
-						plvdi->item.pszText = rgCheckInfo[plvdi->item.iItem].szAction;
 						break;
 	            
 					default:
 						break;
 				}
 			break;
-			case NM_DBLCLK:
-				LPNMITEMACTIVATE lpnmitem = (LPNMITEMACTIVATE) lParam;
-				if (lpnmitem->iItem == CHECK_USERNAME && rgCheckInfo[CHECK_USERNAME].szAction)
+			case LVN_LINKCLICK:
+				 NMLVLINK* pLinkInfo = (NMLVLINK*)lParam;
+				if ((dwCheckInfoNum -1 - pLinkInfo->iSubItem) == CHECK_USERNAME && rgCheckInfo[CHECK_USERNAME].szAction)
 				{
-					RenameAccount(NULL,(PTSTR) rgCheckInfo[CHECK_USERNAME].pCustomInfo);
+					WinExec("control /name Microsoft.UserAccounts /page pageRenameMyAccount", SW_NORMAL);
+				}
+				if ((dwCheckInfoNum -1 - pLinkInfo->iSubItem) == CHECK_HASPASSWORD && rgCheckInfo[CHECK_HASPASSWORD].szAction)
+				{
+					WinExec("control /name Microsoft.UserAccounts /page pageChangeMyPassword", SW_NORMAL);
 				}
 				break;
 		}

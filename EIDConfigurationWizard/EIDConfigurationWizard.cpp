@@ -34,17 +34,6 @@ BOOL fShowNewCertificatePanel;
 BOOL fGotoNewScreen = FALSE;
 HINSTANCE g_hinst;
 
-
-void NTAPI DllRegister()
-{
-	EIDConfigurationWizardDllRegister();
-}
-
-void NTAPI DllUnRegister()
-{
-	EIDConfigurationWizardDllUnRegister();
-}
-
 int APIENTRY _tWinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
                      LPTSTR    lpCmdLine,
@@ -67,13 +56,6 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 		if (_tcscmp(pszCommandLine[0],TEXT("NEW")) == 0)
 		{
 			fGotoNewScreen = TRUE;
-		}
-		if (iNumArgs >= 3)
-		{
-			if (_tcscmp(pszCommandLine[0],TEXT("RENAME")) == 0)
-			{
-				return RenameAccount(pszCommandLine[1],pszCommandLine[2]);
-			}
 		}
 	}
 

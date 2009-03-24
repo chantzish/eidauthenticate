@@ -25,16 +25,6 @@ extern HRESULT CEIDFilter_CreateInstance(REFIID riid, void** ppv);
 
 HINSTANCE g_hinst = NULL;   // global dll hinstance
 
-void NTAPI DllRegister()
-{
-	EIDCredentialProviderDllRegister();
-}
-
-void NTAPI DllUnRegister()
-{
-	EIDCredentialProviderDllUnRegister();
-}
-
 class CClassFactory : public IClassFactory
 {
   public:

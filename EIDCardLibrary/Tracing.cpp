@@ -19,6 +19,9 @@ WCHAR Section[100];
 
 /**
  *  Tracing function.
+ *  Extract data using :
+ * C:\Windows\System32\LogFiles\WMI>tracerpt EIDCredentialProvider.etl.001 -o c:\us
+ * ers\Adiant\Desktop\report.txt -of csv
  */
 
 /**

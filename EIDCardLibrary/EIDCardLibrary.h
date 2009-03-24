@@ -88,16 +88,21 @@ typedef enum _EID_CALLPACKAGE_MESSAGE
 	EIDCMUpdateStoredCredential,
 	EIDCMRemoveStoredCredential,
 	EIDCMHasStoredCredential,
+	EIDCMTest,
 } EID_CALLPACKAGE_MESSAGE;
 
 typedef struct _EID_CALLPACKAGE_BUFFER
 {
 	EID_CALLPACKAGE_MESSAGE MessageType;
+	DWORD dwError;
 	DWORD dwRid;
 	PWSTR szPassword;		// used if EIDCMCreateStoredCredential
 	USHORT usPasswordLen;	// can be 0 if null terminated
-	PWSTR szProvider;		// used if EIDCMCreateStoredCredential
-	PWSTR szContainer;		// used if EIDCMCreateStoredCredential
-	DWORD dwKeySpec;		// used if EIDCMCreateStoredCredential
+	PBYTE pbPublicKey;
+	USHORT dwPublicKeySize;
+	BOOL fEncryptPassword;
+	//PWSTR szProvider;		// used if EIDCMCreateStoredCredential
+	//PWSTR szContainer;		// used if EIDCMCreateStoredCredential
+	//DWORD dwKeySpec;		// used if EIDCMCreateStoredCredential
 
 } EID_CALLPACKAGE_BUFFER, *PEID_CALLPACKAGE_BUFFER;
