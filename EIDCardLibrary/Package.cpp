@@ -1,3 +1,20 @@
+/*	EID Authentication
+    Copyright (C) 2009 Vincent Le Toux
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License version 2.1 as published by the Free Software Foundation.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
+
 #include <ntstatus.h>
 #define WIN32_NO_STATUS
 #include <windows.h>
@@ -10,7 +27,7 @@
 #define SECURITY_WIN32
 #include <sspi.h>
 #include <ntsecpkg.h>
-
+#include <Wtsapi32.h>
 
 
 #include <CodeAnalysis/warnings.h>
@@ -31,6 +48,7 @@
 
 #pragma comment(lib, "Secur32.lib")
 #pragma comment(lib, "Netapi32.lib")
+#pragma comment(lib, "Wtsapi32.lib")
 //
 // This function copies the length of pwz and the pointer pwz into the UNICODE_STRING structure
 // This function is intended for serializing a credential in GetSerialization only.
@@ -511,29 +529,67 @@ BOOL HasAccountOnCurrentComputer(PWSTR szUserName)
 
 BOOL IsCurrentUser(PWSTR szUserName)
 {
-	PWKSTA_USER_INFO_0 pUserInfo;
 	BOOL fReturn;
-	if (NERR_Success != NetWkstaUserGetInfo(NULL, 0, (PBYTE*)&pUserInfo))
+	PWSTR szCurrentUserName;
+	DWORD dwSize;
+	// GetUserName return SYSTEM
+	DWORD dwSessionId = WTSGetActiveConsoleSessionId();
+	fReturn = WTSQuerySessionInformationW(WTS_CURRENT_SERVER_HANDLE, dwSessionId, WTSUserName, &szCurrentUserName, &dwSize);
+	if (!fReturn)
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"WTSQuerySessionInformationW 0x%08X",GetLastError());
 		return FALSE;
-	fReturn = wcscmp(szUserName, pUserInfo->wkui0_username) == 0;
-	NetApiBufferFree(pUserInfo);
+	}
+
+	fReturn = wcscmp(szCurrentUserName,szUserName) == 0;
+	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"CurrentUsername = '%s' match with '%s'",szCurrentUserName,szUserName);
+	WTSFreeMemory(szCurrentUserName);
 	return fReturn;
 }
 
 BOOL IsAdmin(PWSTR szUserName)
 {
 	BOOL fReturn = FALSE;
+	WCHAR szAdministratorGroupName[256];
+	WCHAR szDomainName[256];
 	PLOCALGROUP_USERS_INFO_0 pGroupInfo;
-	DWORD dwEntriesRead, dwTotalEntries;
+	SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
+	SID_NAME_USE SidType;
+	PSID AdministratorsGroup; 
+	DWORD dwEntriesRead, dwTotalEntries, dwSize;
 	if (NERR_Success != NetUserGetLocalGroups(NULL, szUserName, 0, LG_INCLUDE_INDIRECT, (PBYTE*)&pGroupInfo,
 		MAX_PREFERRED_LENGTH, &dwEntriesRead, &dwTotalEntries))
 		return FALSE;
+	fReturn = AllocateAndInitializeSid(&NtAuthority,
+		2,
+		SECURITY_BUILTIN_DOMAIN_RID,
+		DOMAIN_ALIAS_RID_ADMINS,
+		0, 0, 0, 0, 0, 0,
+		&AdministratorsGroup); 
+	if(!fReturn) 
+	{
+		NetApiBufferFree(pGroupInfo);
+		return FALSE;
+	}
+	dwSize = ARRAYSIZE(szAdministratorGroupName);
+	if( !LookupAccountSid( NULL, AdministratorsGroup,
+								  szAdministratorGroupName, &dwSize, szDomainName, 
+								  &dwSize, &SidType ) ) 
+	{
+		FreeSid(AdministratorsGroup); 
+		NetApiBufferFree(pGroupInfo);
+		return FALSE;
+	}
+
 	for (DWORD dwI = 0; dwI < dwTotalEntries ; dwI++)
 	{
-		fReturn = wcscmp(L"BUILTIN\\Administrators", pGroupInfo->lgrui0_name) == 0;
+		fReturn = wcscmp(szAdministratorGroupName, pGroupInfo[dwI].lgrui0_name) == 0;
 		if (fReturn) break;
 	}
+	
+	FreeSid(AdministratorsGroup); 
 	NetApiBufferFree(pGroupInfo);
+	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"CurrentUsername = '%s'",szUserName);
 	return fReturn;
 }
 
@@ -762,7 +818,7 @@ BOOL LsaEIDRemoveStoredCredential(__in_opt PWSTR szUsername)
 	{
 		pBuffer->dwRid = GetRidFromUsername(szUsername);
 	}
-	pBuffer->MessageType = EIDCMHasStoredCredential;
+	pBuffer->MessageType = EIDCMRemoveStoredCredential;
 	if (!pBuffer->dwRid)
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"dwRid = 0");
@@ -941,6 +997,7 @@ BOOL MatchUserOrIsAdmin(__in DWORD dwRid, __in PVOID pClientInfo)
 {
 	BOOL fReturn = FALSE;
 	LUID LogonId = ((SECPKG_CLIENT_INFO*)pClientInfo)->LogonId;
+	HANDLE hToken = ((SECPKG_CLIENT_INFO*)pClientInfo)->ClientToken;
 	NTSTATUS status;
 	PSECURITY_LOGON_SESSION_DATA pLogonSessionData = NULL;
 	status = LsaGetLogonSessionData(&LogonId, &pLogonSessionData);
@@ -1012,7 +1069,7 @@ BOOL MatchUserOrIsAdmin(__in DWORD dwRid, __in PVOID pClientInfo)
 				&AdministratorsGroup); 
 			if(fReturn) 
 			{
-				if (!CheckTokenMembership( NULL, AdministratorsGroup, &fReturn)) 
+				if (!CheckTokenMembership( hToken, AdministratorsGroup, &fReturn)) 
 				{
 					 fReturn = FALSE;
 				} 

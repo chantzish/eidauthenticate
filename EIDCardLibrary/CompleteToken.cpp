@@ -1,3 +1,19 @@
+/*	EID Authentication
+    Copyright (C) 2009 Vincent Le Toux
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License version 2.1 as published by the Free Software Foundation.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
 
 #include <ntstatus.h>
 #define WIN32_NO_STATUS
@@ -14,16 +30,15 @@
 
 #include "Tracing.h"
 
-BOOL NameToSid(WCHAR* DomainName, WCHAR* UserName, PLSA_DISPATCH_TABLE FunctionTable, PSID* pUserSid);
-BOOL GetGroups(WCHAR* DomainName, WCHAR* UserName,PGROUP_USERS_INFO_1 *lpGroupInfo, LPDWORD pTotalEntries);
-BOOL GetLocalGroups(WCHAR* DomainName, WCHAR* UserName,PGROUP_USERS_INFO_0 *lpGroupInfo, LPDWORD pTotalEntries);
+BOOL NameToSid(WCHAR* UserName, PLSA_DISPATCH_TABLE FunctionTable, PSID* pUserSid);
+BOOL GetGroups(WCHAR* UserName,PGROUP_USERS_INFO_1 *lpGroupInfo, LPDWORD pTotalEntries);
+BOOL GetLocalGroups(WCHAR* UserName,PGROUP_USERS_INFO_0 *lpGroupInfo, LPDWORD pTotalEntries);
 BOOL GetPrimaryGroupSidFromUserSid(PSID UserSID,PLSA_DISPATCH_TABLE FunctionTable, PSID *PrimaryGroupSID);
 void DebugPrintSid(WCHAR* Name, PSID Sid);
 
-NTSTATUS CheckAuthorization(PWSTR DomainName, PWSTR UserName, NTSTATUS *SubStatus, LARGE_INTEGER *ExpirationTime);
+NTSTATUS CheckAuthorization(PWSTR UserName, NTSTATUS *SubStatus, LARGE_INTEGER *ExpirationTime);
 
-NTSTATUS UserNameToToken(__in_opt PLSA_UNICODE_STRING AuthenticatingAuthority,
-						__in PLSA_UNICODE_STRING AccountName,
+NTSTATUS UserNameToToken(__in PLSA_UNICODE_STRING AccountName,
 						__in PLSA_DISPATCH_TABLE FunctionTable,
 						__out PLSA_TOKEN_INFORMATION_V2 *Token,
 						__out LPDWORD TokenLength,
@@ -47,34 +62,25 @@ NTSTATUS UserNameToToken(__in_opt PLSA_UNICODE_STRING AuthenticatingAuthority,
 	LARGE_INTEGER ExpirationTime;
 	// convert AuthenticatingAuthority & AccountName to WSTR
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Convert");
-	WCHAR DomainName[UNCLEN+1];
 	WCHAR UserName[UNLEN+1];
-	if (AuthenticatingAuthority != NULL)
-	{
-		wcsncpy_s(DomainName,UNCLEN,AuthenticatingAuthority->Buffer,AuthenticatingAuthority->Length/2);
-		DomainName[AuthenticatingAuthority->Length/2]=0;
-	}
-	else
-	{
-		DomainName[0]=0;
-	}
+
 	wcsncpy_s(UserName,UNCLEN,AccountName->Buffer,AccountName->Length/2);
 	UserName[AccountName->Length/2]=0;
 	
 	// check authorization
-	Status = CheckAuthorization(DomainName, UserName, SubStatus, &ExpirationTime);
+	Status = CheckAuthorization(UserName, SubStatus, &ExpirationTime);
 	if (Status != STATUS_SUCCESS)
 	{
 		return Status;
 	}
 	// get the number of groups
-	bResult = GetGroups(DomainName,UserName,&pGroupInfo,&NumberOfGroups);
+	bResult = GetGroups(UserName,&pGroupInfo,&NumberOfGroups);
 	if (!bResult)
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetGroups error");
 		return STATUS_DATA_ERROR;
 	}
-	bResult = GetLocalGroups(DomainName,UserName,&pLocalGroupInfo,&NumberOfLocalGroups);
+	bResult = GetLocalGroups(UserName,&pLocalGroupInfo,&NumberOfLocalGroups);
 	if (!bResult)
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetGroups error");
@@ -85,7 +91,7 @@ NTSTATUS UserNameToToken(__in_opt PLSA_UNICODE_STRING AuthenticatingAuthority,
 	// get SID
 	// User
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"User");
-	bResult = NameToSid(DomainName,UserName,FunctionTable,&UserSid);
+	bResult = NameToSid(UserName,FunctionTable,&UserSid);
 	if (!bResult)
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"NameToSid");
@@ -109,12 +115,12 @@ NTSTATUS UserNameToToken(__in_opt PLSA_UNICODE_STRING AuthenticatingAuthority,
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Group");
 	for (i=0; i<NumberOfGroups; i++)
 	{
-		NameToSid(DomainName,pGroupInfo[i].grui1_name,FunctionTable,&pGroupSid[i]);
+		NameToSid(pGroupInfo[i].grui1_name,FunctionTable,&pGroupSid[i]);
 		Size += GetLengthSid(pGroupSid[i]);
 	}
 	for (i=0; i<NumberOfLocalGroups; i++)
 	{
-		NameToSid(DomainName,pLocalGroupInfo[i].grui0_name,FunctionTable,&pGroupSid[NumberOfGroups+i]);
+		NameToSid(pLocalGroupInfo[i].grui0_name,FunctionTable,&pGroupSid[NumberOfGroups+i]);
 		Size += GetLengthSid(pGroupSid[NumberOfGroups+i]);
 	}	// allocation
 	// compute the size
@@ -210,7 +216,7 @@ NTSTATUS UserNameToToken(__in_opt PLSA_UNICODE_STRING AuthenticatingAuthority,
 }
 
 
-BOOL NameToSid(WCHAR* DomainName, WCHAR* UserName, PLSA_DISPATCH_TABLE FunctionTable, PSID *pUserSid)
+BOOL NameToSid(WCHAR* UserName, PLSA_DISPATCH_TABLE FunctionTable, PSID *pUserSid)
 {
 	BOOL bResult;
 	SID_NAME_USE Use;
@@ -218,40 +224,40 @@ BOOL NameToSid(WCHAR* DomainName, WCHAR* UserName, PLSA_DISPATCH_TABLE FunctionT
 	DWORD cchReferencedDomainName=0;
 
 	DWORD dLengthSid = 0;
-	bResult = LookupAccountNameW(DomainName,  UserName, NULL,&dLengthSid,NULL, &cchReferencedDomainName, &Use);
+	bResult = LookupAccountNameW( NULL, UserName, NULL,&dLengthSid,NULL, &cchReferencedDomainName, &Use);
 	
 	*pUserSid = FunctionTable->AllocateLsaHeap(dLengthSid);
 	cchReferencedDomainName=UNCLEN;
-	bResult = LookupAccountNameW(DomainName,  UserName, *pUserSid,&dLengthSid,checkDomainName, &cchReferencedDomainName, &Use);
+	bResult = LookupAccountNameW( NULL, UserName, *pUserSid,&dLengthSid,checkDomainName, &cchReferencedDomainName, &Use);
 	if (!bResult) 
 	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Unable to LookupAccountNameW %d",GetLastError());
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Unable to LookupAccountNameW 0x%08x",GetLastError());
 		return FALSE;
 	}
 	return TRUE;
 }
 
-BOOL GetGroups(WCHAR* DomainName, WCHAR* UserName,PGROUP_USERS_INFO_1 *lpGroupInfo, LPDWORD pTotalEntries)
+BOOL GetGroups(WCHAR* UserName,PGROUP_USERS_INFO_1 *lpGroupInfo, LPDWORD pTotalEntries)
 {
 	NET_API_STATUS Status;
 	DWORD NumberOfEntries;
-	Status = NetUserGetGroups(DomainName,UserName,1,(LPBYTE*)lpGroupInfo,MAX_PREFERRED_LENGTH,&NumberOfEntries,pTotalEntries);
+	Status = NetUserGetGroups(NULL,UserName,1,(LPBYTE*)lpGroupInfo,MAX_PREFERRED_LENGTH,&NumberOfEntries,pTotalEntries);
 	if (Status != NERR_Success)
 	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Unable to NetUserGetGroups %d",Status);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Unable to NetUserGetGroups 0x%08x",Status);
 		return FALSE;
 	}
 	return TRUE;
 }
 
-BOOL GetLocalGroups(WCHAR* DomainName, WCHAR* UserName,PGROUP_USERS_INFO_0 *lpGroupInfo, LPDWORD pTotalEntries)
+BOOL GetLocalGroups(WCHAR* UserName,PGROUP_USERS_INFO_0 *lpGroupInfo, LPDWORD pTotalEntries)
 {
 	NET_API_STATUS Status;
 	DWORD NumberOfEntries;
-	Status = NetUserGetLocalGroups(DomainName,UserName,0,0,(LPBYTE*)lpGroupInfo,MAX_PREFERRED_LENGTH,&NumberOfEntries,pTotalEntries);
+	Status = NetUserGetLocalGroups(NULL,UserName,0,0,(LPBYTE*)lpGroupInfo,MAX_PREFERRED_LENGTH,&NumberOfEntries,pTotalEntries);
 	if (Status != NERR_Success)
 	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Unable to NetUserGetLocalGroups %d",Status);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Unable to NetUserGetLocalGroups 0x%08x",Status);
 		return FALSE;
 	}
 	return TRUE;
@@ -279,7 +285,7 @@ void DebugPrintSid(WCHAR* Name, PSID Sid)
 }
 
 // check is the account is valid and not disabled
-NTSTATUS CheckAuthorization(PWSTR DomainName, PWSTR UserName, NTSTATUS *SubStatus, LARGE_INTEGER *ExpirationTime)
+NTSTATUS CheckAuthorization(PWSTR UserName, NTSTATUS *SubStatus, LARGE_INTEGER *ExpirationTime)
 {
 	NTSTATUS Status;
 	USER_INFO_4 *UserInfo = NULL;

@@ -5,7 +5,6 @@
 
 #include "global.h"
 #include "EIDConfigurationWizard.h"
-#include "ElevatedActions.h"
 
 BOOL CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -17,10 +16,6 @@ BOOL CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 		if (!fHasAlreadySmartCardCredential)
 		{
 			CenterWindow(GetParent(hWnd));
-		}
-		if (fGotoNewScreen)
-		{
-			PropSheet_SetCurSelByID(hWnd,IDD_03NEW);
 		}
 		break;
 	case WM_COMMAND:

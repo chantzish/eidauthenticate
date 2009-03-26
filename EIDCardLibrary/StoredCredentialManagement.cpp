@@ -1,9 +1,32 @@
+/*	EID Authentication
+    Copyright (C) 2009 Vincent Le Toux
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License version 2.1 as published by the Free Software Foundation.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
+
 #include <ntstatus.h>
 #define WIN32_NO_STATUS
 #include <windows.h>
+#define SECURITY_WIN32
+#include <sspi.h>
+
 #include <shlobj.h>
 #include <Ntsecapi.h>
 #include <lm.h>
+
+#include <Ntsecpkg.h>
+
 #include "EidCardLibrary.h"
 #include "Tracing.h"
 #include "beid.h"
@@ -54,6 +77,74 @@ BOOL StorePrivateData(__in DWORD dwRid, __in_opt PBYTE pbSecret, __in_opt USHORT
 ////////////////////////////////////////////////////////////////////////////////
 // LEVEL 1
 ////////////////////////////////////////////////////////////////////////////////
+
+NTSTATUS CompletePrimaryCredential(__in PLSA_UNICODE_STRING AuthenticatingAuthority,
+						__in PLSA_UNICODE_STRING AccountName,
+						__in PSID UserSid,
+						__in PLUID LogonId,
+						__in PWSTR szPassword,
+						__in PLSA_DISPATCH_TABLE FunctionTable,
+						__out  PSECPKG_PRIMARY_CRED PrimaryCredentials)
+{
+
+	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
+	memset(PrimaryCredentials, 0, sizeof(SECPKG_PRIMARY_CRED));
+	PrimaryCredentials->LogonId.HighPart = LogonId->HighPart;
+	PrimaryCredentials->LogonId.LowPart = LogonId->LowPart;
+
+	PrimaryCredentials->DownlevelName.Length = AccountName->Length;
+	PrimaryCredentials->DownlevelName.MaximumLength = AccountName->MaximumLength;
+	PrimaryCredentials->DownlevelName.Buffer = (PWSTR) FunctionTable->AllocateLsaHeap(AccountName->MaximumLength);
+	memcpy(PrimaryCredentials->DownlevelName.Buffer, AccountName->Buffer, AccountName->MaximumLength);
+
+	PrimaryCredentials->DomainName.Length = AuthenticatingAuthority->Length;
+	PrimaryCredentials->DomainName.MaximumLength = AuthenticatingAuthority->MaximumLength;
+	PrimaryCredentials->DomainName.Buffer = (PWSTR) FunctionTable->AllocateLsaHeap(AuthenticatingAuthority->MaximumLength);
+	if (PrimaryCredentials->DomainName.Buffer)
+	{
+		memcpy(PrimaryCredentials->DomainName.Buffer, AuthenticatingAuthority->Buffer, AuthenticatingAuthority->MaximumLength);
+	}
+
+	PrimaryCredentials->Password.Length = (USHORT) wcslen(szPassword) * sizeof(WCHAR);
+	PrimaryCredentials->Password.MaximumLength = PrimaryCredentials->Password.Length;
+	PrimaryCredentials->Password.Buffer = (PWSTR) FunctionTable->AllocateLsaHeap(PrimaryCredentials->Password.MaximumLength);
+	if (PrimaryCredentials->Password.Buffer)
+	{
+		memcpy(PrimaryCredentials->Password.Buffer, szPassword, PrimaryCredentials->Password.Length);
+	}
+
+	// we decide that the password cannot be changed so copy it into old pass
+	PrimaryCredentials->OldPassword.Length = 0;
+	PrimaryCredentials->OldPassword.MaximumLength = 0;
+	PrimaryCredentials->OldPassword.Buffer = (PWSTR) FunctionTable->AllocateLsaHeap(PrimaryCredentials->OldPassword.MaximumLength);;
+
+	PrimaryCredentials->Flags = PRIMARY_CRED_INTERACTIVE_SMARTCARD_LOGON;
+
+	PrimaryCredentials->UserSid = (PSID) FunctionTable->AllocateLsaHeap(GetLengthSid(UserSid));
+	if (PrimaryCredentials->UserSid)
+	{
+		CopySid(GetLengthSid(UserSid),PrimaryCredentials->UserSid,UserSid);
+	}
+
+	PrimaryCredentials->DnsDomainName.Length = 0;
+	PrimaryCredentials->DnsDomainName.MaximumLength = 0;
+	PrimaryCredentials->DnsDomainName.Buffer = NULL;
+
+	PrimaryCredentials->Upn.Length = 0;
+	PrimaryCredentials->Upn.MaximumLength = 0;
+	PrimaryCredentials->Upn.Buffer = NULL;
+
+	PrimaryCredentials->LogonServer.Length = AuthenticatingAuthority->Length;
+	PrimaryCredentials->LogonServer.MaximumLength = AuthenticatingAuthority->MaximumLength;
+	PrimaryCredentials->LogonServer.Buffer = (PWSTR) FunctionTable->AllocateLsaHeap(AuthenticatingAuthority->MaximumLength);
+	if (PrimaryCredentials->LogonServer.Buffer)
+	{
+		memcpy(PrimaryCredentials->LogonServer.Buffer, AuthenticatingAuthority->Buffer, AuthenticatingAuthority->MaximumLength);
+	}
+	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave");
+	return STATUS_SUCCESS;	
+}
+
 
 BOOL CanEncryptPassword(__in_opt HCRYPTPROV hProv, __in_opt DWORD dwKeySpec,  __in_opt PCCERT_CONTEXT pCertContext)
 {
@@ -1014,7 +1105,7 @@ BOOL DecryptPassword(__in PEID_PRIVATE_DATA pEidPrivateData, __in PBYTE pSymetri
 ////////////////////////////////////////////////////////
 // Private Data Storage
 ////////////////////////////////////////////////////////
-
+/*
 extern "C" 
 {
 	//http://msdn.microsoft.com/en-us/library/cc234344(PROT.10).aspx
@@ -1039,6 +1130,7 @@ NTSTATUS MyLsaStorePrivateData(
     )
 {
 	LSA_HANDLE SecretHandle;
+	PSECURITY_DESCRIPTOR pSD;
 	NTSTATUS status = LsaOpenSecret(PolicyHandle, KeyName, 0, &SecretHandle);
 	if (status == STATUS_OBJECT_NAME_NOT_FOUND)
 	{
@@ -1050,6 +1142,9 @@ NTSTATUS MyLsaStorePrivateData(
 		return status;
 	}
 	status = LsaSetSecret(SecretHandle, PrivateData, NULL);
+	status = LsaQuerySecurityObject(SecretHandle, 
+		OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION, &pSD);
+	
 	LsaClose(SecretHandle);
 	return status;
 }
@@ -1072,7 +1167,7 @@ NTSTATUS MyLsaRetrievePrivateData(
 	status = LsaQuerySecret(SecretHandle,PrivateData,&CurrentValueSetTime,NULL,&OldValueSetTime);
 	LsaClose(SecretHandle);
 	return status;
-}
+}*/
 
 BOOL StorePrivateData(__in DWORD dwRid, __in_opt PBYTE pbSecret, __in_opt USHORT usSecretSize)
 {
@@ -1093,7 +1188,7 @@ BOOL StorePrivateData(__in DWORD dwRid, __in_opt PBYTE pbSecret, __in_opt USHORT
     ntsResult = LsaOpenPolicy(
         NULL,    // local machine
         &ObjectAttributes, 
-        POLICY_CREATE_SECRET,
+        POLICY_CREATE_SECRET | READ_CONTROL | WRITE_OWNER | WRITE_DAC,
         &LsaPolicyHandle);
 
     if( STATUS_SUCCESS != ntsResult )

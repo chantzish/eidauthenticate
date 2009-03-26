@@ -4,7 +4,6 @@
 #include <Winuser.h>
 #include "global.h"
 #include "EIDConfigurationWizard.h"
-#include "ElevatedActions.h"
 
 #include "Checks.h"
 

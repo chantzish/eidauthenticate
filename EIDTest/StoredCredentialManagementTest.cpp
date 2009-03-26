@@ -8,6 +8,7 @@
 #include "../EIDCardLibrary/StoredCredentialManagement.h"
 #include "../EIDCardLibrary/Package.h"
 #include "../EIDCardLibrary/CertificateUtilities.h"
+#include "../EIDCardLibrary/Tracing.h"
 
 extern HWND hMainWnd;
 
@@ -37,7 +38,7 @@ void menu_CREDMGMT_CreateStoredCredential()
 					}
 					else
 					{
-						MessageBox(hMainWnd,_T("Failure"),_T("Failure"),0);
+						MessageBoxWin32(GetLastError());
 					}
 				}
 			}
@@ -60,7 +61,7 @@ void menu_CREDMGMT_UpdateStoredCredential()
 			}
 			else
 			{
-				MessageBox(hMainWnd,_T("Failure"),_T("Failure"),0);
+				MessageBoxWin32(GetLastError());
 			}
 		}
 	}
@@ -78,7 +79,7 @@ void menu_CREDMGMT_DeleteStoredCredential()
 		}
 		else
 		{
-			MessageBox(hMainWnd,_T("Failure"),_T("Failure"),0);
+			MessageBoxWin32(GetLastError());
 		}
 	}
 }
@@ -110,7 +111,7 @@ void menu_CREDMGMT_RetrieveStoredCredential()
 					}
 					else
 					{
-						MessageBox(hMainWnd,_T("Failure"),_T("Failure"),0);
+						MessageBoxWin32(GetLastError());
 					}
 				}
 			}

@@ -222,8 +222,6 @@ BOOL CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 					}
 					else if (IsDlgButtonChecked(hWnd,IDC_03USETHIS))
 					{
-						WCHAR szReader[256];
-						WCHAR szCard[256];
 						if (!pRootCertificate)
 						{
 							SetWindowLong(hWnd,DWL_MSGRESULT,-1);

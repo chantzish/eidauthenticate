@@ -8,6 +8,4 @@ PROCESS 85999d90  SessionId: 0  Cid: 02a0    Peb: 7ffdf000  ParentCid: 022c
 
 switch
 
-.process /i 85999d90  
-
-.reload
+.process /r /p  85999d90  

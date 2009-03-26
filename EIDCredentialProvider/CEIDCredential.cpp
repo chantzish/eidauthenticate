@@ -1,3 +1,20 @@
+/*	EID Authentication
+    Copyright (C) 2009 Vincent Le Toux
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License version 2.1 as published by the Free Software Foundation.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
+
 //
 // THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
 // ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
@@ -16,7 +33,6 @@
 #include "../EIDCardLibrary/guid.h"
 #include "../EIDCardLibrary/EIDCardLibrary.h"
 #include "../EIDCardLibrary/Package.h"
-#include "../EIDCardLibrary/CContainer.h"
 
 
 // CEIDCredential ////////////////////////////////////////////////////////
@@ -234,52 +250,16 @@ HRESULT CEIDCredential::GetBitmapValue(
 	if ((SFI_TILEIMAGE == dwFieldID) && phbmp)
     {
         HBITMAP hbmp;
-		/*LPWSTR swImagePath = NULL;
-		ULONG swImagePathLen = 0;
-		HRESULT Status;
-		//try to load the user tile (name is in _rgFieldStrings[SFI_USERNAME])
-		Status = CallAuthPackage(_rgFieldStrings[SFI_USERNAME],&swImagePath,&swImagePathLen);
-		if (SUCCEEDED(Status))
+		// load the bitmap saved in the resource.
+		hbmp = LoadBitmap(HINST_THISDLL, MAKEINTRESOURCE(IDB_TILE_IMAGE));
+		if (hbmp != NULL)
 		{
-			hbmp = (HBITMAP) LoadImage(NULL, swImagePath,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
-			if (hbmp != NULL)
-			{
-				hr = S_OK;
-				*phbmp = hbmp;
-			}
-			else
-			{
-				hr = HRESULT_FROM_WIN32(GetLastError());
-			}
-			__try
-			{
-				//NTSTATUS status = LsaFreeMemory(swImagePath);
-				//EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"6 %d %d",status, STATUS_SUCCESS);
-			}
-			#pragma warning(push)
-#pragma warning(disable : 6320)
-			__except(EXCEPTION_EXECUTE_HANDLER)
-		#pragma warning(pop)
-			{
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"NT exception 0x%08x",GetExceptionCode());
-				return GetExceptionCode();
-			}
+			hr = S_OK;
+			*phbmp = hbmp;
 		}
-		else*/
+		else
 		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"7");
-			// else load the bitmap saved in the resource.
-			hbmp = LoadBitmap(HINST_THISDLL, MAKEINTRESOURCE(IDB_TILE_IMAGE));
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"8");
-			if (hbmp != NULL)
-			{
-				hr = S_OK;
-				*phbmp = hbmp;
-			}
-			else
-			{
-				hr = HRESULT_FROM_WIN32(GetLastError());
-			}
+			hr = HRESULT_FROM_WIN32(GetLastError());
 		}
     }
     else
