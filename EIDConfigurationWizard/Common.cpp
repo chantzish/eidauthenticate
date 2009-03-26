@@ -21,3 +21,33 @@ VOID CenterWindow(HWND hWnd)
 	       0,
 	       SWP_NOSIZE);
 }
+
+
+BOOL IsElevated()
+{
+	BOOL fReturn = FALSE;
+	HANDLE hToken	= NULL;
+
+	if ( !OpenProcessToken( GetCurrentProcess(), TOKEN_QUERY, &hToken ) )
+	{
+		return FALSE;
+	}
+
+	TOKEN_ELEVATION te = { 0 };
+	DWORD dwReturnLength = 0;
+
+	if ( GetTokenInformation(
+				hToken,
+				TokenElevation,
+				&te,
+				sizeof( te ),
+				&dwReturnLength ) )
+	{
+	
+		fReturn = te.TokenIsElevated ? TRUE : FALSE; 
+	}
+
+	CloseHandle(hToken);
+
+	return fReturn;
+}

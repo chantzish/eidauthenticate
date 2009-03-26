@@ -26,10 +26,6 @@ BOOL CALLBACK	WndProc_01MAIN(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 	{
 	case WM_INITDIALOG:
 		CenterWindow(GetParent(hWnd));
-		if (fGotoNewScreen)
-		{
-			PropSheet_SetCurSelByID(hWnd,IDD_02ENABLE);
-		}
 		break;
 	case WM_COMMAND:
 		wmId    = LOWORD(wParam);

@@ -1,3 +1,20 @@
+/*	EID Authentication
+    Copyright (C) 2009 Vincent Le Toux
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License version 2.1 as published by the Free Software Foundation.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
+
 #include <ntstatus.h>
 #define WIN32_NO_STATUS
 #include <windows.h>
@@ -22,8 +39,7 @@ LARGE_INTEGER SecondsSince1970ToTime( const DWORD Seconds )
 	return Time;
 }
 
-NTSTATUS UserNameToProfile(__in_opt PLSA_UNICODE_STRING AuthenticatingAuthority,
-						__in PLSA_UNICODE_STRING AccountName,
+NTSTATUS UserNameToProfile(__in PLSA_UNICODE_STRING AccountName,
 						__in PLSA_DISPATCH_TABLE FunctionTable,
 						__in PLSA_CLIENT_REQUEST ClientRequest,
 						__out PEID_INTERACTIVE_PROFILE *ProfileBuffer,
@@ -39,27 +55,22 @@ NTSTATUS UserNameToProfile(__in_opt PLSA_UNICODE_STRING AuthenticatingAuthority,
 	}
 
 	// copy unicode_string into LPWSTR
-	WCHAR DomainName[UNCLEN+1];
 	WCHAR UserName[UNLEN+1];
+	WCHAR DomainName[UNLEN+1];
 	ULONG Length;
 	PBYTE Offset;
-	if (AuthenticatingAuthority != NULL)
-	{
-		wcsncpy_s(DomainName,UNCLEN,AuthenticatingAuthority->Buffer,AuthenticatingAuthority->Length/2);
-		DomainName[AuthenticatingAuthority->Length/2]=0;
-	}
-	else
-	{
-		DomainName[0]=0;
-	}
+	DWORD dwSize;
+
 	wcsncpy_s(UserName,UNCLEN,AccountName->Buffer,AccountName->Length/2);
 	UserName[AccountName->Length/2]=0;
-
+	
+	dwSize = ARRAYSIZE(DomainName);
+	GetComputerNameW(DomainName, &dwSize);
 	// fill info into a dummy structure
 	EID_INTERACTIVE_PROFILE MyProfileBuffer;
 	MyProfileBuffer.MessageType = EIDInteractiveProfile;
 	USER_INFO_4 *UserInfo = NULL;
-	if((Status=NetUserGetInfo(DomainName, UserName, 4, (LPBYTE*)&UserInfo))!=0)
+	if((Status=NetUserGetInfo(NULL, UserName, 4, (LPBYTE*)&UserInfo))!=0)
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"No NetUserGetInfo");
 		if (ProfileBufferLength) *ProfileBufferLength=0;

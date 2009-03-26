@@ -135,6 +135,7 @@
 				Name="VCLinkerTool"
 				LinkIncremental="1"
 				ModuleDefinitionFile=""
+				DelayLoadDLLs=" beid35libCpp.dll"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -276,10 +277,6 @@
 				RelativePath=".\EIDConfigurationWizardPage05.cpp"
 				>
 			</File>
-			<File
-				RelativePath=".\ElevatedActions.cpp"
-				>
-			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -292,10 +289,6 @@
 			</File>
 			<File
 				RelativePath=".\EIDConfigurationWizard.h"
-				>
-			</File>
-			<File
-				RelativePath=".\ElevatedActions.h"
 				>
 			</File>
 			<File

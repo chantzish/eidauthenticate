@@ -3,7 +3,6 @@
 #include <credentialprovider.h>
 
 #include "EIDConfigurationWizard.h"
-#include "ElevatedActions.h"
 
 #include "../EIDCardLibrary/EIDCardLibrary.h"
 #include "../EIDCardLibrary/Package.h"
@@ -53,6 +52,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 
 	if (iNumArgs >= 1)
 	{
+		
 		if (_tcscmp(pszCommandLine[0],TEXT("NEW")) == 0)
 		{
 			fGotoNewScreen = TRUE;
@@ -110,7 +110,11 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 
 	fHasAlreadySmartCardCredential = LsaEIDHasStoredCredential(NULL);
 
-	if (fHasAlreadySmartCardCredential)
+	 if (fGotoNewScreen)
+	{
+		psh.nStartPage = 2;
+	}
+	else if (fHasAlreadySmartCardCredential)
 	{
 		// 01MAIN
 		psh.nStartPage = 0;

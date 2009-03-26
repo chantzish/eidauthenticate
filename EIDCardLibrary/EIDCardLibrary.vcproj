@@ -255,10 +255,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\CompletePrimaryCredential.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\CompleteProfile.cpp"
 				>
 			</File>
@@ -318,10 +314,6 @@
 			</File>
 			<File
 				RelativePath=".\CertificateValidation.h"
-				>
-			</File>
-			<File
-				RelativePath=".\CompletePrimaryCredential.h"
 				>
 			</File>
 			<File

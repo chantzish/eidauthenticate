@@ -5,6 +5,7 @@
 #include <Ntsecapi.h>
 #include "EIDTest.h"
 #include "EIDTestUIUtil.h"
+#include "../EIDCardLibrary/Tracing.h"
 
 extern HINSTANCE hInst;
 extern HWND hMainWnd;
@@ -286,6 +287,7 @@ void menu_INFO_ComputeHashSha1()
 	BOOL fStatus;
 	BYTE bHash[1024];
 	WCHAR szEncryptedPassword[2048];
+	DWORD dwError = 0;
 	if (AskPin(szPassword))
 	{
 		HCRYPTPROV hProv = NULL;
@@ -294,17 +296,45 @@ void menu_INFO_ComputeHashSha1()
 		__try
 		{
 			fStatus = CryptAcquireContext(&hProv,NULL,NULL,PROV_RSA_FULL,0);
-			if (!fStatus) __leave;
+			if (!fStatus) 
+			{	
+				dwError = GetLastError();
+				if (dwError == NTE_BAD_KEYSET)
+				{
+					dwError = 0;
+					fStatus = CryptAcquireContext(&hProv,NULL,NULL,PROV_RSA_FULL,CRYPT_NEWKEYSET);
+				}
+				if (!fStatus) 
+				{
+					__leave;
+				}
+			}
 			fStatus = CryptCreateHash(hProv, CALG_SHA1, NULL, 0, &hHash);
-			if (!fStatus) __leave;
+			if (!fStatus) 
+			{	
+				dwError = GetLastError();
+				__leave;
+			}
 			fStatus = CryptHashData(hHash,(PBYTE) szPassword, wcslen(szPassword) * sizeof(WCHAR),0);
-			if (!fStatus) __leave;
+			if (!fStatus) 
+			{	
+				dwError = GetLastError();
+				__leave;
+			}
 			dwSize = sizeof(DWORD);
 			fStatus = CryptGetHashParam(hHash, HP_HASHSIZE, (PBYTE) &dwHashSize,&dwSize, 0);
-			if (!fStatus) __leave;
+			if (!fStatus) 
+			{	
+				dwError = GetLastError();
+				__leave;
+			}
 			if (dwHashSize>sizeof(bHash)) __leave;
 			fStatus = CryptGetHashParam(hHash, HP_HASHVAL, bHash,&dwHashSize, 0);
-			if (!fStatus) __leave;
+			if (!fStatus) 
+			{	
+				dwError = GetLastError();
+				__leave;
+			}
 			for (DWORD i = 0; i< dwHashSize; i++)
 			{
 				swprintf_s(szEncryptedPassword+i*3, ARRAYSIZE(szEncryptedPassword)-i*3, L"%02X ", bHash[i]);
@@ -318,6 +348,8 @@ void menu_INFO_ComputeHashSha1()
 			if (hProv) CryptReleaseContext(hProv, 0);
 		}
 	}
+	if (dwError)
+		MessageBoxWin32(dwError);
 }
 
 typedef NTSTATUS (WINAPI *SystemFunction007) (PUNICODE_STRING string, LPBYTE hash);

@@ -1,3 +1,19 @@
+/*	EID Authentication
+    Copyright (C) 2009 Vincent Le Toux
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License version 2.1 as published by the Free Software Foundation.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
 
 //#include <stdio.h>
 //#include <winnt.h>
@@ -8,14 +24,15 @@
 
 #include <winscard.h>
 #include <Ntsecapi.h>
-#include <credentialprovider.h>
-#include <wincred.h>
+
 
 #define SECURITY_WIN32
 #include <sspi.h>
 
 #include <ntsecpkg.h>
 #include <subauth.h>
+#include <credentialprovider.h>
+#include <wincred.h>
 
 #include <iphlpapi.h>
 #include <tchar.h>
@@ -26,7 +43,6 @@
 #include "../EIDCardLibrary/CompleteProfile.h"
 #include "../EIDCardLibrary/Package.h"
 #include "../EIDCardLibrary/CertificateValidation.h"
-#include "../EIDCardLibrary/CompletePrimaryCredential.h"
 #include "../EIDCardLibrary/StoredCredentialManagement.h"
 #include "../EIDCardLibrary/Registration.h"
 
@@ -249,7 +265,7 @@ extern "C"
 
 					ULONG ulAuthPackage;
 					LSA_STRING lsaszPackageName;
-					LsaInitString(&lsaszPackageName, "Negotiate");
+					LsaInitString(&lsaszPackageName, "NTLM");
 
 					status = LsaLookupAuthenticationPackage(hLsa, &lsaszPackageName, &ulAuthPackage);
 					if (STATUS_SUCCESS != status)
@@ -299,7 +315,7 @@ extern "C"
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Invalid message %d",pBuffer->MessageType);
 			}
 			// copy error back to original buffer
-			if ( STATUS_SUCCESS != MyLsaDispatchTable->CopyToClientBuffer(ClientRequest, sizeof(DWORD), &(pBuffer->dwError)  + (ULONG) ClientBufferBase - (ULONG) pBuffer, &(pBuffer->dwError)))
+			if ( STATUS_SUCCESS != MyLsaDispatchTable->CopyToClientBuffer(ClientRequest, sizeof(DWORD), (&(pBuffer->dwError))  + (ULONG) ClientBufferBase - (ULONG) pBuffer, &(pBuffer->dwError)))
 			{
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CopyToClientBuffer failed");
 			}
@@ -312,7 +328,7 @@ extern "C"
 #pragma warning(pop)
 		{
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"NT exception 0x%08x",GetExceptionCode());
-			return GetExceptionCode();
+			return STATUS_LOGON_FAILURE;
 		}
 	}
 
@@ -511,12 +527,12 @@ extern "C"
 
 			// create token
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"TokenInformation ?");
-			Status = UserNameToToken(*AuthenticatingAuthority,*AccountName,(PLSA_DISPATCH_TABLE)MyLsaDispatchTable,
+			Status = UserNameToToken(*AccountName,(PLSA_DISPATCH_TABLE)MyLsaDispatchTable,
 						&MyTokenInformation,&TokenLength, SubStatus);
 			if (Status != STATUS_SUCCESS) 
 			{
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"UserNameToToken failed %d",Status);
-				return Status;
+				return STATUS_LOGON_FAILURE;
 			}
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"TokenInformation OK");
 			PSID pSid = MyTokenInformation->User.User.Sid;
@@ -561,7 +577,7 @@ EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Password = %s",szPassword);
 
 			// undocumented feature : if this buffer (which is not mandatory) is not filled
 			// vista login WILL crash
-			Status = UserNameToProfile(*AuthenticatingAuthority,*AccountName,(PLSA_DISPATCH_TABLE)MyLsaDispatchTable,
+			Status = UserNameToProfile(*AccountName,(PLSA_DISPATCH_TABLE)MyLsaDispatchTable,
 						ClientRequest,(PEID_INTERACTIVE_PROFILE*)ProfileBuffer,ProfileBufferLength);
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"ProfileBuffer OK Status = %d",Status);
 
@@ -592,7 +608,7 @@ EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Password = %s",szPassword);
 #pragma warning(pop)
 		{
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"NT exception 0x%08x",GetExceptionCode());
-			return GetExceptionCode();
+			return STATUS_LOGON_FAILURE;
 		}
 
 	}

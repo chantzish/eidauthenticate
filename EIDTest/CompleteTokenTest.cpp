@@ -54,7 +54,7 @@ void Menu_AP_Token()
 	FunctionTable.FreeLsaHeap = (PLSA_FREE_LSA_HEAP)EIDCardLibraryMyLsaFree;
 
 	// call function
-	Status = UserNameToToken(&ComputerName,&UserName,&FunctionTable,&TokenInformation,&TokenLength, &SubStatus);
+	Status = UserNameToToken(&UserName,&FunctionTable,&TokenInformation,&TokenLength, &SubStatus);
 	//Status = GetTokenInformationv2(NULL,ComputerNameBuffer,UserNameBuffer,&TokenInformation);
 	// analyze results & free buffer
 	if (Status == STATUS_SUCCESS)

@@ -73,7 +73,7 @@ void Menu_AP_Profile()
 	FunctionTable.FreeClientBuffer = (PLSA_FREE_CLIENT_BUFFER)EIDCardLibraryMyFreeClientBuffer;
 	FunctionTable.CopyToClientBuffer = (PLSA_COPY_TO_CLIENT_BUFFER) EIDCardLibraryMyCopyToClientBuffer;
 	// call function
-	Status = UserNameToProfile(&ComputerName,&UserName,&FunctionTable,NULL,&ProfileInformation,&ProfileLength);
+	Status = UserNameToProfile(&UserName,&FunctionTable,NULL,&ProfileInformation,&ProfileLength);
 
 	// analyze results & free buffer
 	if (Status == STATUS_SUCCESS)
