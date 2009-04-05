@@ -120,6 +120,8 @@ private:
     UINT_PTR                    _upAdviseContext;       // Used to tell our owner who we are when asking to 
                                                         // re-enumerate credentials.
     CREDENTIAL_PROVIDER_USAGE_SCENARIO      _cpus;
+	DWORD									_dwFlags;
+	BOOL									_fDontShowAnything;
 	CContainerHolderFactory<CEIDCredential>	_CredentialList;
 	CSmartCardConnectionNotifier*			_pSmartCardConnectionNotifier;
 };

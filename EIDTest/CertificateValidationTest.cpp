@@ -31,14 +31,13 @@ void menu_CREDENTIAL_Certificate()
 				MessageBox(NULL,_T("UserName not found"),_T("UserName not found"),0);
 			}
 			
-			if (IsTrustedCertificate(pCertContext,&dwError))
+			if (IsTrustedCertificate(pCertContext))
 			{
 				MessageBox(NULL,_T("The Certificate is valid"),_T("The Certificate is valid"),0);
 			}
 			else
 			{
-				MessageBox(NULL,GetTrustErrorText(dwError),_T("The Certificate is not valid"),0);
-				MessageBoxWin32(dwError);
+				MessageBoxWin32(GetLastError());
 			}
 			CertFreeCertificateContext(pCertContext);
 		}

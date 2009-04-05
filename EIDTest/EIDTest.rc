@@ -37,6 +37,7 @@ BEGIN
     MENUITEM "Certificate &Validation",IDM_CRED_CERT
     MENUITEM "UserTile",IDM_CRED_TILE
     MENUITEM "Test COM Object",IDM_CRED_COM
+    MENUITEM "Test Password Reset Wizard",IDM_CRED_RESETPASS
   END
   POPUP "EID&PasswordChangeNotification",IDM_
   BEGIN
@@ -44,6 +45,7 @@ BEGIN
     MENUITEM "Update Credential (Direct)",IDM_PASS_UPDATE
     MENUITEM "Delete Credential (Direct)",IDM_PASS_DELETE
     MENUITEM "Retrieve Credential (Direct)",IDM_PASS_RETRIEVE
+    MENUITEM "Check Password (Direct)",IDM_PASS_CHECK
   END
   POPUP "Registration",143
   BEGIN
@@ -60,6 +62,7 @@ BEGIN
   BEGIN
     MENUITEM "&CredUIPromptForWindowsCredentials",IDM_CRED_UI
     MENUITEM "CredUI Admin",IDM_CRED_UI_ADMIN
+    MENUITEM "CredUI Only EID",IDM_CRED_ONLYEID
   END
   POPUP "&Utilities"
   BEGIN

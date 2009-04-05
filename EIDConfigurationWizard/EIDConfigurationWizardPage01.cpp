@@ -18,7 +18,7 @@
 //  WM_DESTROY	- génère un message d'arrêt et retourne
 //
 //
-BOOL CALLBACK	WndProc_01MAIN(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+INT_PTR CALLBACK	WndProc_01MAIN(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	int wmId;
 	int wmEvent;

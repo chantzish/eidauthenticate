@@ -41,8 +41,8 @@ void Menu_AP_Token()
 
 	// ask for a username
 	UserName.Buffer = UserNameBuffer;
-	UserName.Length = wcslen(UserNameBuffer)*sizeof(WCHAR);
-	UserName.MaximumLength = UserName.Length+sizeof(WCHAR);
+	UserName.Length = (DWORD) wcslen(UserNameBuffer)*sizeof(WCHAR);
+	UserName.MaximumLength = (DWORD) (UserName.Length+sizeof(WCHAR));
 
 	// ask for a computer
 	ComputerName.Buffer = ComputerNameBuffer;

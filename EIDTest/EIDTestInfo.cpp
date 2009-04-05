@@ -352,25 +352,25 @@ void menu_INFO_ComputeHashSha1()
 		MessageBoxWin32(dwError);
 }
 
-typedef NTSTATUS (WINAPI *SystemFunction007) (PUNICODE_STRING string, LPBYTE hash);
+extern "C"
+{
+	NTSTATUS WINAPI SystemFunction007 (PUNICODE_STRING string, LPBYTE hash);
+}
 
 void menu_INFO_ComputeHashNT()
 {
 	WCHAR szPassword[256];
-	BYTE bHash[1024];
+	BYTE bHash[16];
 	WCHAR szEncryptedPassword[2048];
 	if (AskPin(szPassword))
 	{
-		UNICODE_STRING MyPass = {wcslen(szPassword) * sizeof(WCHAR),wcslen(szPassword) * sizeof(WCHAR),szPassword};
-		HMODULE module = LoadLibrary( TEXT("advapi32.dll") );
-		SystemFunction007 MySystemFunction007 = (SystemFunction007) GetProcAddress(module, "SystemFunction007");
-		MySystemFunction007(&MyPass, bHash);
+		UNICODE_STRING MyPass = {(USHORT) (wcslen(szPassword) * sizeof(WCHAR)),(USHORT) (wcslen(szPassword) * sizeof(WCHAR)),szPassword};
+		SystemFunction007(&MyPass, bHash);
 		for (DWORD i = 0; i< 16; i++)
 		{
 			swprintf_s(szEncryptedPassword+i*3, ARRAYSIZE(szEncryptedPassword)-i*3, L"%02X ", bHash[i]);
 		}
 		MessageBoxW(hMainWnd,szEncryptedPassword,L"Encrypted Password",0);
-		FreeLibrary(module);
 	}
 }
 

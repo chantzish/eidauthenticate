@@ -56,7 +56,7 @@ extern "C"
 	PLSA_STRING LsaInitializeString(PCHAR Source)
 	{
 		size_t Size = strlen(Source);
-		PCHAR Buffer = (PCHAR)MyLsaDispatchTable->AllocateLsaHeap(sizeof(CHAR)*(Size+1));
+		PCHAR Buffer = (PCHAR)MyLsaDispatchTable->AllocateLsaHeap((DWORD) (sizeof(CHAR)*(Size+1)));
 		if (Buffer == NULL) {
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"No Memory Buffer");
 			return NULL;
@@ -81,7 +81,7 @@ extern "C"
 	PLSA_UNICODE_STRING LsaInitializeUnicodeStringFromWideString(PWSTR Source)
 	{
 		DWORD Size = sizeof(WCHAR)*wcslen(Source);
-		PWSTR Buffer = (PWSTR)MyLsaDispatchTable->AllocateLsaHeap(Size+sizeof(WCHAR));
+		PWSTR Buffer = (PWSTR)MyLsaDispatchTable->AllocateLsaHeap((DWORD) (Size+sizeof(WCHAR)));
 		if (Buffer == NULL) {
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"No Memory Buffer");
 			return NULL;
@@ -169,6 +169,7 @@ extern "C"
 		BOOL fStatus;
 		SECPKG_CLIENT_INFO ClientInfo;
 		NTSTATUS status = STATUS_INVALID_MESSAGE;
+		NTSTATUS statusError;
 		UNREFERENCED_PARAMETER(ClientRequest);
 		UNREFERENCED_PARAMETER(ReturnBufferLength);
 		UNREFERENCED_PARAMETER(ProtocolReturnBuffer);
@@ -195,14 +196,8 @@ extern "C"
 				}
 				pPointer = (PBYTE) pBuffer->szPassword - (ULONG) ClientBufferBase + (ULONG) pBuffer;
 				pBuffer->szPassword = (PWSTR) pPointer;
-				//pPointer = (PBYTE) pBuffer->szProvider - (ULONG) ClientBufferBase + (ULONG) pBuffer;
-				//pBuffer->szProvider = (PWSTR) pPointer;
-				//pPointer = (PBYTE) pBuffer->szContainer - (ULONG) ClientBufferBase + (ULONG) pBuffer;
-				//pBuffer->szContainer = (PWSTR) pPointer;
 				pPointer = (PBYTE) pBuffer->pbPublicKey - (ULONG) ClientBufferBase + (ULONG) pBuffer;
 				pBuffer->pbPublicKey = (PBYTE) pPointer;
-				//fStatus = CreateStoredCredential(pBuffer->dwRid, pBuffer->szPassword, 0, pBuffer->szProvider,
-				//		pBuffer->szContainer, pBuffer->dwKeySpec);
 				fStatus = UpdateStoredCredentialEx(pBuffer->dwRid, pBuffer->szPassword, 0, pBuffer->pbPublicKey, 
 					pBuffer->dwPublicKeySize, pBuffer->fEncryptPassword);
 				if (!fStatus)
@@ -258,67 +253,16 @@ extern "C"
 					status = STATUS_SUCCESS;
 				}
 				break;
-			case EIDCMTest:
-				HANDLE hLsa;
-				if (LsaConnectUntrusted(&hLsa) == STATUS_SUCCESS)
-				{
-
-					ULONG ulAuthPackage;
-					LSA_STRING lsaszPackageName;
-					LsaInitString(&lsaszPackageName, "NTLM");
-
-					status = LsaLookupAuthenticationPackage(hLsa, &lsaszPackageName, &ulAuthPackage);
-					if (STATUS_SUCCESS != status)
-					{
-						EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaLookupAuthenticationPackage 0x%08X",status);
-						break;
-					}
-					CHAR PrimaryKeyBuffer[1000];
-					LSA_STRING PrimaryKey = {ARRAYSIZE(PrimaryKeyBuffer),ARRAYSIZE(PrimaryKeyBuffer),PrimaryKeyBuffer};
-					ULONG QueryContext = 0;
-					LSA_STRING Credentials;
-					EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"EIDCMTest");
-					status = MyLsaDispatchTable->GetClientInfo(&ClientInfo);
-					if (STATUS_SUCCESS != status)
-					{
-						EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetClientInfo 0x%08X",status);
-						break;
-					}
-					status = STATUS_SUCCESS;
-					while(status == STATUS_SUCCESS)
-					{
-						ULONG PrimaryKeyLength = PrimaryKey.MaximumLength;
-						Credentials.Buffer = NULL;
-						Credentials.Length = 0;
-						Credentials.MaximumLength = 0;
-						status = MyLsaDispatchTable->GetCredentials(&(ClientInfo.LogonId), ulAuthPackage, &QueryContext, TRUE, &PrimaryKey, &PrimaryKeyLength, &Credentials);
-						if (status == STATUS_SUCCESS)
-						{
-							EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Key = %Z",PrimaryKey);	
-							EIDCardLibraryDumpMemory((PUCHAR) Credentials.Buffer,Credentials.Length);
-							MyLsaDispatchTable->FreeLsaHeap(Credentials.Buffer);
-						}
-						else
-						{
-							EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetCredentials 0x%08X",status);
-						}
-					}
-					LsaClose(hLsa);
-				}
-				else
-				{
-					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaConnectUntrusted 0x%08X",status);
-					break;
-				}
-				break;
 			default:
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Invalid message %d",pBuffer->MessageType);
 			}
 			// copy error back to original buffer
-			if ( STATUS_SUCCESS != MyLsaDispatchTable->CopyToClientBuffer(ClientRequest, sizeof(DWORD), (&(pBuffer->dwError))  + (ULONG) ClientBufferBase - (ULONG) pBuffer, &(pBuffer->dwError)))
+			statusError= MyLsaDispatchTable->CopyToClientBuffer(ClientRequest, sizeof(DWORD), ((PBYTE)&(pBuffer->dwError))  + (ULONG) ClientBufferBase - (ULONG) pBuffer, &(pBuffer->dwError));
+			if (STATUS_SUCCESS != statusError )
 			{
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CopyToClientBuffer failed");
 			}
+			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"return 0x%08X",status);
 			return status;
 		}
 			// disable warning because we want to trap ALL exception
@@ -439,7 +383,6 @@ extern "C"
 		LPWSTR pPin = pwzPin;
 		PCCERT_CONTEXT pCertContext = NULL;
 		LPTSTR szUserName = NULL;
-		DWORD dwError;
 		PLSA_TOKEN_INFORMATION_V2 MyTokenInformation = NULL;
 		__try
 		{
@@ -518,9 +461,9 @@ extern "C"
 				return STATUS_LOGON_FAILURE;
 			}
 			delete[] szUserName;
-			if (!IsTrustedCertificate(pCertContext,&dwError))
+			if (!IsTrustedCertificate(pCertContext))
 			{
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Untrusted certificate 0x%x",dwError);
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Untrusted certificate 0x%x",GetLastError());
 				return STATUS_LOGON_FAILURE;
 			}
 

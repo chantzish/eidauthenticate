@@ -32,12 +32,24 @@
 #include "StoredCredentialManagementTest.h"
 #include "../EIDCardLibrary/Registration.h"
 
+#ifdef UNICODE
+#if defined _M_IX86
+#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#elif defined _M_IA64
+#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='ia64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#elif defined _M_X64
+#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='amd64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#else
+#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#endif
+#endif
+
 // Variables globales :
 HINSTANCE hInst;								// instance actuelle
 HWND hMainWnd;
 // Pré-déclarations des fonctions incluses dans ce module de code :
 
-BOOL CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
 
 int APIENTRY _tWinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
@@ -69,7 +81,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 //  WM_DESTROY	- génère un message d'arrêt et retourne
 //
 //
-BOOL CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	int wmId, wmEvent;
 	SHSTOCKICONINFO sii = {0};
@@ -166,6 +178,9 @@ BOOL CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case IDM_CRED_UI_ADMIN:
 			Menu_CREDENTIALUID_ADMIN();
 			break;
+		case IDM_CRED_ONLYEID:
+			Menu_CREDENTIALUID_ONLY_EID();
+			break;
 		case IDM_CRED_LIST:
 			menu_CREDENTIAL_List();
 			break;
@@ -178,6 +193,9 @@ BOOL CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case IDM_CRED_COM:
 			menu_CRED_COM();
 			break;
+		case IDM_CRED_RESETPASS:
+			menu_ResetPasswordWizard();
+			break;
 		case IDM_PASS_CREATE:
 			menu_CREDMGMT_CreateStoredCredential();
 			break;
@@ -189,6 +207,9 @@ BOOL CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		case IDM_PASS_RETRIEVE:
 			menu_CREDMGMT_RetrieveStoredCredential();
+			break;
+		case IDM_PASS_CHECK:
+			menu_CREDMGT_TestPassword();
 			break;
 		case IDM_REG_AP:
 			EIDAuthenticationPackageDllRegister();

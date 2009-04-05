@@ -161,6 +161,11 @@ class CMessageCredential : public ICredentialProviderCredential
 			_dwStatus = dwStatus;
 		}
 	}
+	void SetUsageScenario(CREDENTIAL_PROVIDER_USAGE_SCENARIO cpus,DWORD dwFlags)
+	{
+		_cpus = cpus;
+		_dwFlags = dwFlags;
+	}
 
 	DWORD GetStatus()
 	{
@@ -184,8 +189,11 @@ class CMessageCredential : public ICredentialProviderCredential
                                                                                             // from the name of the 
                                                                                             // field held in 
                                                                                             // _rgCredProvFieldDescriptors.
+	ICredentialProviderCredentialEvents*	_pCredProvCredentialEvents;    
 	DWORD									_dwSmartCardCount;
 	DWORD									_dwStatus;
 	DWORD									_dwOldStatus;
+	CREDENTIAL_PROVIDER_USAGE_SCENARIO    _cpus; // The usage scenario for which we were enumerated.
+	DWORD								  _dwFlags;
 };
 

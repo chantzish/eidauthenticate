@@ -28,9 +28,17 @@
 
 
 #include "helpers.h"
+#include "dll.h"
+#include "resources.h"
 #include <intsafe.h>
 #include <wincred.h>
+#include <lm.h>
+#include "../EIDCardLibrary/EIDCardLibrary.h"
+#include "../EIDCardLibrary/Tracing.h"
+#include "../EIDCardLibrary/Package.h"
 
+#pragma comment(lib,"shlwapi")
+#pragma comment(lib,"comctl32")
 // 
 // Copies the field descriptor pointed to by rcpfd into a buffer allocated 
 // using CoTaskMemAlloc. Returns that buffer in ppcpfd.
@@ -225,4 +233,118 @@ HRESULT ProtectIfNecessaryAndCopyPassword(
     }
 
     return hr;
+}
+
+typedef BOOL (NTAPI * PRShowRestoreFromMsginaW) (DWORD, DWORD, PWSTR, DWORD);
+static BOOL CALLBACK CancelForcePolicyWizardCallBack(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM lParam) 
+{ 
+ 
+    switch (message) 
+    { 
+        case WM_INITDIALOG: 
+			break;
+		case WM_COMMAND: 
+            switch (LOWORD(wParam)) 
+            { 
+            case IDC_OK: 
+				
+				{
+					WCHAR szUserName[256];
+					WCHAR szPassword[256];
+					HANDLE hToken = INVALID_HANDLE_VALUE;
+					DWORD dwValue = 0;
+					LONG lStatus;
+					__try
+					{
+						GetWindowTextW(GetDlgItem(hwndDlg,IDC_USERNAME),szUserName,ARRAYSIZE(szUserName));
+						GetWindowTextW(GetDlgItem(hwndDlg,IDC_PASSWORD),szPassword,ARRAYSIZE(szPassword));
+						if (!LogonUser(szUserName,NULL,szPassword,LOGON32_LOGON_INTERACTIVE,LOGON32_PROVIDER_DEFAULT,&hToken))
+						{
+							MessageBoxWin32(GetLastError());
+							__leave;
+						}
+						if (!IsAdmin(szUserName))
+						{
+							MessageBoxWin32(0x5);
+							__leave;
+						}
+						lStatus = RegSetKeyValue(	HKEY_CLASSES_ROOT, 
+								TEXT("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Policies\\System"), 
+								TEXT("scforceoption"), REG_DWORD, &dwValue,sizeof(DWORD));
+						if (lStatus != ERROR_SUCCESS)
+						{
+							MessageBoxWin32(lStatus);
+							__leave;
+						}
+					}
+					__finally
+					{
+						if (hToken != INVALID_HANDLE_VALUE)
+							CloseHandle(hToken);
+					}
+				}
+				EndDialog(hwndDlg,1);
+                return TRUE; 
+			case IDC_CANCEL:
+				EndDialog(hwndDlg,0);
+                return TRUE; 
+            }
+			break;
+			// g_hLink is the handle of the SysLink control.
+		case WM_NOTIFY:
+			switch (((LPNMHDR)lParam)->code)
+			{
+			case NM_CLICK:
+			case NM_RETURN:
+				{
+					PNMLINK pNMLink = (PNMLINK)lParam;
+					LITEM item = pNMLink->item;
+					if (wcscmp(item.szID, L"idinfo") == 0)
+					{
+						// launch the password reset wizard
+						HMODULE keymgrDll = NULL;
+						WCHAR szUserName[256];
+						PBYTE pbBuffer;
+						NET_API_STATUS nStatus;
+						GetWindowTextW(GetDlgItem(hwndDlg,IDC_USERNAME),szUserName,ARRAYSIZE(szUserName));
+						nStatus = NetUserGetInfo(NULL,szUserName,0,&pbBuffer);
+						if (nStatus == NERR_Success)
+						{
+							NetApiBufferFree(pbBuffer);
+							__try
+							{
+								keymgrDll = LoadLibrary(TEXT("keymgr.dll"));
+								if (!keymgrDll)
+								{
+									__leave;
+								}
+								PRShowRestoreFromMsginaW MyPRShowRestoreFromMsginaW = (PRShowRestoreFromMsginaW) GetProcAddress(keymgrDll,"PRShowRestoreFromMsginaW");
+								if (!MyPRShowRestoreFromMsginaW)
+								{
+									__leave;
+								}
+								MyPRShowRestoreFromMsginaW(NULL,NULL,szUserName,NULL);
+							}
+							__finally
+							{
+								if (keymgrDll)
+									FreeLibrary(keymgrDll);
+							}
+						}
+						else
+						{
+							MessageBoxWin32(nStatus);
+						}
+					}
+					break;
+				}
+			}
+
+	}
+	return FALSE;
+}
+
+void ShowCancelForcePolicyWizard(HWND hWnd)
+{
+	DialogBox(HINST_THISDLL,MAKEINTRESOURCE(IDD_CANCELFORCEPOLICY) ,hWnd,CancelForcePolicyWizardCallBack);
 }

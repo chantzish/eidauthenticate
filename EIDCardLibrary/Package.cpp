@@ -331,9 +331,7 @@ HRESULT LsaInitString(PSTRING pszDestinationString, PCSTR pszSourceString)
 }
 
 //
-// Retrieves the 'negotiate' AuthPackage from the LSA. In this case, Kerberos
-// For more information on auth packages see this msdn page:
-// http://msdn.microsoft.com/library/default.asp?url=/library/en-us/secauthn/security/msv1_0_lm20_logon.asp
+// Retrieves the 'eid' AuthPackage from the LSA.
 //
 HRESULT RetrieveNegotiateAuthPackage(ULONG * pulAuthPackage)
 {
@@ -654,8 +652,7 @@ DWORD GetRidFromUsername(LPTSTR szUsername)
 	return dwRid;
 }
 
-//BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPassword, __in PWSTR szProvider, 
-//								  __in PWSTR szContainer, __in DWORD dwKeySpec)
+
 BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPassword, __in PBYTE pbPublicKey, 
 								  __in USHORT dwPublicKeySize, __in BOOL fEncryptPassword)
 {
@@ -666,29 +663,16 @@ BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPasswo
 	NTSTATUS status;
 	PBYTE pPointer;
 	DWORD dwPasswordSize;
-//	DWORD dwProviderSize;
-//	DWORD dwContainerSize;
 	DWORD dwError;
 	if (!szPassword) 
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"szPassword null");
 		return FALSE;
 	}
-/*	if (!szProvider) 
-	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"szProvider null");
-		return FALSE;
-	}
-	if (!szContainer) 
-	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"szContainer null");
-		return FALSE;
-	}*/
 
-	dwPasswordSize = (wcslen(szPassword) + 1) * sizeof(WCHAR);
-	//dwProviderSize = (wcslen(szProvider) + 1) * sizeof(WCHAR);
-	//dwContainerSize = (wcslen(szContainer) + 1) * sizeof(WCHAR);
-	dwSize = sizeof(EID_CALLPACKAGE_BUFFER) + dwPasswordSize + dwPublicKeySize; //+ dwProviderSize + dwContainerSize;
+
+	dwPasswordSize = (DWORD) (wcslen(szPassword) + 1) * sizeof(WCHAR);
+	dwSize = (DWORD) (sizeof(EID_CALLPACKAGE_BUFFER) + dwPasswordSize + dwPublicKeySize); //+ dwProviderSize + dwContainerSize;
 
 	pBuffer = (PEID_CALLPACKAGE_BUFFER) malloc(dwSize);
 	if( !pBuffer) 
@@ -706,20 +690,11 @@ BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPasswo
 	}
 	pBuffer->MessageType = EIDCMCreateStoredCredential;
 	pBuffer->usPasswordLen = 0;
-	//pBuffer->dwKeySpec = dwKeySpec;
 	pPointer = (PBYTE) &(pBuffer[1]);
 
 	pBuffer->szPassword = (PWSTR) pPointer;
 	memcpy(pPointer, szPassword, dwPasswordSize);
 	pPointer += dwPasswordSize;
-
-	/*pBuffer->szProvider = (PWSTR) pPointer;
-	memcpy(pPointer, szProvider, dwProviderSize);
-	pPointer += dwProviderSize;
-
-	pBuffer->szContainer = (PWSTR) pPointer;
-	memcpy(pPointer, szContainer, dwContainerSize);
-	pPointer += dwContainerSize;*/
 	
 	pBuffer->dwPublicKeySize = dwPublicKeySize;
 	pBuffer->fEncryptPassword = fEncryptPassword;
@@ -979,6 +954,11 @@ BOOL LsaEIDCreateStoredCredential(__in PWSTR szUsername, __in PWSTR szPassword, 
 		}
 		fEncryptPassword = CanEncryptPassword(hProv, dwKeySpec, NULL);
 		fReturn = LsaEIDCreateStoredCredential(szUsername, szPassword, pbPublicKey, (USHORT) dwPublicKeySize, fEncryptPassword);
+		if (!fReturn)
+		{
+			dwError = GetLastError();
+			__leave;
+		}
 	}
 	__finally
 	{

@@ -212,7 +212,6 @@ BOOL CContainerHolderFactory<T>::CreateItemFromCertificateBlob(__in LPCTSTR szRe
 	pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, Data, DataSize);
 	if (pCertContext)
 	{
-		DWORD dwError;
 		CRYPT_KEY_PROV_INFO KeyProvInfo;
 		KeyProvInfo.dwFlags = 0;
 		KeyProvInfo.dwKeySpec = KeySpec;
@@ -222,7 +221,7 @@ BOOL CContainerHolderFactory<T>::CreateItemFromCertificateBlob(__in LPCTSTR szRe
 		KeyProvInfo.rgProvParam = 0;
 		KeyProvInfo.cProvParam = NULL;
 		CertSetCertificateContextProperty(pCertContext, CERT_KEY_PROV_INFO_PROP_ID, 0, &KeyProvInfo);
-		if (_cpus == CPUS_CREDUI || IsTrustedCertificate(pCertContext, &dwError))
+		if (_cpus == CPUS_CREDUI || IsTrustedCertificate(pCertContext))
 		{
 			BOOL fAdd = TRUE;
 			CContainer* pContainer = new CContainer(szReaderName,szCardName,szProviderName,szWideContainerName, KeySpec, ActivityCount, pCertContext);
@@ -264,7 +263,7 @@ BOOL CContainerHolderFactory<T>::CreateItemFromCertificateBlob(__in LPCTSTR szRe
 		}
 		else
 		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Untrusted certificate 0x%x",dwError);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Untrusted certificate 0x%x",GetLastError());
 		}
 	}
 	else
@@ -335,7 +334,7 @@ BOOL CContainerHolderFactory<T>::HasContainerHolder()
 template <typename T> 
 DWORD CContainerHolderFactory<T>::ContainerHolderCount()
 {
-	return _CredentialList.size();
+	return (DWORD) _CredentialList.size();
 }
 
 template <typename T> 

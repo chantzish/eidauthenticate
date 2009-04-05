@@ -41,10 +41,11 @@ enum SAMPLE_FIELD_ID
 {
     SFI_TILEIMAGE       = 0,
     SFI_USERNAME        = 1,
-    SFI_PIN		        = 2,
-    SFI_SUBMIT_BUTTON   = 3, 
-	SFI_CERTIFICATE		= 4,
-    SFI_NUM_FIELDS      = 5,  // Note: if new fields are added, keep NUM_FIELDS last.  This is used as a count of the number of fields
+	SFI_MESSAGE         = 2,
+    SFI_PIN		        = 3,
+    SFI_SUBMIT_BUTTON   = 4, 
+	SFI_CERTIFICATE		= 5,
+    SFI_NUM_FIELDS      = 6,  // Note: if new fields are added, keep NUM_FIELDS last.  This is used as a count of the number of fields
 };
 
 // Same as SAMPLE_FIELD_ID above, but for the CMessageCredential.
@@ -52,7 +53,8 @@ enum SAMPLE_MESSAGE_FIELD_ID
 {
     SMFI_TILEIMAGE		= 0,
 	SMFI_MESSAGE        = 1, 
-    SMFI_NUM_FIELDS     = 2,  // Note: if new fields are added, keep NUM_FIELDS last.  This is used as a count of the number of fields
+	SMFI_CANCELFORCEPOLICY	= 2,
+    SMFI_NUM_FIELDS     = 3,  // Note: if new fields are added, keep NUM_FIELDS last.  This is used as a count of the number of fields
 };
 
 // The first value indicates when the tile is displayed (selected, not selected)
@@ -74,6 +76,7 @@ static const FIELD_STATE_PAIR s_rgFieldStatePairs[] =
 {
     { CPFS_DISPLAY_IN_BOTH, CPFIS_NONE },                   // SFI_TILEIMAGE
     { CPFS_DISPLAY_IN_BOTH, CPFIS_NONE },                   // SFI_USERNAME
+	{ CPFS_DISPLAY_IN_BOTH, CPFIS_NONE },                   // SFI_MESSAGE
     { CPFS_DISPLAY_IN_SELECTED_TILE, CPFIS_FOCUSED },       // SFI_PIN
     { CPFS_DISPLAY_IN_SELECTED_TILE, CPFIS_NONE    },       // SFI_SUBMIT_BUTTON   
 	{ CPFS_DISPLAY_IN_SELECTED_TILE, CPFIS_FOCUSED },       // SFI_CERTIFICATE
@@ -84,6 +87,7 @@ static const FIELD_STATE_PAIR s_rgMessageFieldStatePairs[] =
 {
 	{ CPFS_DISPLAY_IN_BOTH, CPFIS_NONE },                   // SMFI_TILEIMAGE
 	{ CPFS_DISPLAY_IN_BOTH, CPFIS_NONE },                   // SMFI_MESSAGE
+	{ CPFS_HIDDEN, CPFIS_NONE },          // SMFI_CANCELFORCEPOLICY
 };
 
 // Field descriptors for unlock and logon.
@@ -94,7 +98,8 @@ static const CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR s_rgCredProvFieldDescriptors[]
 {
     { SFI_TILEIMAGE, CPFT_TILE_IMAGE, L"Image" },
     { SFI_USERNAME, CPFT_LARGE_TEXT, L"Username" },
-    { SFI_PIN, CPFT_PASSWORD_TEXT, L"Pinèèèèè" },
+	{ SFI_MESSAGE, CPFT_SMALL_TEXT, L"Test" },
+    { SFI_PIN, CPFT_PASSWORD_TEXT, L"Pin" },
     { SFI_SUBMIT_BUTTON, CPFT_SUBMIT_BUTTON, L"Submit" },
 	{ SFI_CERTIFICATE, CPFT_COMMAND_LINK, L"Submit" },
 };
@@ -104,4 +109,5 @@ static const CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR s_rgMessageCredProvFieldDescri
 {
     { SMFI_TILEIMAGE, CPFT_TILE_IMAGE, L"Image" },
 	{ SMFI_MESSAGE, CPFT_LARGE_TEXT, L"PleaseConnect" },
+	{ SMFI_CANCELFORCEPOLICY, CPFT_COMMAND_LINK, L"Disable Force Smart Card Logon Policy" },
 };

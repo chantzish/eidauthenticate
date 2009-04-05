@@ -55,6 +55,7 @@ CEIDProvider::CEIDProvider():
     _pcpe = NULL;
     _pMessageCredential = NULL;
 	_pSmartCardConnectionNotifier = NULL;
+	_fDontShowAnything = FALSE;
 }
 
 CEIDProvider::~CEIDProvider()
@@ -131,6 +132,7 @@ HRESULT CEIDProvider::SetUsageScenario(
     case CPUS_UNLOCK_WORKSTATION:       
     case CPUS_CREDUI:
         _cpus = cpus;
+		_dwFlags = dwFlags;
 
         // Create the CEIDCredential (for connected scenarios), the CMessageCredential
         // (for disconnected scenarios), and the CEIDDetection (to detect commands, such
@@ -150,6 +152,7 @@ HRESULT CEIDProvider::SetUsageScenario(
   
 			    hr = _pMessageCredential->Initialize(s_rgMessageCredProvFieldDescriptors, s_rgMessageFieldStatePairs, L"Please connect");
 				_CredentialList.SetUsageScenario(cpus,dwFlags);
+				_pMessageCredential->SetUsageScenario(cpus,dwFlags);
 				_pSmartCardConnectionNotifier = new CSmartCardConnectionNotifier(this);
             }
             else
@@ -197,9 +200,17 @@ STDMETHODIMP CEIDProvider::SetSerialization(
     const CREDENTIAL_PROVIDER_CREDENTIAL_SERIALIZATION* pcpcs
     )
 {
-    UNREFERENCED_PARAMETER(pcpcs);
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"");
-    return E_NOTIMPL;
+	if (_dwFlags | CREDUIWIN_AUTHPACKAGE_ONLY)
+	{
+		ULONG ulAuthenticationPackage;
+		RetrieveNegotiateAuthPackage(&ulAuthenticationPackage);
+		if (pcpcs->ulAuthenticationPackage != ulAuthenticationPackage)
+		{
+			_fDontShowAnything = TRUE;
+		}
+	}
+    return S_OK;
 }
 
 // Called by LogonUI to give you a callback. Providers often use the callback if they
@@ -333,26 +344,34 @@ HRESULT CEIDProvider::GetCredentialCount(
     BOOL* pbAutoLogonWithDefault
     )
 {
-	if (_CredentialList.HasContainerHolder())
-    {
-		*pdwCount = _CredentialList.ContainerHolderCount();
-		*pdwDefault = 0;
+	if (_fDontShowAnything)
+	{
+		*pdwDefault = CREDENTIAL_PROVIDER_NO_DEFAULT;
+		*pdwCount = 0;
 	}
 	else
 	{
-		// show the tile when :
-		// not in Logon
-		// Smart Card Logon requiered not active
-		*pdwCount = 1;
-		if (_cpus == CPUS_LOGON)
+		if (_CredentialList.HasContainerHolder())
 		{
-			if (!GetPolicyValue(scforceoption))
-			{
-				*pdwCount = 0;
-			}
+			*pdwCount = _CredentialList.ContainerHolderCount();
+			*pdwDefault = 0;
 		}
-		
-		*pdwDefault = CREDENTIAL_PROVIDER_NO_DEFAULT;
+		else
+		{
+			// show the tile when :
+			// not in Logon
+			// Smart Card Logon requiered not active
+			*pdwCount = 1;
+			if (_cpus == CPUS_LOGON)
+			{
+				if (!GetPolicyValue(scforceoption))
+				{
+					*pdwCount = 0;
+				}
+			}
+			
+			*pdwDefault = CREDENTIAL_PROVIDER_NO_DEFAULT;
+		}
 	}
     *pbAutoLogonWithDefault = FALSE;
     return S_OK;

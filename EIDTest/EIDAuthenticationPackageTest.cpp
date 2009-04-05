@@ -125,7 +125,7 @@ void menu_AP_Protect()
     DATA_BLOB DataOut;
 	DATA_BLOB DataVerify;
     BYTE *pbDataInput =(BYTE *)"Hello world of data protection.";
-    DWORD cbDataInput = strlen((char *)pbDataInput)+1;
+    DWORD cbDataInput = (DWORD) (strlen((char *)pbDataInput)+1);
     DataIn.pbData = pbDataInput;
     DataIn.cbData = cbDataInput; 
 	//-------------------------------------------------------------------

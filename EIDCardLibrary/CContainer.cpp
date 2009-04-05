@@ -99,10 +99,10 @@ BOOL CContainer::IsOnReader(LPCTSTR szReaderName)
 
 PEID_SMARTCARD_CSP_INFO CContainer::GetCSPInfo()
 {
-	DWORD dwReaderLen = _tcslen(_szReaderName)+1;
-	DWORD dwCardLen = _tcslen(_szCardName)+1;
-	DWORD dwProviderLen = _tcslen(_szProviderName)+1;
-	DWORD dwContainerLen = _tcslen(_szContainerName)+1;
+	DWORD dwReaderLen = (DWORD) _tcslen(_szReaderName)+1;
+	DWORD dwCardLen = (DWORD) _tcslen(_szCardName)+1;
+	DWORD dwProviderLen = (DWORD) _tcslen(_szProviderName)+1;
+	DWORD dwContainerLen = (DWORD) _tcslen(_szContainerName)+1;
 	DWORD dwBufferSize = dwReaderLen + dwCardLen + dwProviderLen + dwContainerLen;
 	
 	PEID_SMARTCARD_CSP_INFO pCspInfo = (PEID_SMARTCARD_CSP_INFO) malloc(sizeof(EID_SMARTCARD_CSP_INFO)+dwBufferSize*sizeof(TCHAR));
@@ -191,7 +191,7 @@ BOOL CContainer::TriggerRemovePolicy()
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"RegOpenKey 0x%08x (service not running ?)",lResult);
 			__leave;
 		}
-		dwSize = sizeof(USHORT) + sizeof(USHORT) + (_tcslen(_szReaderName) + 1) *sizeof(WCHAR);
+		dwSize = (DWORD) (sizeof(USHORT) + sizeof(USHORT) + (_tcslen(_szReaderName) + 1) *sizeof(WCHAR));
 		pbBuffer = (PBYTE) malloc(dwSize);
 		if (!pbBuffer)
 		{

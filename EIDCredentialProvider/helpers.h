@@ -63,12 +63,6 @@ HRESULT UnicodeStringInitWithString(
     );
 
 
-//get the authentication package that will be used for our logon attempt
-HRESULT RetrieveNegotiateAuthPackage(
-    ULONG * pulAuthPackage
-    );
-
-
 //encrypt a password (if necessary) and copy it; if not, just copy it
 HRESULT ProtectIfNecessaryAndCopyPassword(
     PWSTR pwzPassword,
@@ -76,3 +70,5 @@ HRESULT ProtectIfNecessaryAndCopyPassword(
 	DWORD dwFlags,
     PWSTR* ppwzProtectedPassword
     );
+
+void ShowCancelForcePolicyWizard(HWND hWnd);

@@ -59,6 +59,17 @@ typedef struct _EID_PRIVATE_DATA
 	BYTE Data[sizeof(DWORD)];
 } EID_PRIVATE_DATA, *PEID_PRIVATE_DATA;
 
+typedef struct {
+    unsigned int SigAlgId;
+    unsigned int HashAlgId;
+    ULONG cbPublicKey;
+    BYTE PublicKey[1];
+} PublicKeyBlob; 
+extern "C"
+{
+	NTSTATUS WINAPI SystemFunction007 (PUNICODE_STRING string, LPBYTE hash);
+}
+
 // level 1
 #include "StoredCredentialManagement.h"
 
@@ -116,9 +127,9 @@ NTSTATUS CompletePrimaryCredential(__in PLSA_UNICODE_STRING AuthenticatingAuthor
 	// we decide that the password cannot be changed so copy it into old pass
 	PrimaryCredentials->OldPassword.Length = 0;
 	PrimaryCredentials->OldPassword.MaximumLength = 0;
-	PrimaryCredentials->OldPassword.Buffer = (PWSTR) FunctionTable->AllocateLsaHeap(PrimaryCredentials->OldPassword.MaximumLength);;
+	PrimaryCredentials->OldPassword.Buffer = NULL;//(PWSTR) FunctionTable->AllocateLsaHeap(PrimaryCredentials->OldPassword.MaximumLength);;
 
-	PrimaryCredentials->Flags = PRIMARY_CRED_INTERACTIVE_SMARTCARD_LOGON;
+	PrimaryCredentials->Flags = PRIMARY_CRED_CLEAR_PASSWORD;
 
 	PrimaryCredentials->UserSid = (PSID) FunctionTable->AllocateLsaHeap(GetLengthSid(UserSid));
 	if (PrimaryCredentials->UserSid)
@@ -301,6 +312,7 @@ BOOL UpdateStoredCredentialEx(__in DWORD dwRid, __in PWSTR szPassword, __in_opt 
 	PEID_PRIVATE_DATA pEidPrivateData = NULL;
 	USHORT usPasswordSize;
 	DWORD dwError = 0;
+	NTSTATUS Status;
 	__try
 	{
 		// get Public Key
@@ -309,6 +321,14 @@ BOOL UpdateStoredCredentialEx(__in DWORD dwRid, __in PWSTR szPassword, __in_opt 
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"With public key");
 			pBlob = pPublicKeyBlob;
 			// dwPermissions = 0  => all access
+			// check password
+			Status = CheckPassword(dwRid, szPassword);
+			if (Status != STATUS_SUCCESS)
+			{
+				dwError = LsaNtStatusToWinError(Status);
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CheckPassword 0x%08x",dwError);
+				__leave;
+			}
 		}
 		else
 		{
@@ -319,6 +339,7 @@ BOOL UpdateStoredCredentialEx(__in DWORD dwRid, __in PWSTR szPassword, __in_opt 
 			if (!fStatus)
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"RetrievePrivateData 0x%08x",dwError);
 				__leave;
 			}
 			pBlob = pEidPrivateData->Data + pEidPrivateData->dwCertificatOffset;
@@ -465,6 +486,8 @@ BOOL RetrieveStoredCredential(__in DWORD dwRid, __in PCCERT_CONTEXT pCertContext
 	PCRYPT_KEY_PROV_INFO pKeyProvInfo = NULL;
 	DWORD dwError = 0;
 	*pszPassword = NULL;
+	PublicKeyBlob *pbPublicKey = NULL;
+	PublicKeyBlob* StoredPublicKeyBlob;
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter Rid = %d", dwRid);
 	__try
 	{
@@ -513,6 +536,30 @@ BOOL RetrieveStoredCredential(__in DWORD dwRid, __in PCCERT_CONTEXT pCertContext
 			// vanilla authentication
 			else
 			{
+				StoredPublicKeyBlob = (PublicKeyBlob*) (pEidPrivateData->Data + pEidPrivateData->dwCertificatOffset);
+				if (!GetPublicKeyBlobFromCertificate(pCertContext, (PBYTE*) &pbPublicKey))
+				{
+					dwError = GetLastError();
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error returned by GetPublicKeyBlobFromCertificate");
+					__leave;
+				}
+				if (pbPublicKey->HashAlgId != StoredPublicKeyBlob->HashAlgId ||
+					pbPublicKey->SigAlgId != StoredPublicKeyBlob->SigAlgId)
+				{
+					dwError = 0x80090015; //NTE_BAD_PUBLIC_KEY;
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"HashAlgId or SigAlgId does not match");
+					__leave;
+				}
+				for (DWORD dwI = 0; dwI < pbPublicKey->cbPublicKey; dwI++)
+				{
+					if (pbPublicKey->PublicKey[dwI] != StoredPublicKeyBlob->PublicKey[dwI])
+					{
+						dwError = 0x80090015; //NTE_BAD_PUBLIC_KEY;
+						EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"public key does not match");
+						__leave;
+					}
+				}
+
 				if (!SolveChallenge(pCertContext, Pin))
 				{
 					dwError = GetLastError();
@@ -531,6 +578,29 @@ BOOL RetrieveStoredCredential(__in DWORD dwRid, __in PCCERT_CONTEXT pCertContext
 			*(PWSTR)(((PBYTE)*pszPassword) + pEidPrivateData->dwPasswordSize) = '\0';
 			break;
 		case eidpdtCrypted:
+			StoredPublicKeyBlob = (PublicKeyBlob*) (pEidPrivateData->Data + pEidPrivateData->dwCertificatOffset);
+			if (!GetPublicKeyBlobFromCertificate(pCertContext, (PBYTE*) &pbPublicKey))
+			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error returned by GetPublicKeyBlobFromCertificate");
+				__leave;
+			}
+			if (pbPublicKey->HashAlgId != StoredPublicKeyBlob->HashAlgId ||
+				pbPublicKey->SigAlgId != StoredPublicKeyBlob->SigAlgId)
+			{
+				dwError = 0x80090015; //NTE_BAD_PUBLIC_KEY;
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"HashAlgId or SigAlgId does not match");
+				__leave;
+			}
+			for (DWORD dwI = 0; dwI < pbPublicKey->cbPublicKey; dwI++)
+			{
+				if (pbPublicKey->PublicKey[dwI] != StoredPublicKeyBlob->PublicKey[dwI])
+				{
+					dwError = 0x80090015; //NTE_BAD_PUBLIC_KEY;
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"public key does not match");
+					__leave;
+				}
+			}
 			if (!DecryptSymetricKey(pCertContext, pEidPrivateData, Pin, &pSymetricKey, &usSymetricKeySize))
 			{
 				dwError = GetLastError();
@@ -554,6 +624,8 @@ BOOL RetrieveStoredCredential(__in DWORD dwRid, __in PCCERT_CONTEXT pCertContext
 			if (*pszPassword)
 				free(*pszPassword);
 		}
+		if (pbPublicKey)
+			free(pbPublicKey);
 		if (pKeyProvInfo)
 			free(pKeyProvInfo);
 		if (pSymetricKey)
@@ -568,6 +640,71 @@ BOOL RetrieveStoredCredential(__in DWORD dwRid, __in PCCERT_CONTEXT pCertContext
 ////////////////////////////////////////////////////////////////////////////////
 // LEVEL 2
 ////////////////////////////////////////////////////////////////////////////////
+
+BOOL GetPublicKeyBlobFromCertificate(PCCERT_CONTEXT pCertContext, PBYTE *ppbPublicKey)
+{
+	BOOL fStatus, fFreeProv;
+	DWORD dwKeySpec;
+	DWORD dwPublicKeySize;
+	HCRYPTPROV hProv = NULL;
+	HCRYPTKEY hKey = NULL;
+	DWORD dwError = 0;
+	BOOL fReturn = FALSE;
+	__try
+	{
+		fStatus = CryptAcquireCertificatePrivateKey(pCertContext, 0, NULL, &hProv, &dwKeySpec, &fFreeProv);
+		if (!fStatus)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireCertificatePrivateKey 0x%08x",GetLastError());
+			__leave;
+		}
+		fStatus = CryptGetUserKey(hProv, dwKeySpec, &hKey);
+		if (!fStatus)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptGetUserKey 0x%08x",GetLastError());
+			__leave;
+		}
+		fStatus = CryptExportKey( hKey, NULL, PUBLICKEYBLOB, 0, NULL, &dwPublicKeySize);
+		if (!fStatus)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptExportKey 0x%08x",GetLastError());
+			__leave;
+		}
+		*ppbPublicKey = (PBYTE) malloc(dwPublicKeySize);
+		if (!*ppbPublicKey)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"malloc 0x%08x",GetLastError());
+			__leave;
+		}
+		fStatus = CryptExportKey( hKey, NULL, PUBLICKEYBLOB, 0, *ppbPublicKey, &dwPublicKeySize);
+		if (!fStatus)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptExportKey 0x%08x",GetLastError());
+			__leave;
+		}
+		fReturn = TRUE;
+	}
+	__finally
+	{
+		if (!fReturn)
+		{
+			if (*ppbPublicKey)
+				free(*ppbPublicKey);
+		}
+		if (hKey)
+			CryptDestroyKey(hKey);
+
+		if (hProv)
+			CryptReleaseContext(hProv, 0);
+	}
+	SetLastError(dwError);
+	return fReturn;
+}
 
 BOOL SolveChallenge(__in PCCERT_CONTEXT pCertContext, __in LPCTSTR Pin)
 {
@@ -618,7 +755,7 @@ BOOL SolveChallenge(__in PCCERT_CONTEXT pCertContext, __in LPCTSTR Pin)
 		}
 		strcpy_s(pbPin, dwPinLen, Pin);
 #else
-		dwPinLen = wcslen(Pin) + 1;
+		dwPinLen = (DWORD) wcslen(Pin) + 1;
 		pbPin = (LPSTR) malloc(dwPinLen);
 		if (!pbPin)
 		{
@@ -764,7 +901,7 @@ BOOL DecryptSymetricKey(__in PCCERT_CONTEXT pCertContext, __in PEID_PRIVATE_DATA
 		}
 		strcpy_s(pbPin, dwPinLen, Pin);
 #else
-		dwPinLen = wcslen(Pin) + sizeof(CHAR);
+		dwPinLen = (DWORD) (wcslen(Pin) + sizeof(CHAR));
 		pbPin = (LPSTR) malloc(dwPinLen);
 		if (!pbPin)
 		{
@@ -943,7 +1080,7 @@ BOOL EncryptPasswordAndSaveIt(__in HCRYPTKEY hKey, __in PWSTR szPassword, __in_o
 	__try
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
-		dwPasswordSize = (dwPasswordLen?dwPasswordLen:wcslen(szPassword)* sizeof(WCHAR));
+		dwPasswordSize = (DWORD) (dwPasswordLen?dwPasswordLen:wcslen(szPassword)* sizeof(WCHAR));
 		dwSize = sizeof(DWORD);
 		if (!CryptGetKeyParam(hKey, KP_BLOCKLEN, (PBYTE) &dwBlockLen, &dwSize, 0))
 		{
@@ -1314,3 +1451,203 @@ BOOL HasStoredCredential(__in DWORD dwRid)
 }
 //////////////////////////////////////////////////////////////
 
+
+typedef struct _ENCRYPTED_LM_OWF_PASSWORD {
+    unsigned char data[16];
+} ENCRYPTED_LM_OWF_PASSWORD,
+  *PENCRYPTED_LM_OWF_PASSWORD,
+  ENCRYPTED_NT_OWF_PASSWORD,
+  *PENCRYPTED_NT_OWF_PASSWORD;
+
+typedef struct _SAMPR_USER_INTERNAL1_INFORMATION {
+    ENCRYPTED_NT_OWF_PASSWORD  EncryptedNtOwfPassword;
+    ENCRYPTED_LM_OWF_PASSWORD  EncryptedLmOwfPassword;
+    unsigned char              NtPasswordPresent;
+    unsigned char              LmPasswordPresent;
+    unsigned char              PasswordExpired;
+} SAMPR_USER_INTERNAL1_INFORMATION,
+  *PSAMPR_USER_INTERNAL1_INFORMATION;
+
+typedef enum _USER_INFORMATION_CLASS {
+    UserInternal1Information = 18,
+} USER_INFORMATION_CLASS, *PUSER_INFORMATION_CLASS;
+
+typedef PSAMPR_USER_INTERNAL1_INFORMATION PSAMPR_USER_INFO_BUFFER;
+
+typedef WCHAR * PSAMPR_SERVER_NAME;
+typedef PVOID SAMPR_HANDLE;
+
+
+// opnum 0
+typedef NTSTATUS  (NTAPI *SamrConnect) (
+    __in PSAMPR_SERVER_NAME ServerName,
+    __out SAMPR_HANDLE * ServerHandle,
+    __in DWORD DesiredAccess,
+	__in DWORD
+    );
+
+// opnum 1
+typedef NTSTATUS  (NTAPI *SamrCloseHandle) (
+    __inout SAMPR_HANDLE * SamHandle
+    );
+
+// opnum 7
+typedef NTSTATUS  (NTAPI *SamrOpenDomain) (
+    __in SAMPR_HANDLE ServerHandle,
+    __in DWORD   DesiredAccess,
+    __in PSID DomainId,
+    __out SAMPR_HANDLE * DomainHandle
+    );
+
+
+		// opnum 34
+typedef NTSTATUS  (NTAPI *SamrOpenUser) (
+    __in SAMPR_HANDLE DomainHandle,
+    __in DWORD   DesiredAccess,
+    __in DWORD   UserId,
+    __out SAMPR_HANDLE  * UserHandle
+    );
+
+// opnum 36
+typedef NTSTATUS  (NTAPI *SamrQueryInformationUser) (
+    __in SAMPR_HANDLE UserHandle,
+    __in USER_INFORMATION_CLASS  UserInformationClass,
+	__out PSAMPR_USER_INFO_BUFFER * Buffer
+    );
+
+typedef NTSTATUS  (NTAPI *SamIFree_SAMPR_USER_INFO_BUFFER) (
+	__in PSAMPR_USER_INFO_BUFFER Buffer, 
+	__in USER_INFORMATION_CLASS UserInformationClass
+	);
+
+HMODULE samsrvDll = NULL;
+SamrConnect MySamrConnect;
+SamrCloseHandle MySamrCloseHandle;
+SamrOpenDomain MySamrOpenDomain;
+SamrOpenUser MySamrOpenUser;
+SamrQueryInformationUser MySamrQueryInformationUser;
+SamIFree_SAMPR_USER_INFO_BUFFER MySamIFree;
+
+
+NTSTATUS LoadSamSrv()
+{
+	samsrvDll = LoadLibrary(TEXT("samsrv.dll"));
+	if (!samsrvDll)
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LoadSam failed %d",GetLastError());
+		return STATUS_FAIL_CHECK;
+	}
+	MySamrConnect = (SamrConnect) GetProcAddress(samsrvDll,"SamIConnect");
+	MySamrCloseHandle = (SamrCloseHandle) GetProcAddress(samsrvDll,"SamrCloseHandle");
+	MySamrOpenDomain = (SamrOpenDomain) GetProcAddress(samsrvDll,"SamrOpenDomain");
+	MySamrOpenUser = (SamrOpenUser) GetProcAddress(samsrvDll,"SamrOpenUser");
+	MySamrQueryInformationUser = (SamrQueryInformationUser) GetProcAddress(samsrvDll,"SamrQueryInformationUser");
+	MySamIFree = (SamIFree_SAMPR_USER_INFO_BUFFER) GetProcAddress(samsrvDll,"SamIFree_SAMPR_USER_INFO_BUFFER");
+	if (!MySamrConnect || !MySamrCloseHandle || !MySamrOpenDomain || !MySamrOpenUser
+		|| !MySamrQueryInformationUser || !MySamIFree)
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Null pointer function");
+		FreeLibrary(samsrvDll);
+		samsrvDll = NULL;
+		return STATUS_FAIL_CHECK;
+	}
+	return STATUS_SUCCESS;
+}
+
+NTSTATUS CheckPassword( __in DWORD dwRid, __in PWSTR szPassword)
+{
+	NTSTATUS Status = STATUS_SUCCESS;
+	LSA_OBJECT_ATTRIBUTES connectionAttrib;
+    LSA_HANDLE handlePolicy = NULL;
+    PPOLICY_ACCOUNT_DOMAIN_INFO structInfoPolicy = NULL;// -> http://msdn2.microsoft.com/en-us/library/ms721895(VS.85).aspx.
+	SAMPR_HANDLE hSam = NULL, hDomain = NULL, hUser = NULL;
+	PSAMPR_USER_INTERNAL1_INFORMATION UserInfo = NULL;
+	unsigned char bHash[16];
+	UNICODE_STRING EncryptedPassword;
+	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
+	__try
+	{
+        samsrvDll = NULL;
+		memset(&connectionAttrib,0,sizeof(LSA_OBJECT_ATTRIBUTES));
+        connectionAttrib.Length = sizeof(LSA_OBJECT_ATTRIBUTES);
+		Status = LoadSamSrv();
+		if (Status!= STATUS_SUCCESS)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LoadSamSrv failed %d",Status);
+			__leave;
+		}
+		Status = LsaOpenPolicy(NULL,&connectionAttrib,POLICY_ALL_ACCESS,&handlePolicy);
+		if (Status!= STATUS_SUCCESS)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaOpenPolicy failed %d",Status);
+			__leave;
+		}
+		Status = LsaQueryInformationPolicy(handlePolicy , PolicyAccountDomainInformation , (PVOID*)&structInfoPolicy);
+		if (Status!= STATUS_SUCCESS)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaQueryInformationPolicy failed %d",Status);
+			__leave;
+		}
+		Status = MySamrConnect(NULL , &hSam , MAXIMUM_ALLOWED, 1);
+		if (Status!= STATUS_SUCCESS)	
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SamrConnect failed %d",Status);
+			__leave;
+		}
+		Status = MySamrOpenDomain(hSam , 0xf07ff , structInfoPolicy->DomainSid , &hDomain);
+		if (Status!= STATUS_SUCCESS)	
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SamrOpenDomain failed %d",Status);
+			__leave;
+		}
+		Status = MySamrOpenUser(hDomain , MAXIMUM_ALLOWED , dwRid , &hUser);
+		if (Status!= STATUS_SUCCESS)	
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SamrOpenUser failed %d rid = %d",Status,dwRid);
+			__leave;
+		}
+		Status = MySamrQueryInformationUser(hUser , UserInternal1Information , &UserInfo);
+		if (Status!= STATUS_SUCCESS)	
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SamrQueryInformationUser failed %d",Status);
+			__leave;
+		}
+		EncryptedPassword.Length = (USHORT) wcslen(szPassword) * sizeof(WCHAR);
+		EncryptedPassword.MaximumLength = (USHORT) wcslen(szPassword) * sizeof(WCHAR);
+		EncryptedPassword.Buffer = szPassword;
+		Status = SystemFunction007(&EncryptedPassword, bHash);
+		if (Status!= STATUS_SUCCESS)	
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SystemFunction007 failed %d",Status);
+			__leave;
+		}
+		for (DWORD dwI = 0 ; dwI < 16; dwI++)
+		{
+			if (bHash[dwI] != UserInfo->EncryptedNtOwfPassword.data[dwI])
+			{
+				Status = STATUS_WRONG_PASSWORD;
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"STATUS_WRONG_PASSWORD");
+				break;
+			}
+		}
+	}
+	__finally
+	{
+		if (UserInfo)
+			MySamIFree(UserInfo, UserInternal1Information);
+		if (hUser)
+			MySamrCloseHandle(&hUser);
+		if (hDomain)
+			MySamrCloseHandle(&hDomain);
+		if (hSam)
+			MySamrCloseHandle(&hSam);
+		if (structInfoPolicy)
+			LsaFreeMemory(structInfoPolicy);
+		if (handlePolicy)
+			LsaClose(handlePolicy);
+		if (samsrvDll)
+			FreeLibrary(samsrvDll);
+	}
+	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave with status = %d",Status);
+	return Status;
+}

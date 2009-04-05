@@ -7,3 +7,5 @@ extern BOOL fGotoNewScreen;
 
 VOID CenterWindow(HWND hWnd);
 BOOL IsElevated();
+BOOL ChangeRemovePolicy(BOOL fActivate);
+BOOL ChangeForceSmartCardLogonPolicy(BOOL fActivate);

@@ -19,6 +19,11 @@ BOOL IsEIDPackageAvailable();
 
 HRESULT LsaInitString(PSTRING pszDestinationString, PCSTR pszSourceString);
 
+//get the authentication package that will be used for our logon attempt
+HRESULT RetrieveNegotiateAuthPackage(
+    ULONG * pulAuthPackage
+    );
+
 HRESULT EIDUnlockLogonInit(
     PWSTR pwzDomain,
     PWSTR pwzUsername,
@@ -48,8 +53,6 @@ BOOL HasAccountOnCurrentComputer(PWSTR szUserName);
 BOOL IsCurrentUser(PWSTR szUserName);
 BOOL IsAdmin(PWSTR szUserName);
 
-//BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPassword, __in PWSTR szProvider, 
-//								  __in PWSTR szContainer, __in DWORD dwKeySpec);
 BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPassword, __in PBYTE pbPublicKey, 
 								  __in USHORT dwPublicKeySize, __in BOOL fEncryptPassword);
 BOOL LsaEIDCreateStoredCredential(__in PWSTR szUsername, __in PWSTR szPassword, __in PCCERT_CONTEXT pCertContext);
