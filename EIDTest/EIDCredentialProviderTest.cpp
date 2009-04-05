@@ -10,37 +10,45 @@
 #include "../EIDCardLibrary/EIDCardLibrary.h"
 #include "../EIDCardLibrary/Tracing.h"
 #include "../EIDCardLibrary/guid.h"
+#include "../EIDCardLibrary/package.h"
+
+#include "EIDTestUIUtil.h"
 
 #pragma comment(lib,"Credui")
 extern HWND hMainWnd;
 
 void Menu_CREDENTIALUID_GENERIC(DWORD dwFlag)
 {
-  BOOL save = false;
-  DWORD authPackage = 0;
-  LPVOID authBuffer;
-  ULONG authBufferSize = 0;
-  CREDUI_INFO credUiInfo;
-  
-  LSA_HANDLE hLsa;
-  LSA_STRING Origin = { (USHORT)strlen("MYTEST"), (USHORT)sizeof("MYTEST"), "MYTEST" };
-  QUOTA_LIMITS Quota = {0};
-  TOKEN_SOURCE Source = { "TEST", { 0, 101 } };
-  MSV1_0_INTERACTIVE_PROFILE *Profile;
+	BOOL save = false;
+	DWORD authPackage = 0;
+	LPVOID authBuffer;
+	ULONG authBufferSize = 0;
+	CREDUI_INFO credUiInfo;
+
+	LSA_HANDLE hLsa;
+	LSA_STRING Origin = { (USHORT)strlen("MYTEST"), (USHORT)sizeof("MYTEST"), "MYTEST" };
+	QUOTA_LIMITS Quota = {0};
+	TOKEN_SOURCE Source = { "TEST", { 0, 101 } };
+	MSV1_0_INTERACTIVE_PROFILE *Profile;
 	ULONG ProfileLen;
 	LUID Luid;
 	NTSTATUS err,stat;
 	HANDLE Token;
 
+	if (dwFlag | CREDUIWIN_AUTHPACKAGE_ONLY)
+	{
+		RetrieveNegotiateAuthPackage(&authPackage);
+	}
+
 	CoInitializeEx(NULL,COINIT_APARTMENTTHREADED); 
 
-  credUiInfo.pszCaptionText = TEXT("My caption");
-  credUiInfo.pszMessageText = TEXT("My message");
-  credUiInfo.cbSize = sizeof(credUiInfo);
-  credUiInfo.hbmBanner = NULL;
-  credUiInfo.hwndParent = hMainWnd;
+	credUiInfo.pszCaptionText = TEXT("My caption");
+	credUiInfo.pszMessageText = TEXT("My message");
+	credUiInfo.cbSize = sizeof(credUiInfo);
+	credUiInfo.hbmBanner = NULL;
+	credUiInfo.hwndParent = hMainWnd;
 
-  DWORD result = CredUIPromptForWindowsCredentials(&(credUiInfo), 0, &(authPackage), 
+	DWORD result = CredUIPromptForWindowsCredentials(&(credUiInfo), 0, &(authPackage), 
     NULL, 0, &authBuffer, &authBufferSize, &(save), dwFlag);
 	if (result == ERROR_SUCCESS)
 	{
@@ -71,12 +79,9 @@ void Menu_CREDENTIALUID_GENERIC(DWORD dwFlag)
 	}
 	else
 	{
-		result = CredUIConfirmCredentials(NULL,FALSE);
 		MessageBoxWin32(GetLastError());
 	}
 	result = CredUIConfirmCredentials(NULL,FALSE);
-//GetLastError();
-
 }
 
 void Menu_CREDENTIALUID()
@@ -88,6 +93,12 @@ void Menu_CREDENTIALUID_ADMIN()
 {
 	Menu_CREDENTIALUID_GENERIC(CREDUIWIN_ENUMERATE_ADMINS);
 }
+
+void Menu_CREDENTIALUID_ONLY_EID()
+{
+	Menu_CREDENTIALUID_GENERIC(CREDUIWIN_AUTHPACKAGE_ONLY);
+}
+
 
 void menu_CRED_COM()
 {
@@ -109,4 +120,34 @@ void menu_CRED_COM()
 	Sleep(1000);
 	m_pMyID->Release();
 	m_pIMyCredentialProvider->Release();
+}
+
+typedef BOOL (NTAPI * PRShowRestoreFromMsginaW) (DWORD, DWORD, PWSTR, DWORD);
+void menu_ResetPasswordWizard()
+{
+	WCHAR szUserName[256];
+	WCHAR szComputerName[256];
+	HMODULE keymgrDll = NULL;
+	if (AskUsername(szUserName, szComputerName))
+	{
+		__try
+		{
+			keymgrDll = LoadLibrary(TEXT("keymgr.dll"));
+			if (!keymgrDll)
+			{
+				__leave;
+			}
+			PRShowRestoreFromMsginaW MyPRShowRestoreFromMsginaW = (PRShowRestoreFromMsginaW) GetProcAddress(keymgrDll,"PRShowRestoreFromMsginaW");
+			if (!MyPRShowRestoreFromMsginaW)
+			{
+				__leave;
+			}
+			MyPRShowRestoreFromMsginaW(NULL,NULL,szUserName,NULL);
+		}
+		__finally
+		{
+			if (keymgrDll)
+				FreeLibrary(keymgrDll);
+		}
+	}
 }

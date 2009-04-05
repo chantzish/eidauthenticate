@@ -31,6 +31,10 @@ BOOL CanEncryptPassword(__in_opt HCRYPTPROV hProv, __in_opt DWORD dwKeySpec,  __
 
 BOOL HasStoredCredential(__in DWORD dwRid);
 
+NTSTATUS CheckPassword( __in DWORD dwRid, __in PWSTR szPassword);
+
+BOOL GetPublicKeyBlobFromCertificate(PCCERT_CONTEXT pCertContext, PBYTE *ppbPublicKey);
+
 #ifdef _NTSECPKG_
 NTSTATUS CompletePrimaryCredential(__in PLSA_UNICODE_STRING AuthenticatingAuthority,
 						__in PLSA_UNICODE_STRING AccountName,

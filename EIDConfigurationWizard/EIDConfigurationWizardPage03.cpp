@@ -89,7 +89,7 @@ BOOL CreateRootCertificate()
 	return fReturn;
 }
 
-BOOL CreateSmartCardCertificate(PCCERT_CONTEXT pRootCertificate, PWSTR szReader, PWSTR szCard)
+BOOL CreateSmartCardCertificate(PCCERT_CONTEXT pCertificate, PWSTR szReader, PWSTR szCard)
 {
 	BOOL fReturn;
 	UI_CERTIFICATE_INFO CertificateInfo;
@@ -104,7 +104,7 @@ BOOL CreateSmartCardCertificate(PCCERT_CONTEXT pRootCertificate, PWSTR szReader,
 	CertificateInfo.szCard = szCard;
 	CertificateInfo.dwKeyType = AT_KEYEXCHANGE;
 	CertificateInfo.bHasSmartCardAuthentication = TRUE;
-	CertificateInfo.pRootCertificate = pRootCertificate;
+	CertificateInfo.pRootCertificate = pCertificate;
 	CertificateInfo.szSubject = szSubject;
 	GetSystemTime(&(CertificateInfo.StartTime));
 	GetSystemTime(&(CertificateInfo.EndTime));
@@ -146,7 +146,7 @@ VOID UpdateCertificatePanel(HWND hWnd)
 	CheckDlgButton(hWnd,IDC_03_CREATE,BST_UNCHECKED);
 }
 
-BOOL CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+INT_PTR CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	int wmId;
 	int wmEvent;
@@ -196,7 +196,7 @@ BOOL CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 						if (!ClearCard(szReader, szCard))
 						{
 							MessageBoxWin32(GetLastError());
-							SetWindowLong(hWnd,DWL_MSGRESULT,-1);
+							SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
 							return TRUE;
 						}
 					}
@@ -213,7 +213,7 @@ BOOL CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 							else
 							{
 								MessageBoxWin32(GetLastError());
-								SetWindowLong(hWnd,DWL_MSGRESULT,-1);
+								SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
 								return TRUE;
 							}
 						}
@@ -224,13 +224,13 @@ BOOL CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 					{
 						if (!pRootCertificate)
 						{
-							SetWindowLong(hWnd,DWL_MSGRESULT,-1);
+							SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
 							return TRUE;
 						}
 						if (!CreateSmartCardCertificate(pRootCertificate, szReader, szCard))
 						{
 							MessageBoxWin32(GetLastError());
-							SetWindowLong(hWnd,DWL_MSGRESULT,-1);
+							SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
 							return TRUE;
 						}
 					}
@@ -243,7 +243,7 @@ BOOL CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 						if (!ImportFileToSmartCard(szFileName, szPassword, szReader, szCard))
 						{
 							MessageBoxWin32(GetLastError());
-							SetWindowLong(hWnd,DWL_MSGRESULT,-1);
+							SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
 							return TRUE;
 						}
 
@@ -252,7 +252,7 @@ BOOL CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 				else
 				{
 					// cancel
-					SetWindowLong(hWnd,DWL_MSGRESULT,-1);
+					SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
 					return TRUE;
 				}
 				break;

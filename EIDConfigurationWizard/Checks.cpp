@@ -208,7 +208,7 @@ void DoChecks()
 				}
 				CContainer* container = MyTest->GetContainer();
 				PCCERT_CONTEXT pCertContext = container->GetContainer();
-				if (IsTrustedCertificate(pCertContext,&dwTrustError))
+				if (IsTrustedCertificate(pCertContext))
 				{
 					if (dwLevel == 1) 
 					{
@@ -252,14 +252,14 @@ void DoChecks()
 		rgCheckInfo[CHECK_USERNAME].szComment = (PTSTR) malloc(sizeof(TCHAR)*200);
 		_stprintf_s(rgCheckInfo[CHECK_USERNAME].szComment, 100, TEXT("Username(s) found : %s"),
 						MyCredentialList.GetContainerHolderAt(0)->GetContainer()->GetUserName());
-		DWORD dwRemainingChar = 200 - _tcsclen(rgCheckInfo[CHECK_USERNAME].szComment) - 1;
+		DWORD dwRemainingChar = (DWORD) (200 - _tcsclen(rgCheckInfo[CHECK_USERNAME].szComment) - 1);
 		DWORD dwMax = MyCredentialList.ContainerHolderCount();
 		for (DWORD dwI = 1; dwI < dwMax; dwI++)
 		{
 			_tcscat_s(rgCheckInfo[CHECK_USERNAME].szComment,dwRemainingChar,TEXT(", "));
-			dwRemainingChar = 200 - _tcsclen(rgCheckInfo[CHECK_USERNAME].szComment) - 1;
+			dwRemainingChar = (DWORD) (200 - _tcsclen(rgCheckInfo[CHECK_USERNAME].szComment) - 1);
 			_tcscat_s(rgCheckInfo[CHECK_USERNAME].szComment,dwRemainingChar,MyCredentialList.GetContainerHolderAt(dwI)->GetContainer()->GetUserName());
-			dwRemainingChar = 200 - _tcsclen(rgCheckInfo[CHECK_USERNAME].szComment) - 1;
+			dwRemainingChar = (DWORD) (200 - _tcsclen(rgCheckInfo[CHECK_USERNAME].szComment) - 1);
 		}
 		rgCheckInfo[CHECK_USERNAME].pCustomInfo = malloc(sizeof(TCHAR)*100);
 		_stprintf_s((PTSTR) rgCheckInfo[CHECK_USERNAME].pCustomInfo, 100, TEXT("%s"),
@@ -272,7 +272,7 @@ void DoChecks()
 		{
 			CContainerHolderTest* MyTest = MyCredentialList.GetContainerHolderAt(dwBestId);
 			PCCERT_CONTEXT pCertContext = MyTest->GetContainer()->GetContainer();
-			if (IsTrustedCertificate(pCertContext,&dwTrustError))
+			if (IsTrustedCertificate(pCertContext))
 			{
 				rgCheckInfo[CHECK_VALIDATION].dwStatus = CHECK_SUCCESS;
 				rgCheckInfo[CHECK_VALIDATION].szComment = (PTSTR) malloc(sizeof(TCHAR)*100);
@@ -282,8 +282,11 @@ void DoChecks()
 			{
 				rgCheckInfo[CHECK_VALIDATION].dwStatus = CHECK_FAILED;
 				rgCheckInfo[CHECK_VALIDATION].szComment = (PTSTR) malloc(sizeof(TCHAR)*100);
-				_stprintf_s(rgCheckInfo[CHECK_VALIDATION].szComment, 100, TEXT("Failure (%s)"),GetTrustErrorText(dwTrustError));
-				EnableAction(CHECK_VALIDATION);
+				_stprintf_s(rgCheckInfo[CHECK_VALIDATION].szComment, 100, TEXT("Failure (%s)"),GetTrustErrorText(GetLastError()));
+				if (IsTrustedCertificate(pCertContext,EID_CERTIFICATE_FLAG_USERSTORE))
+				{
+					EnableAction(CHECK_VALIDATION);
+				}
 			}
 		}
 		else
@@ -295,10 +298,15 @@ void DoChecks()
 	}
 	if (dwLevel == 1)
 	{
+		CContainerHolderTest* MyTest = MyCredentialList.GetContainerHolderAt(dwBestId);
+		PCCERT_CONTEXT pCertContext = MyTest->GetContainer()->GetContainer();
 		rgCheckInfo[CHECK_VALIDATION].dwStatus = CHECK_FAILED;
 		rgCheckInfo[CHECK_VALIDATION].szComment = (PTSTR) malloc(sizeof(TCHAR)*100);
 		_stprintf_s(rgCheckInfo[CHECK_VALIDATION].szComment, 100, TEXT("Failure (%s)"),GetTrustErrorText(dwTrustError));
-		EnableAction(CHECK_VALIDATION);
+		if (IsTrustedCertificate(pCertContext,EID_CERTIFICATE_FLAG_USERSTORE))
+		{
+			EnableAction(CHECK_VALIDATION);
+		}
 	}
 	if (dwLevel > 1)
 	{

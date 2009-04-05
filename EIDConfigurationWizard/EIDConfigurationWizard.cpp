@@ -3,6 +3,7 @@
 #include <credentialprovider.h>
 
 #include "EIDConfigurationWizard.h"
+#include "global.h"
 
 #include "../EIDCardLibrary/EIDCardLibrary.h"
 #include "../EIDCardLibrary/Package.h"
@@ -22,11 +23,11 @@
 #endif
 #endif
 
-BOOL CALLBACK	WndProc_01MAIN(HWND, UINT, WPARAM, LPARAM);
-BOOL CALLBACK	WndProc_02ENABLE(HWND, UINT, WPARAM, LPARAM);
-BOOL CALLBACK	WndProc_03NEW(HWND, UINT, WPARAM, LPARAM);
-BOOL CALLBACK	WndProc_04CHECKS(HWND, UINT, WPARAM, LPARAM);
-BOOL CALLBACK	WndProc_05PASSWORD(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK	WndProc_01MAIN(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK	WndProc_02ENABLE(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK	WndProc_03NEW(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK	WndProc_04CHECKS(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK	WndProc_05PASSWORD(HWND, UINT, WPARAM, LPARAM);
 
 BOOL fHasAlreadySmartCardCredential = FALSE;
 BOOL fShowNewCertificatePanel;
@@ -57,6 +58,26 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 		{
 			fGotoNewScreen = TRUE;
 		}
+		else if (_tcscmp(pszCommandLine[0],TEXT("ACTIVATEREMOVEPOLICY")) == 0)
+		{
+			ChangeRemovePolicy(TRUE);
+			return 0;
+		} 
+		else if (_tcscmp(pszCommandLine[0],TEXT("DESACTIVATEREMOVEPOLICY")) == 0)
+		{
+			ChangeRemovePolicy(FALSE);
+			return 0;
+		} 
+		else if (_tcscmp(pszCommandLine[0],TEXT("ACTIVATEFORCEPOLICY")) == 0)
+		{
+			ChangeForceSmartCardLogonPolicy(TRUE);
+			return 0;
+		} 
+		else if (_tcscmp(pszCommandLine[0],TEXT("DESACTIVATEFORCEPOLICY")) == 0)
+		{
+			ChangeForceSmartCardLogonPolicy(FALSE);
+			return 0;
+		} 
 	}
 
 	HPROPSHEETPAGE ahpsp[5];

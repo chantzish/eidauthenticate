@@ -41,7 +41,7 @@ void AppendValueToMultiSz(HKEY hKey,PTSTR szKey, PTSTR szValue, PTSTR szData)
 		RegCloseKey(hkResult);
 		return;
 	}
-	RegSize += (_tcslen(szData) + 1 ) * sizeof(TCHAR);
+	RegSize += (DWORD) (_tcslen(szData) + 1 ) * sizeof(TCHAR);
 	Buffer = (PTSTR) malloc(RegSize);
 	if (!Buffer)
 	{
@@ -71,7 +71,7 @@ void AppendValueToMultiSz(HKEY hKey,PTSTR szKey, PTSTR szValue, PTSTR szData)
 		// add the data
 		_tcscpy_s(Pointer, _tcslen(szData) + 1, szData);
 		Pointer[_tcslen(szData) + 1] = 0;
-		RegSize += (_tcslen(szData) + 1 ) * sizeof(TCHAR);
+		RegSize += (DWORD) (_tcslen(szData) + 1 ) * sizeof(TCHAR);
 		Status = RegSetValueEx(hkResult, szValue, 0, RegType, (PBYTE) Buffer, RegSize);
 		if (Status != ERROR_SUCCESS) {
 			MessageBoxWin32(Status);
@@ -138,7 +138,7 @@ void RemoveValueFromMultiSz(HKEY hKey, PTSTR szKey, PTSTR szValue, PTSTR szData)
 		
 		if (_tcscmp(PointerIn,szData)!=0) {			
 			_tcscpy_s(PointerOut,(RegSize - RegSizeOut) /sizeof(TCHAR), PointerIn);
-			RegSizeOut += (_tcslen(PointerOut) + 1) * sizeof(TCHAR);
+			RegSizeOut += (DWORD) (_tcslen(PointerOut) + 1) * sizeof(TCHAR);
 			PointerOut += _tcslen(PointerOut) + 1;
 		}
 		PointerIn += _tcslen(PointerIn) + 1;

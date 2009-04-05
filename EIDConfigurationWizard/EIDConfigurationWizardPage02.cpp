@@ -6,7 +6,7 @@
 #include "global.h"
 #include "EIDConfigurationWizard.h"
 
-BOOL CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	int wmId;
 	int wmEvent;
@@ -16,6 +16,10 @@ BOOL CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 		if (!fHasAlreadySmartCardCredential)
 		{
 			CenterWindow(GetParent(hWnd));
+		}
+		if (!IsElevated())
+		{
+			Button_SetElevationRequiredState(GetDlgItem(hWnd,IDC_02NEW),TRUE);
 		}
 		break;
 	case WM_COMMAND:
@@ -71,10 +75,6 @@ BOOL CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 				else
 				{
 					PropSheet_SetWizButtons(hWnd, 0);
-				}
-				if (!IsElevated())
-				{
-					Button_SetElevationRequiredState(GetDlgItem(hWnd,IDC_02NEW),TRUE);
 				}
 				break;
 		}

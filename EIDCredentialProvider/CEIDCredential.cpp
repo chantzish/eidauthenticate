@@ -108,11 +108,22 @@ HRESULT CEIDCredential::Initialize(
     {
         hr = SHStrDupW(L"", &_rgFieldStrings[SFI_PIN]);
     }
+	if (SUCCEEDED(hr))
+    {
+        HINSTANCE Handle = LoadLibrary(TEXT("SmartcardCredentialProvider.dll"));
+		WCHAR Message[256] = L"";
+		if (Handle)
+		{
+			LoadStringW(Handle, 34, Message, ARRAYSIZE(Message));
+			FreeLibrary(Handle);
+		}
+		hr = SHStrDupW(Message, &_rgFieldStrings[SFI_MESSAGE]);
+    }
     if (SUCCEEDED(hr))
     {
         hr = SHStrDupW(L"Submit", &_rgFieldStrings[SFI_SUBMIT_BUTTON]);
     }
-   if (SUCCEEDED(hr))
+    if (SUCCEEDED(hr))
     {
         hr = SHStrDupW(L"Certificate detail", &_rgFieldStrings[SFI_CERTIFICATE]);
     }

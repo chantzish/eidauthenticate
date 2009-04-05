@@ -190,7 +190,7 @@ LPCTSTR GetTrustErrorText(DWORD Status)
 	return pszName;
 } 
 
-BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt PDWORD pdwError)
+BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt DWORD dwFlag)
 {
     //
     // Validate certificate chain.
@@ -203,10 +203,9 @@ BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt PDWORD pdwE
 	CERT_CHAIN_PARA          ChainPara         = {0};
 	CERT_CHAIN_POLICY_PARA   ChainPolicy       = {0};
 	CERT_CHAIN_POLICY_STATUS PolicyStatus      = {0};
-    DWORD                    dwFlags           = 0;
 	LPSTR					szOid;
-
-	dwFlags = 0;//CERT_CHAIN_ENABLE_PEER_TRUST; 
+	HCERTCHAINENGINE		hChainEngine		= HCCE_LOCAL_MACHINE;
+	DWORD dwError = 0;
 
 	//---------------------------------------------------------
     // Initialize data structures for chain building.
@@ -221,6 +220,11 @@ BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt PDWORD pdwE
 		EnhkeyUsage.cUsageIdentifier = 1;
 		szOid = szOID_KP_SMARTCARD_LOGON;
 		EnhkeyUsage.rgpszUsageIdentifier=& szOid;
+	}
+
+	if (dwFlag | EID_CERTIFICATE_FLAG_USERSTORE)
+	{
+		hChainEngine = HCCE_CURRENT_USER;
 	}
     
 	CertUsage.dwType = USAGE_MATCH_TYPE_AND;
@@ -242,12 +246,12 @@ BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt PDWORD pdwE
     // Build a chain using CertGetCertificateChain
     
     if(CertGetCertificateChain(
-        HCCE_LOCAL_MACHINE,pCertContext,NULL,NULL,&ChainPara,dwFlags,NULL,&pChainContext))
+        hChainEngine,pCertContext,NULL,NULL,&ChainPara,0,NULL,&pChainContext))
     {
 		   
 		if (pChainContext->TrustStatus.dwErrorStatus)
 		{
-			if (pdwError) *pdwError = pChainContext->TrustStatus.dwErrorStatus;
+			dwError = pChainContext->TrustStatus.dwErrorStatus;
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error %s (0x%x) returned by CertVerifyCertificateChainPolicy",GetTrustErrorText(pChainContext->TrustStatus.dwErrorStatus),pChainContext->TrustStatus.dwErrorStatus);
 		}
 		else
@@ -258,19 +262,18 @@ BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt PDWORD pdwE
 			{
 				if(PolicyStatus.dwError)
 				{
-					if (pdwError) *pdwError = PolicyStatus.dwError;
+					dwError = PolicyStatus.dwError;
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error %s %d returned by CertVerifyCertificateChainPolicy",GetTrustErrorText(PolicyStatus.dwError),PolicyStatus.dwError);
 				} 
 				else
 				{
-					if (pdwError) *pdwError = S_OK;
 					fValidation = TRUE;
 					EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"Chain OK");
 				}
 			}
 			else
 			{
-				if (pdwError) *pdwError = GetLastError();
+				dwError = GetLastError();
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CertGetCertificateChain", GetLastError());
 			}
 		}
@@ -278,12 +281,13 @@ BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt PDWORD pdwE
     }
     else
     {
-       if (pdwError) *pdwError = GetLastError();
+       dwError = GetLastError();
 	   EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CertGetCertificateChain", GetLastError());
     }
 	
 	if (!fValidation) {
 		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"Not Valid");
+		SetLastError(dwError);
 		return FALSE;
 	}
 
@@ -303,6 +307,6 @@ BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt PDWORD pdwE
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"Not Valid");
 	}
-
+	SetLastError(dwError);
 	return fValidation;
 }

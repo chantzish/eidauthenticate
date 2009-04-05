@@ -7,6 +7,10 @@
 #define IDD_05PASSWORD 1100
 #define IDC_05PASSWORD 2004
 #define IDC_05TEST 1101
+#define IDC_05RemovePolicy 1102
+#define IDC_05ForcePolicy 1103
+#define IDC_STC4 1104
+#define IDC_STC5 1105
 #define IDD_03NEW 101
 #define IDC_03USETHIS 1000
 #define IDC_03_CREATE 1002

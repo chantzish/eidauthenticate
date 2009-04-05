@@ -55,7 +55,7 @@ BOOL InitListViewData(HWND hWndListView)
 		grp.cbSize = sizeof(grp);
 		grp.iGroupId = index;
 		grp.pszHeader = rgCheckInfo[dwCheckInfoNum -1 - index].szName;
-		grp.cchHeader = wcslen(grp.pszHeader);
+		grp.cchHeader = (int) wcslen(grp.pszHeader);
 		grp.pszTask = rgCheckInfo[dwCheckInfoNum -1 - index].szAction;
 		grp.mask = LVGF_HEADER | LVGF_GROUPID | LVGF_TASK;
 		ListView_InsertGroup(hWndListView, 0, &grp);
@@ -144,7 +144,7 @@ BOOL InitListViewView(HWND hWndListView)
 	return TRUE;
 }
 
-BOOL CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	HWND hwndList;
 	BOOL fDisplayNext;

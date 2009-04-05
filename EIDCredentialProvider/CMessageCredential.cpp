@@ -28,12 +28,14 @@
 #include "CMessageCredential.h"
 #include <unknwn.h>
 #include "../EIDCardLibrary/guid.h"
+#include "../EIDCardLibrary/GPO.h"
 
 
 // CMessageCredential ////////////////////////////////////////////////////////
 
 CMessageCredential::CMessageCredential():
-    _cRef(1)
+    _cRef(1),
+    _pCredProvCredentialEvents(NULL)
 {
     DllAddRef();
     ZeroMemory(_rgCredProvFieldDescriptors, sizeof(_rgCredProvFieldDescriptors));
@@ -78,6 +80,10 @@ HRESULT CMessageCredential::Initialize(
     {
         hr = SHStrDupW(szMessage, &(_rgFieldStrings[SMFI_MESSAGE]));
     }
+	if (SUCCEEDED(hr))
+    {
+        hr = SHStrDupW(L"Test", &(_rgFieldStrings[SMFI_CANCELFORCEPOLICY]));
+    }
 
     return S_OK;
 }
@@ -88,14 +94,24 @@ HRESULT CMessageCredential::Advise(
     ICredentialProviderCredentialEvents* pcpce
     )
 {
-    UNREFERENCED_PARAMETER(pcpce);
-    return E_NOTIMPL;
+	if (_pCredProvCredentialEvents != NULL)
+    {
+        _pCredProvCredentialEvents->Release();
+    }
+    _pCredProvCredentialEvents = pcpce;
+    _pCredProvCredentialEvents->AddRef();
+    return S_OK;
 }
 
 // LogonUI calls this to tell us to release the callback.
 HRESULT CMessageCredential::UnAdvise()
 {
-    return E_NOTIMPL;
+	if (_pCredProvCredentialEvents)
+    {
+        _pCredProvCredentialEvents->Release();
+    }
+    _pCredProvCredentialEvents = NULL;
+    return S_OK;
 }
 
 // LogonUI calls this function when our tile is selected (zoomed). If you simply want 
@@ -106,7 +122,7 @@ HRESULT CMessageCredential::UnAdvise()
 HRESULT CMessageCredential::SetSelected(BOOL* pbAutoLogon)  
 {
 	UNREFERENCED_PARAMETER(pbAutoLogon);
-    return S_FALSE;
+    return S_OK;
 }
 
 // Similarly to SetSelected, LogonUI calls this when your tile was selected
@@ -129,7 +145,15 @@ HRESULT CMessageCredential::GetFieldState(
     if (dwFieldID < ARRAYSIZE(_rgFieldStatePairs) && pcpfs && pcpfis)
     {
         *pcpfis = _rgFieldStatePairs[dwFieldID].cpfis;
-        *pcpfs = _rgFieldStatePairs[dwFieldID].cpfs;
+		*pcpfs = _rgFieldStatePairs[dwFieldID].cpfs;
+		if (dwFieldID == SMFI_CANCELFORCEPOLICY && _cpus == CPUS_CREDUI)
+		{
+			if (GetPolicyValue(scforceoption))
+			{
+				*pcpfs = CPFS_DISPLAY_IN_SELECTED_TILE;
+			}
+		}
+        
         hr = S_OK;
     }
     else
@@ -148,46 +172,52 @@ HRESULT CMessageCredential::GetStringValue(
     HRESULT hr;
 	
     // Check to make sure dwFieldID is a legitimate index
-    if (dwFieldID < ARRAYSIZE(_rgCredProvFieldDescriptors) && ppwsz && dwFieldID == SMFI_MESSAGE) 
-    {
-        // Make a copy of the string and return that. The caller
-        // is responsible for freeing it.
-        UINT MessageId;
-		if (_dwStatus == Reading)
+    if (dwFieldID < ARRAYSIZE(_rgCredProvFieldDescriptors) && ppwsz )
+	{
+		if (dwFieldID == SMFI_MESSAGE) 
 		{
-			MessageId = 38;
-		}
-		else if (_dwSmartCardCount)
-		{
-			MessageId = 70;
-		}
-		else
-		{
-			MessageId = 1;
-		}
-		HINSTANCE Handle = LoadLibrary(TEXT("SmartcardCredentialProvider.dll"));
-		if (Handle)
-		{
-			DWORD dwMessageLen = 256;
-			PWSTR Message = (PWSTR) CoTaskMemAlloc(dwMessageLen*sizeof(WCHAR));
-			if (Message)
+			// Make a copy of the string and return that. The caller
+			// is responsible for freeing it.
+			UINT MessageId;
+			if (_dwStatus == Reading)
 			{
-				LoadString(Handle, MessageId, Message, dwMessageLen);
-				*ppwsz = Message;
-				hr = S_OK;
+				MessageId = 38;
+			}
+			else if (_dwSmartCardCount)
+			{
+				MessageId = 70;
+			}
+			else
+			{
+				MessageId = 1;
+			}
+			HINSTANCE Handle = LoadLibrary(TEXT("SmartcardCredentialProvider.dll"));
+			if (Handle)
+			{
+				DWORD dwMessageLen = 256;
+				PWSTR Message = (PWSTR) CoTaskMemAlloc(dwMessageLen*sizeof(WCHAR));
+				if (Message)
+				{
+					LoadString(Handle, MessageId, Message, dwMessageLen);
+					*ppwsz = Message;
+					hr = S_OK;
+				}
+				else
+				{
+					hr = HRESULT_FROM_WIN32(GetLastError());
+				}
+				FreeLibrary(Handle);
 			}
 			else
 			{
 				hr = HRESULT_FROM_WIN32(GetLastError());
-				CoTaskMemFree(Message);
 			}
-			FreeLibrary(Handle);
 		}
 		else
 		{
-			hr = HRESULT_FROM_WIN32(GetLastError());
+			hr = SHStrDupW(_rgFieldStrings[dwFieldID], ppwsz);
 		}
-    }
+	}
     else
     {
         hr = E_INVALIDARG;
@@ -224,6 +254,26 @@ HRESULT CMessageCredential::GetBitmapValue(
     }
 
     return hr;
+}
+
+// Called when a command link is clicked.
+HRESULT CMessageCredential::CommandLinkClicked(DWORD dwFieldID)
+{
+    HRESULT hr;
+	if (SMFI_CANCELFORCEPOLICY == dwFieldID)
+	{
+		if (_pCredProvCredentialEvents)
+		{
+			HWND hWnd;
+			_pCredProvCredentialEvents->OnCreatingWindow(&hWnd);
+			ShowCancelForcePolicyWizard(hWnd);
+		}
+	}
+	else
+	{
+		hr = E_INVALIDARG;
+	}
+    return E_NOTIMPL;
 }
 
 // Since this credential isn't intended to provide a way for the user to submit their
@@ -307,13 +357,6 @@ HRESULT CMessageCredential::SetComboBoxSelectedValue(
 {
     UNREFERENCED_PARAMETER(dwFieldId);
     UNREFERENCED_PARAMETER(dwSelectedItem);
-    return E_NOTIMPL;
-}
-
-// Our credential doesn't have a command link.
-HRESULT CMessageCredential::CommandLinkClicked(DWORD dwFieldID)
-{
-    UNREFERENCED_PARAMETER(dwFieldID);
     return E_NOTIMPL;
 }
 

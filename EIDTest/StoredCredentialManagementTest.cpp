@@ -118,3 +118,20 @@ void menu_CREDMGMT_RetrieveStoredCredential()
 		}
 	}
 }
+
+void menu_CREDMGT_TestPassword()
+{
+	WCHAR szUserName[256];
+	WCHAR szComputerName[256];
+	WCHAR szPassword[256];
+	DWORD dwRid;
+	if (AskUsername(szUserName, szComputerName))
+	{
+		dwRid = GetRidFromUsername(szUserName);
+		if (AskPin(szPassword))
+		{
+			NTSTATUS status = CheckPassword(NULL,szPassword);
+			MessageBoxWin32(LsaNtStatusToWinError(status));
+		}
+	}
+}
