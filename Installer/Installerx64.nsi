@@ -3,13 +3,15 @@
 ;Include Modern UI
 
   !include "MUI2.nsh"
+  !include "X64.nsh"
+
 
 ;--------------------------------
 ;General
 
   ;Name and file
   Name "EID Authentication"
-  OutFile "EIDInstall.exe"
+  OutFile "EIDInstallx64.exe"
 
   ;Default installation folder
   InstallDir "$SYSDIR"
@@ -48,21 +50,24 @@ Section "Core" SecCore
 
   SetOutPath "$INSTDIR"
   
-  ;ADD YOUR OWN FILES HERE...
-  FILE "..\Release\EIDAuthenticationPackage.dll"
-  FILE "..\Release\EIDCredentialProvider.dll"
-  FILE "..\Release\EIDPasswordChangeNotification.dll"
-  FILE "..\Release\EIDConfigurationWizard.exe"
-
- 
   ;Create uninstaller
-  WriteUninstaller "$INSTDIR\EIDUninstall.exe"
+  WriteUninstaller "$SYSDIR\EIDUninstall.exe"
 
   ;Uninstall info
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\EIDAuthentication" "DisplayName" "EID Authentication"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\EIDAuthentication" "UninstallString" "$INSTDIR\EIDUninstall.exe"
+  SetRegView 64
 
-  System::Call "EIDAuthenticationPackage.dll::DllRegister()"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\EIDAuthentication" "DisplayName" "EID Authentication"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\EIDAuthentication" "UninstallString" "$WINDIR\SYSWOW64\EIDUninstall.exe"
+
+  ;ADD YOUR OWN FILES HERE...
+
+  ${DisableX64FSRedirection}
+  FILE "..\x64\Release\EIDAuthenticationPackage.dll"
+  FILE "..\x64\Release\EIDCredentialProvider.dll"
+  FILE "..\x64\Release\EIDPasswordChangeNotification.dll"
+  FILE "..\x64\Release\EIDConfigurationWizard.exe"
+
+  ExecWait 'rundll32.exe EIDAuthenticationPackage.dll,DllRegister'
  
  
   SetPluginUnload manual
@@ -88,15 +93,18 @@ SectionEnd
 Section "Uninstall"
 
 
-  System::Call "EIDAuthenticationPackage.dll::DllUnRegister()"
-
-  Delete /REBOOTOK "$INSTDIR\EIDUninstall.exe"
-  Delete /REBOOTOK "$INSTDIR\EIDAuthenticationPackage.dll"
-  Delete /REBOOTOK "$INSTDIR\EIDCredentialProvider.dll"
-  Delete /REBOOTOK "$INSTDIR\EIDPasswordChangeNotification.dll"
-  Delete /REBOOTOK "$INSTDIR\EIDConfigurationWizard.exe"
-
+  Delete /REBOOTOK "$SYSDIR\EIDUninstall.exe"
+  SetRegView 64
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\EIDAuthentication"
+
+  ${DisableX64FSRedirection}
+  ExecWait 'rundll32.exe EIDAuthenticationPackage.dll,DllUnRegister'
+
+  Delete /REBOOTOK "$SYSDIR\EIDAuthenticationPackage.dll"
+  Delete /REBOOTOK "$SYSDIR\EIDCredentialProvider.dll"
+  Delete /REBOOTOK "$SYSDIR\EIDPasswordChangeNotification.dll"
+  Delete /REBOOTOK "$SYSDIR\EIDConfigurationWizard.exe"
+
 
   SetPluginUnload manual
   SetRebootFlag true
