@@ -30,7 +30,7 @@ CHECKINFO rgCheckInfo[ ] =
 
 DWORD dwCheckInfoNum = ARRAYSIZE(rgCheckInfo);
 
-class CContainerHolderTest : public IContainerHolderList
+class CContainerHolderTest
 {
 public:
 	CContainerHolderTest(CContainer* pContainer)
@@ -128,16 +128,15 @@ void CheckRemovePolicy()
 	}
 }
 
-void DoChecks()
+BOOL DoChecks()
 {
-	SCARDCONTEXT     hSC;
-	OPENCARDNAME_EX  dlgStruct;
-	LONG             lReturn;
 	DWORD dwTrustError = 0;
 	TCHAR szReader[1024];
 	TCHAR szCard[1024];
 	DWORD			dwBestId;
 	DWORD			dwLevel;
+	TCHAR szUserName[1024];
+	DWORD dwSize = ARRAYSIZE(szUserName);
 
 	for (DWORD dwI = 0; dwI < dwCheckInfoNum; dwI++)
 	{
@@ -154,38 +153,13 @@ void DoChecks()
 			rgCheckInfo[dwI].pCustomInfo = NULL;
 		}
 	}
-	TCHAR szUserName[1024];
-	DWORD dwSize = ARRAYSIZE(szUserName);
+
 	GetUserName(szUserName, &dwSize);
 
-	lReturn = SCardEstablishContext(SCARD_SCOPE_USER,
-									NULL,
-									NULL,
-									&hSC );
-	if ( SCARD_S_SUCCESS != lReturn )
+	if (!AskForCard(szReader, ARRAYSIZE(szReader), szCard, ARRAYSIZE(szCard)))
 	{
-		return;
+		return FALSE;
 	}
-
-	// Initialize the structure.
-	memset(&dlgStruct, 0, sizeof(dlgStruct));
-	dlgStruct.dwStructSize = sizeof(dlgStruct);
-	dlgStruct.hSCardContext = hSC;
-	dlgStruct.dwFlags = SC_DLG_MINIMAL_UI;
-	dlgStruct.lpstrRdr = szReader;
-	dlgStruct.nMaxRdr = ARRAYSIZE(szReader);
-	dlgStruct.lpstrCard = szCard;
-	dlgStruct.nMaxCard = ARRAYSIZE(szCard);
-	dlgStruct.lpstrTitle = L"Select Card";
-	dlgStruct.dwShareMode = 0;
-	// Display the select card dialog box.
-	lReturn = SCardUIDlgSelectCard(&dlgStruct);
-	SCardReleaseContext(hSC);
-	if ( SCARD_S_SUCCESS != lReturn )
-	{
-		return;
-	}
-	
 	dwLevel = 0;
 	dwBestId = 0;
 	CContainerHolderFactory<CContainerHolderTest> MyCredentialList;
@@ -373,5 +347,5 @@ void DoChecks()
 		rgCheckInfo[CHECK_REQUIRESCLOGON].szComment = (PTSTR) malloc(sizeof(TCHAR)*100);
 		_stprintf_s(rgCheckInfo[CHECK_REQUIRESCLOGON].szComment, 100, TEXT("Disabled"));
 	}
-	
+	return TRUE;
 }
