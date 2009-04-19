@@ -59,12 +59,12 @@ typedef struct _EID_PRIVATE_DATA
 	BYTE Data[sizeof(DWORD)];
 } EID_PRIVATE_DATA, *PEID_PRIVATE_DATA;
 
-typedef struct {
+/*typedef struct {
     unsigned int SigAlgId;
     unsigned int HashAlgId;
     ULONG cbPublicKey;
     BYTE PublicKey[1];
-} PublicKeyBlob; 
+} PublicKeyBlob; */
 extern "C"
 {
 	NTSTATUS WINAPI SystemFunction007 (PUNICODE_STRING string, LPBYTE hash);
@@ -486,8 +486,8 @@ BOOL RetrieveStoredCredential(__in DWORD dwRid, __in PCCERT_CONTEXT pCertContext
 	PCRYPT_KEY_PROV_INFO pKeyProvInfo = NULL;
 	DWORD dwError = 0;
 	*pszPassword = NULL;
-	PublicKeyBlob *pbPublicKey = NULL;
-	PublicKeyBlob* StoredPublicKeyBlob;
+	PBYTE pbPublicKey = NULL;
+	PBYTE StoredPublicKeyBlob;
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter Rid = %d", dwRid);
 	__try
 	{
@@ -536,23 +536,23 @@ BOOL RetrieveStoredCredential(__in DWORD dwRid, __in PCCERT_CONTEXT pCertContext
 			// vanilla authentication
 			else
 			{
-				StoredPublicKeyBlob = (PublicKeyBlob*) (pEidPrivateData->Data + pEidPrivateData->dwCertificatOffset);
-				if (!GetPublicKeyBlobFromCertificate(pCertContext, (PBYTE*) &pbPublicKey))
+				StoredPublicKeyBlob = (PBYTE) (pEidPrivateData->Data + pEidPrivateData->dwCertificatOffset);
+				if (!GetPublicKeyBlobFromCertificate(pCertContext, &pbPublicKey))
 				{
 					dwError = GetLastError();
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error returned by GetPublicKeyBlobFromCertificate");
 					__leave;
 				}
-				if (pbPublicKey->HashAlgId != StoredPublicKeyBlob->HashAlgId ||
-					pbPublicKey->SigAlgId != StoredPublicKeyBlob->SigAlgId)
+				if (!pEidPrivateData->dwCertificatSize)
 				{
+					// dont hang lsa if there is bad data
 					dwError = 0x80090015; //NTE_BAD_PUBLIC_KEY;
-					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"HashAlgId or SigAlgId does not match");
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"public key does not match dwCertificatSize=0");
 					__leave;
 				}
-				for (DWORD dwI = 0; dwI < pbPublicKey->cbPublicKey; dwI++)
+				for (DWORD dwI = 0; dwI < pEidPrivateData->dwCertificatSize; dwI++)
 				{
-					if (pbPublicKey->PublicKey[dwI] != StoredPublicKeyBlob->PublicKey[dwI])
+					if (pbPublicKey[dwI] != StoredPublicKeyBlob[dwI])
 					{
 						dwError = 0x80090015; //NTE_BAD_PUBLIC_KEY;
 						EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"public key does not match");
@@ -578,26 +578,26 @@ BOOL RetrieveStoredCredential(__in DWORD dwRid, __in PCCERT_CONTEXT pCertContext
 			*(PWSTR)(((PBYTE)*pszPassword) + pEidPrivateData->dwPasswordSize) = '\0';
 			break;
 		case eidpdtCrypted:
-			StoredPublicKeyBlob = (PublicKeyBlob*) (pEidPrivateData->Data + pEidPrivateData->dwCertificatOffset);
-			if (!GetPublicKeyBlobFromCertificate(pCertContext, (PBYTE*) &pbPublicKey))
+			StoredPublicKeyBlob = (PBYTE) (pEidPrivateData->Data + pEidPrivateData->dwCertificatOffset);
+			if (!GetPublicKeyBlobFromCertificate(pCertContext, &pbPublicKey))
 			{
 				dwError = GetLastError();
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error returned by GetPublicKeyBlobFromCertificate");
 				__leave;
 			}
-			if (pbPublicKey->HashAlgId != StoredPublicKeyBlob->HashAlgId ||
-				pbPublicKey->SigAlgId != StoredPublicKeyBlob->SigAlgId)
+			if (!pEidPrivateData->dwCertificatSize)
 			{
+				// dont hang lsa if there is bad data
 				dwError = 0x80090015; //NTE_BAD_PUBLIC_KEY;
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"HashAlgId or SigAlgId does not match");
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"public key does not match dwCertificatSize=0");
 				__leave;
 			}
-			for (DWORD dwI = 0; dwI < pbPublicKey->cbPublicKey; dwI++)
+			for (DWORD dwI = 0; dwI < pEidPrivateData->dwCertificatSize; dwI++)
 			{
-				if (pbPublicKey->PublicKey[dwI] != StoredPublicKeyBlob->PublicKey[dwI])
+				if (pbPublicKey[dwI] != StoredPublicKeyBlob[dwI])
 				{
 					dwError = 0x80090015; //NTE_BAD_PUBLIC_KEY;
-					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"public key does not match");
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"public key does not match at %d",dwI);
 					__leave;
 				}
 			}
@@ -1556,6 +1556,11 @@ NTSTATUS LoadSamSrv()
 
 NTSTATUS CheckPassword( __in DWORD dwRid, __in PWSTR szPassword)
 {
+#ifdef _DEBUG
+	UNREFERENCED_PARAMETER(dwRid);
+	UNREFERENCED_PARAMETER(szPassword);
+	return STATUS_SUCCESS;
+#else
 	NTSTATUS Status = STATUS_SUCCESS;
 	LSA_OBJECT_ATTRIBUTES connectionAttrib;
     LSA_HANDLE handlePolicy = NULL;
@@ -1650,4 +1655,5 @@ NTSTATUS CheckPassword( __in DWORD dwRid, __in PWSTR szPassword)
 	}
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave with status = %d",Status);
 	return Status;
+#endif
 }

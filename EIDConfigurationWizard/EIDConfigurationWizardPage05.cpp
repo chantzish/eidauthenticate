@@ -13,129 +13,31 @@
 
 #pragma comment(lib,"Credui")
 
-class CContainerHolderTest : public IContainerHolderList
-{
-public:
-	CContainerHolderTest(CContainer* pContainer)
-	{
-		_pContainer = pContainer;
-	}
+#include "CContainerHolder.h"
 
-	virtual ~CContainerHolderTest()
-	{
-		if (_pContainer)
-		{
-			delete _pContainer;
-		}
-	}
-	void Release()
-	{
-		delete this;
-	}
-	HRESULT SetUsageScenario(__in CREDENTIAL_PROVIDER_USAGE_SCENARIO cpus,__in DWORD dwFlags){return S_OK;}
-	CContainer* GetContainer()
-	{
-		return _pContainer;
-	}
-private:
-	CContainer* _pContainer;
-};
+// from previous step
+// credentials
+extern CContainerHolderFactory<CContainerHolderTest> *pCredentialList;
+// selected credential
+extern DWORD dwCurrentCredential;
 
-
+extern BOOL PopulateListViewListData(HWND hWndListView);
+extern BOOL InitListViewListIcon(HWND hWndListView);
 
 BOOL WizardFinishButton(PTSTR szPassword)
 {
 	BOOL fReturn = FALSE;
-	SCARDCONTEXT     hSC;
-	OPENCARDNAME_EX  dlgStruct;
-	LONG             lReturn;
-	DWORD			dwBestId;
-	DWORD			dwLevel;
 	DWORD dwError = 0;
-	TCHAR szReader[1024];
-	TCHAR szCard[1024];
-
-	TCHAR szUserName[1024];
+	TCHAR szUserName[256];
 	DWORD dwSize = ARRAYSIZE(szUserName);
 	GetUserName(szUserName, &dwSize);
-
-	lReturn = SCardEstablishContext(SCARD_SCOPE_USER,
-									NULL,
-									NULL,
-									&hSC );
-	if ( SCARD_S_SUCCESS != lReturn )
-	{
-		return FALSE;
-	}
-
-	// Initialize the structure.
-	memset(&dlgStruct, 0, sizeof(dlgStruct));
-	dlgStruct.dwStructSize = sizeof(dlgStruct);
-	dlgStruct.hSCardContext = hSC;
-	dlgStruct.dwFlags = SC_DLG_MINIMAL_UI;
-	dlgStruct.lpstrRdr = szReader;
-	dlgStruct.nMaxRdr = ARRAYSIZE(szReader);
-	dlgStruct.lpstrCard = szCard;
-	dlgStruct.nMaxCard = ARRAYSIZE(szCard);
-	dlgStruct.lpstrTitle = L"Select Card";
-	dlgStruct.dwShareMode = 0;
-	// Display the select card dialog box.
-	lReturn = SCardUIDlgSelectCard(&dlgStruct);
-	SCardReleaseContext(hSC);
-	if ( SCARD_S_SUCCESS != lReturn )
-	{
-		return FALSE;
-	}
 	
-	dwLevel = 0;
-	dwBestId = 0;
-	CContainerHolderFactory<CContainerHolderTest> MyCredentialList;
-	MyCredentialList.ConnectNotification(szReader,szCard,0);
-	if (MyCredentialList.HasContainerHolder())
+	CContainerHolderTest* MyTest = pCredentialList->GetContainerHolderAt(dwCurrentCredential);
+	CContainer* container = MyTest->GetContainer();
+	fReturn = LsaEIDCreateStoredCredential(szUserName, szPassword, container->GetContainer());
+	if (!fReturn)
 	{
-		DWORD dwMax = MyCredentialList.ContainerHolderCount();
-		for (DWORD dwI = 0; dwI < dwMax ; dwI++)
-		{
-			CContainerHolderTest* MyTest = MyCredentialList.GetContainerHolderAt(dwI);
-			if (_tcscmp(MyTest->GetContainer()->GetUserName(),szUserName)==0)
-			{
-				CContainer* container = MyTest->GetContainer();
-				PCCERT_CONTEXT pCertContext = container->GetContainer();
-				if (IsTrustedCertificate(pCertContext))
-				{
-					if (dwLevel == 0) 
-					{
-						dwLevel = 1;
-						dwBestId = dwI;
-					}
-					if (CanEncryptPassword(NULL,0, pCertContext))
-					{
-						if (dwLevel == 1) 
-						{
-							dwLevel = 2;
-							dwBestId = dwI;
-						}
-				
-					}
-				}
-				else
-				{
-					dwError = GetLastError();
-				}
-				CertFreeCertificateContext(pCertContext);
-			}
-		}
-	}
-	// container found
-	if (dwLevel)
-	{
-		CContainerHolderTest* MyTest = MyCredentialList.GetContainerHolderAt(dwBestId);
-		CContainer* container = MyTest->GetContainer();
-		fReturn = LsaEIDCreateStoredCredential(szUserName, szPassword, container->GetContainer());
-		if (!fReturn)
-		{
-			dwError = GetLastError();
-		}
+		dwError = GetLastError();
 	}
 	SetLastError(dwError);
 	return fReturn;
@@ -164,8 +66,12 @@ BOOL TestLogon(HWND hMainWnd)
 	
 	CoInitializeEx(NULL,COINIT_APARTMENTTHREADED); 
 
-	credUiInfo.pszCaptionText = TEXT("Test");
-	credUiInfo.pszMessageText = TEXT("");
+	TCHAR szCaption[256] = TEXT("");
+	LoadString(g_hinst, IDS_05CREDINFOCAPTION, szCaption, ARRAYSIZE(szCaption));
+	TCHAR szMessage[256] = TEXT("");
+	LoadString(g_hinst, IDS_05CREDINFOMESSAGE, szMessage, ARRAYSIZE(szMessage));
+	credUiInfo.pszCaptionText = szCaption;
+	credUiInfo.pszMessageText = szMessage;
 	credUiInfo.cbSize = sizeof(credUiInfo);
 	credUiInfo.hbmBanner = NULL;
 	credUiInfo.hwndParent = hMainWnd;
@@ -178,8 +84,6 @@ BOOL TestLogon(HWND hMainWnd)
 		/* Find the setuid package and call it */
 		err = LsaLogonUser(hLsa, &Origin, (SECURITY_LOGON_TYPE)  Interactive , authPackage, authBuffer,authBufferSize,NULL, &Source, (PVOID*)&Profile, &ProfileLen, &Luid, &Token, &Quota, &stat);
 		DWORD dwSize = sizeof(MSV1_0_INTERACTIVE_PROFILE);
-		BYTE ProfileB[142];
-		memcpy(ProfileB,Profile,ProfileLen);
 		LsaDeregisterLogonProcess(hLsa);
 		if (err)
 		{
@@ -187,7 +91,11 @@ BOOL TestLogon(HWND hMainWnd)
 		}
 		else
 		{
-			MessageBox(hMainWnd,_T("Credential Valid"),_T("result"),0);
+			TCHAR szTitle[256] = TEXT("");
+			TCHAR szMessage[256] = TEXT("");
+			LoadString(g_hinst, IDS_05CREDINFOCONFIRMTITLE, szTitle, ARRAYSIZE(szTitle));
+			LoadString(g_hinst, IDS_05CREDINFOCONFIRMMESSAGE, szMessage, ARRAYSIZE(szMessage));
+			MessageBox(hMainWnd,szMessage,szTitle,0);
 			fReturn = TRUE;
 			
 			LsaFreeReturnBuffer(Profile);
@@ -241,129 +149,24 @@ BOOL IsForceSmartCardLogonPolicyActive()
 	return GetPolicyValue(scforceoption) > 0;
 }
 
-
-
-void SetEnabledLabel(HWND hwndDlg, int IDC, BOOL fEnabled)
-{
-	if (fEnabled)
-	{
-		SetWindowText(GetDlgItem(hwndDlg,IDC),TEXT("Enable"));
-	}
-	else
-	{
-		SetWindowText(GetDlgItem(hwndDlg,IDC),TEXT("Disable"));
-	}
-}
-
-BOOL GetRequestedActivationStatus(HWND hwndDlg, int IDC)
-{
-	TCHAR szLabel[256];
-	GetWindowText(GetDlgItem(hwndDlg,IDC),szLabel,ARRAYSIZE(szLabel));
-	return _tcscmp(szLabel, TEXT("Enable")) == 0;
-}
-
-
 INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	int wmId;
-	int wmEvent;
 	TCHAR szPassword[1024];
 	switch(message)
 	{
 	case WM_INITDIALOG:
 		if (!IsElevated())
 		{
-			Button_SetElevationRequiredState(GetDlgItem(hWnd,IDC_05ForcePolicy),TRUE);
-			Button_SetElevationRequiredState(GetDlgItem(hWnd,IDC_05RemovePolicy),TRUE);
+			// Set shield icon
+			HICON ShieldIcon;
+			SHSTOCKICONINFO sii = {0}; 
+			sii.cbSize = sizeof(sii);
+			SHGetStockIconInfo(SIID_SHIELD, SHGFI_ICON | SHGFI_SMALLICON, &sii);
+			ShieldIcon = sii.hIcon;
+			SendMessage(GetDlgItem(hWnd,IDC_05FORCEPOLICYICON),STM_SETICON ,(WPARAM)ShieldIcon,0);
+			SendMessage(GetDlgItem(hWnd,IDC_05REMOVEPOLICYICON),STM_SETICON ,(WPARAM)ShieldIcon,0);
 		}
-		break;
-	case WM_COMMAND:
-		wmId    = LOWORD(wParam);
-		wmEvent = HIWORD(wParam);
-		// Analyse les sélections de menu :
-		switch (wmId)
-		{	
-			case IDC_05RemovePolicy:
-				if (IsElevated())
-				{
-					ChangeRemovePolicy(GetRequestedActivationStatus(hWnd,IDC_05RemovePolicy));
-				}
-				else
-				{
-					// elevate
-					SHELLEXECUTEINFO shExecInfo;
-					TCHAR szName[1024];
-					GetModuleFileName(GetModuleHandle(NULL),szName, ARRAYSIZE(szName));
-					shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
-
-					shExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
-					shExecInfo.hwnd = NULL;
-					shExecInfo.lpVerb = TEXT("runas");
-					shExecInfo.lpFile = szName;
-					if (GetRequestedActivationStatus(hWnd,IDC_05RemovePolicy))
-					{
-						shExecInfo.lpParameters = TEXT("ACTIVATEREMOVEPOLICY");
-					}
-					else
-					{
-						shExecInfo.lpParameters = TEXT("DESACTIVATEREMOVEPOLICY");
-					}
-					shExecInfo.lpDirectory = NULL;
-					shExecInfo.nShow = SW_NORMAL;
-					shExecInfo.hInstApp = NULL;
-
-					if (!ShellExecuteEx(&shExecInfo))
-					{
-						MessageBoxWin32(GetLastError());
-					}
-					else
-					{
-						WaitForSingleObject(shExecInfo.hProcess, INFINITE);
-					}
-				}
-				SetEnabledLabel(hWnd, IDC_05RemovePolicy, !IsRemovePolicyActive());
-				break;
-			case IDC_05ForcePolicy:
-				if (IsElevated())
-				{
-					ChangeForceSmartCardLogonPolicy(GetRequestedActivationStatus(hWnd,IDC_05ForcePolicy));
-				}
-				else
-				{
-					// elevate
-					SHELLEXECUTEINFO shExecInfo;
-					TCHAR szName[1024];
-					GetModuleFileName(GetModuleHandle(NULL),szName, ARRAYSIZE(szName));
-					shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
-
-					shExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
-					shExecInfo.hwnd = NULL;
-					shExecInfo.lpVerb = TEXT("runas");
-					shExecInfo.lpFile = szName;
-					if (GetRequestedActivationStatus(hWnd,IDC_05ForcePolicy))
-					{
-						shExecInfo.lpParameters = TEXT("ACTIVATEFORCEPOLICY");
-					}
-					else
-					{
-						shExecInfo.lpParameters = TEXT("DESACTIVATEFORCEPOLICY");
-					}
-					shExecInfo.lpDirectory = NULL;
-					shExecInfo.nShow = SW_NORMAL;
-					shExecInfo.hInstApp = NULL;
-
-					if (!ShellExecuteEx(&shExecInfo))
-					{
-						MessageBoxWin32(GetLastError());
-					}
-					else
-					{
-						WaitForSingleObject(shExecInfo.hProcess, INFINITE);
-					}
-				}
-				SetEnabledLabel(hWnd, IDC_05ForcePolicy, !IsForceSmartCardLogonPolicyActive());
-				break;
-		}
+		InitListViewListIcon(GetDlgItem(hWnd,IDC_05LIST));
 		break;
 	case WM_NOTIFY :
         LPNMHDR pnmh = (LPNMHDR)lParam;
@@ -371,9 +174,38 @@ INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPAR
         {
 			case PSN_SETACTIVE :
 				//this is an interior page
-				PropSheet_SetWizButtons(hWnd, PSWIZB_FINISH |	PSWIZB_BACK);
-				SetEnabledLabel(hWnd, IDC_05RemovePolicy, !IsRemovePolicyActive());
-				SetEnabledLabel(hWnd, IDC_05ForcePolicy,  !IsForceSmartCardLogonPolicyActive());
+				ListView_DeleteAllItems(GetDlgItem(hWnd, IDC_05LIST));
+				PopulateListViewListData(GetDlgItem(hWnd, IDC_05LIST));	
+				if (pCredentialList->GetContainerHolderAt(dwCurrentCredential)->GetIconIndex())
+				{
+					PropSheet_SetWizButtons(hWnd, PSWIZB_FINISH |	PSWIZB_BACK);
+				}
+				else
+				{
+					PropSheet_SetWizButtons(hWnd, PSWIZB_BACK);
+				}
+				// load string from ressource
+				{
+					TCHAR szMessage[256] = TEXT("");
+					if (IsRemovePolicyActive())
+					{
+						LoadString(g_hinst, IDS_05DESACTIVATEREMOVE, szMessage, ARRAYSIZE(szMessage));
+					}
+					else
+					{
+						LoadString(g_hinst, IDS_05ACTIVATEREMOVE, szMessage, ARRAYSIZE(szMessage));
+					}
+					SetWindowText(GetDlgItem(hWnd,IDC_05REMOVEPOLICYLINK),szMessage);
+					if (IsForceSmartCardLogonPolicyActive())
+					{
+						LoadString(g_hinst, IDS_05DESACTIVATEFORCE, szMessage, ARRAYSIZE(szMessage));
+					}
+					else
+					{
+						LoadString(g_hinst, IDS_05ACTIVATEFORCE, szMessage, ARRAYSIZE(szMessage));
+					}
+					SetWindowText(GetDlgItem(hWnd,IDC_05FORCEPOLICYLINK),szMessage);
+				}
 				break;
 			case PSN_WIZFINISH :
 				GetWindowText(GetDlgItem(hWnd,IDC_05PASSWORD),szPassword,ARRAYSIZE(szPassword));
@@ -391,8 +223,111 @@ INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPAR
 						return TRUE;
 					}
 				}
+				if (pCredentialList)
+				{
+					delete pCredentialList;
+					pCredentialList = NULL;
+				}
 				break;
+			case PSN_RESET:
+				if (pCredentialList)
+				{
+					delete pCredentialList;
+					pCredentialList = NULL;
+				}
+				break;
+
+			case LVN_ITEMCHANGED:
+				if (pnmh->idFrom == IDC_05LIST && pCredentialList)
+				{
+					if (((LPNMITEMACTIVATE)lParam)->uNewState & LVIS_SELECTED )
+					{
+						if ((DWORD)(((LPNMITEMACTIVATE)lParam)->iItem) < pCredentialList->ContainerHolderCount())
+						{
+							dwCurrentCredential = ((LPNMITEMACTIVATE)lParam)->iItem;
+							if (pCredentialList->GetContainerHolderAt(dwCurrentCredential)->GetIconIndex())
+							{
+								PropSheet_SetWizButtons(hWnd, PSWIZB_FINISH |	PSWIZB_BACK);
+							}
+							else
+							{
+								PropSheet_SetWizButtons(hWnd, PSWIZB_BACK);
+							}
+						}
+					}
+					else
+					{
+						PropSheet_SetWizButtons(hWnd, PSWIZB_BACK);
+					}
+				}
+				break;
+			case NM_DBLCLK:
+				if (pnmh->idFrom == IDC_05LIST && pCredentialList)
+				{
+					if (((LPNMITEMACTIVATE)lParam)->iItem >= 0 && (DWORD)((LPNMITEMACTIVATE)lParam)->iItem < pCredentialList->ContainerHolderCount())
+					{
+						pCredentialList->GetContainerHolderAt(((LPNMITEMACTIVATE)lParam)->iItem)->GetContainer()->ViewCertificate(hWnd);
+					}
+				}
+				break;
+			case NM_CLICK:
+			case NM_RETURN:
+				{
+					// enable / disable policy
+					PNMLINK pNMLink = (PNMLINK)lParam;
+					TCHAR szMessage[256] = TEXT("");
+					LITEM item = pNMLink->item;
+					if (wcscmp(item.szID, L"idActRemove") == 0)
+					{
+						if (!ChangeRemovePolicy(TRUE))
+						{
+							MessageBoxWin32(GetLastError());
+						}
+						else
+						{
+							LoadString(g_hinst, IDS_05DESACTIVATEREMOVE, szMessage, ARRAYSIZE(szMessage));
+							SetWindowText(GetDlgItem(hWnd,IDC_05REMOVEPOLICYLINK),szMessage);
+						}
+					}
+					else if (wcscmp(item.szID, L"idDesActRemove") == 0)
+					{
+						if (!ChangeRemovePolicy(FALSE))
+						{
+							MessageBoxWin32(GetLastError());
+						}
+						else
+						{
+							LoadString(g_hinst, IDS_05ACTIVATEREMOVE, szMessage, ARRAYSIZE(szMessage));
+							SetWindowText(GetDlgItem(hWnd,IDC_05REMOVEPOLICYLINK),szMessage);
+						}
+					}
+					else if (wcscmp(item.szID, L"idActForce") == 0)
+					{
+						if (!ChangeForceSmartCardLogonPolicy(TRUE))
+						{
+							MessageBoxWin32(GetLastError());
+						}
+						else
+						{
+							LoadString(g_hinst, IDS_05DESACTIVATEFORCE, szMessage, ARRAYSIZE(szMessage));
+							SetWindowText(GetDlgItem(hWnd,IDC_05FORCEPOLICYLINK),szMessage);
+						}
+					}
+					else if (wcscmp(item.szID, L"idDesActForce") == 0)
+					{
+						if (!ChangeForceSmartCardLogonPolicy(FALSE))
+						{
+							MessageBoxWin32(GetLastError());
+						}
+						else
+						{
+							LoadString(g_hinst, IDS_05ACTIVATEFORCE, szMessage, ARRAYSIZE(szMessage));
+							SetWindowText(GetDlgItem(hWnd,IDC_05FORCEPOLICYLINK),szMessage);
+						}
+					}
+				}
 		}
+
     }
 	return FALSE;
 }

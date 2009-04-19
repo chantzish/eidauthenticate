@@ -16,6 +16,7 @@
 */
 
 #include <windows.h>
+#include <tchar.h>
 #include <stdio.h>
 #include <Evntprov.h>
 #include <crtdbg.h>
@@ -46,11 +47,15 @@ WCHAR Section[100];
  */
 void MessageBoxWin32Ex(DWORD status, LPCSTR szFile, DWORD dwLine) {
 	LPVOID Error;
-	CHAR szTitle[1024];
-	sprintf_s(szTitle,ARRAYSIZE(szTitle),"%s(%d)",szFile, dwLine);
-	FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_FROM_SYSTEM,
-		NULL,status,0,(LPSTR)&Error,0,NULL);
-	MessageBoxA(NULL,(LPCSTR)Error,szTitle ,MB_ICONASTERISK);
+	TCHAR szTitle[1024];
+#ifdef UNICODE
+	_stprintf_s(szTitle,ARRAYSIZE(szTitle),TEXT("%S(%d)"),szFile, dwLine);
+#else
+	_stprintf_s(szTitle,ARRAYSIZE(szTitle),TEXT("%s(%d)"),szFile, dwLine);
+#endif
+	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_FROM_SYSTEM,
+		NULL,status,0,(LPTSTR)&Error,0,NULL);
+	MessageBox(NULL,(LPCTSTR)Error,szTitle ,MB_ICONASTERISK);
 	LocalFree(Error);
 }
 

@@ -5,6 +5,7 @@
 
 #include "global.h"
 #include "EIDConfigurationWizard.h"
+#include "../EIDCardLibrary/CertificateUtilities.h"
 
 INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -31,8 +32,12 @@ INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 		case IDC_02NEW:
 			if (IsElevated())
 			{
-				fShowNewCertificatePanel = TRUE;
-				PropSheet_SetCurSelByID(hWnd,IDD_03NEW);
+				if (AskForCard(szReader, dwReaderSize, szCard, dwCardSize))
+				{
+					//next screen
+					fShowNewCertificatePanel = TRUE;
+					PropSheet_SetCurSelByID(hWnd,IDD_03NEW);
+				}
 			}
 			else
 			{
@@ -56,8 +61,12 @@ INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 			}
 			break;
 		case IDC_02EXISTING:
-			fShowNewCertificatePanel = FALSE;
-			PropSheet_SetCurSelByID(hWnd,IDD_04CHECKS);
+			if (AskForCard(szReader, dwReaderSize, szCard, dwCardSize))
+			{
+				//next screen
+				fShowNewCertificatePanel = FALSE;
+				PropSheet_SetCurSelByID(hWnd,IDD_04CHECKS);
+			}
 			break;
 
 		}

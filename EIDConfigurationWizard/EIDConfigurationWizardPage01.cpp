@@ -6,6 +6,7 @@
 #include "EIDConfigurationWizard.h"
 #include "../EIDCardLibrary/EIDCardLibrary.h"
 #include "../EIDCardLibrary/Package.h"
+#include "../EIDCardLibrary/Tracing.h"
 
 
 //
@@ -25,7 +26,9 @@ INT_PTR CALLBACK	WndProc_01MAIN(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
 	switch(message)
 	{
 	case WM_INITDIALOG:
-		CenterWindow(GetParent(hWnd));
+		{
+			CenterWindow(GetParent(hWnd));
+		}
 		break;
 	case WM_COMMAND:
 		wmId    = LOWORD(wParam);
@@ -38,15 +41,19 @@ INT_PTR CALLBACK	WndProc_01MAIN(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
 
 			break;
 		case IDC_01DELETE:
-			if (IDYES == MessageBox(hWnd,TEXT("Sure ?"),TEXT(""),MB_ICONWARNING|MB_YESNO))
 			{
-				if (!LsaEIDRemoveStoredCredential(NULL))
+				TCHAR szMessage[256] = TEXT("");
+				LoadString(g_hinst,IDS_AREYOUSURE,szMessage,ARRAYSIZE(szMessage));
+				if (IDYES == MessageBox(hWnd,szMessage,TEXT(""),MB_ICONWARNING|MB_YESNO))
 				{
-					MessageBox(hWnd,TEXT("Unable to remove"),TEXT(""),MB_ICONEXCLAMATION);
-					break;
+					if (!LsaEIDRemoveStoredCredential(NULL))
+					{
+						MessageBoxWin32(GetLastError());
+						break;
+					}
+					// delete
+					PropSheet_PressButton(hWnd,PSBTN_CANCEL);
 				}
-				// delete
-				PropSheet_PressButton(hWnd,PSBTN_CANCEL);
 			}
 			break;
 

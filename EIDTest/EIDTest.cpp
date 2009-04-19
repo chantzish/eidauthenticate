@@ -51,6 +51,33 @@ HWND hMainWnd;
 
 INT_PTR CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
 
+BOOL IsElevated()
+{
+	BOOL fReturn = FALSE;
+	HANDLE hToken	= NULL;
+
+	if ( !OpenProcessToken( GetCurrentProcess(), TOKEN_QUERY, &hToken ) )
+	{
+		return FALSE;
+	}
+
+	TOKEN_ELEVATION te = { 0 };
+	DWORD dwReturnLength = 0;
+
+	if ( GetTokenInformation(
+				hToken,
+				TokenElevation,
+				&te,
+				sizeof( te ),
+				&dwReturnLength ) )
+	{
+		fReturn = te.TokenIsElevated ? TRUE : FALSE; 
+	}
+
+	CloseHandle(hToken);
+	return fReturn;
+}
+
 int APIENTRY _tWinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
                      LPTSTR    lpCmdLine,
@@ -60,11 +87,23 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	UNREFERENCED_PARAMETER(lpCmdLine);
 	hInst = hInstance;
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF|_CRTDBG_CHECK_ALWAYS_DF|_CRTDBG_CHECK_CRT_DF|_CRTDBG_DELAY_FREE_MEM_DF);
+	
+	int iNumArgs;
+	LPWSTR *pszCommandLine =  CommandLineToArgvW(lpCmdLine,&iNumArgs);
 
-    DialogBox (hInst, 
-                            MAKEINTRESOURCE (IDD_MAIN), 
-                            0, 
-                            WndProc);
+	if (iNumArgs >= 1)
+	{
+		if (_tcscmp(pszCommandLine[0],TEXT("TRACE")) == 0)
+		{
+			if (IsElevated())
+			{
+				menu_TRACE_TRACING_Thread(NULL);
+			}
+			return 0;
+		}
+	}
+
+    DialogBox (hInst, MAKEINTRESOURCE (IDD_MAIN), 0, WndProc);
 	//_CrtDumpMemoryLeaks();
     return 0;
 
@@ -184,6 +223,9 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case IDM_CRED_LIST:
 			menu_CREDENTIAL_List();
 			break;
+		case IDM_CRED_CSPINFO:
+			menu_CREDENTIAL_CspInfo();
+			break;
 		case IDM_CRED_CERT:
 			menu_CREDENTIAL_Certificate();
 			break;
@@ -251,7 +293,29 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			menu_UTIL_ClearCard();
 			break;
 		case IDM_INFO_TRACING:
-			menu_TRACE_TRACING();
+			if (IsElevated())
+			{
+				menu_TRACE_TRACING();
+			}
+			else
+			{
+				// elevate
+				SHELLEXECUTEINFO shExecInfo;
+				TCHAR szName[1024];
+				GetModuleFileName(GetModuleHandle(NULL),szName, ARRAYSIZE(szName));
+				shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
+
+				shExecInfo.fMask = NULL;
+				shExecInfo.hwnd = NULL;
+				shExecInfo.lpVerb = TEXT("runas");
+				shExecInfo.lpFile = szName;
+				shExecInfo.lpParameters = TEXT("TRACE");
+				shExecInfo.lpDirectory = NULL;
+				shExecInfo.nShow = SW_NORMAL;
+				shExecInfo.hInstApp = NULL;
+
+				ShellExecuteEx(&shExecInfo);
+			}
 			break;
 		case IDM_INFO_CSP:
 			menu_INFO_Provider();

@@ -28,13 +28,22 @@
 
 
 #include "CEIDCredential.h"
+#include "resources.h"
 
 
 #include "../EIDCardLibrary/guid.h"
 #include "../EIDCardLibrary/EIDCardLibrary.h"
 #include "../EIDCardLibrary/Package.h"
 
-
+#include <CodeAnalysis/warnings.h>
+#pragma warning(push)
+#pragma warning(disable : 4995)
+#include <shlwapi.h>
+#pragma warning(pop)
+#pragma warning(push)
+#pragma warning(disable : 4995)
+#include <strsafe.h>
+#pragma warning(pop)
 // CEIDCredential ////////////////////////////////////////////////////////
 
 CEIDCredential::CEIDCredential(CContainer* container):
@@ -125,7 +134,9 @@ HRESULT CEIDCredential::Initialize(
     }
     if (SUCCEEDED(hr))
     {
-        hr = SHStrDupW(L"Certificate detail", &_rgFieldStrings[SFI_CERTIFICATE]);
+        WCHAR szCertificateDetail[256] = L"";
+		LoadStringW(g_hinst,IDS_CERTIFICATEDETAIL,szCertificateDetail,ARRAYSIZE(szCertificateDetail));
+		hr = SHStrDupW(szCertificateDetail, &_rgFieldStrings[SFI_CERTIFICATE]);
     }
     return S_OK;
 }
@@ -491,14 +502,13 @@ struct REPORT_RESULT_STATUS_INFO
 {
     NTSTATUS ntsStatus;
     NTSTATUS ntsSubstatus;
-    PWSTR     pwzMessage;
     CREDENTIAL_PROVIDER_STATUS_ICON cpsi;
 };
 
 static const REPORT_RESULT_STATUS_INFO s_rgLogonStatusInfo[] =
 {
-    { STATUS_LOGON_FAILURE, STATUS_SUCCESS, L"Incorrect Pin or username.", CPSI_ERROR, },
-    { STATUS_ACCOUNT_RESTRICTION, STATUS_ACCOUNT_DISABLED, L"The account is disabled.", CPSI_WARNING },
+    { STATUS_LOGON_FAILURE, STATUS_SUCCESS, CPSI_ERROR, },
+    { STATUS_ACCOUNT_RESTRICTION, STATUS_ACCOUNT_DISABLED, CPSI_WARNING },
 };
 
 // ReportResult is completely optional.  Its purpose is to allow a credential to customize the string

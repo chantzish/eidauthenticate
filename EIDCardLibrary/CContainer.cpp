@@ -38,8 +38,7 @@ CContainer::CContainer(LPCTSTR szReaderName, LPCTSTR szCardName, LPCTSTR szProvi
 	_tcscpy_s(_szContainerName,_tcslen(szContainerName)+1,szContainerName);
 	_szCardName = new TCHAR[_tcslen(szCardName)+1];
 	_tcscpy_s(_szCardName,_tcslen(szCardName)+1,szCardName);
-	//_szUserName = new TCHAR[_tcslen(szContainerName)+1];
-	//_tcscpy_s(_szUserName,_tcslen(szContainerName)+1,szContainerName);
+	_szUserName = NULL;
 	_KeySpec = KeySpec;
 	_ActivityCount = ActivityCount;
 	_pCertContext = pCertContext;

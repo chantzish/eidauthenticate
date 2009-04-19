@@ -22,20 +22,13 @@
 #include <windows.h>
 #include <tchar.h>
 
-#include <CodeAnalysis/warnings.h>
-#pragma warning(push)
-#pragma warning(disable : ALL_CODE_ANALYSIS_WARNINGS)
-#include <strsafe.h>
-#pragma warning(pop)
-
 #include <credentialprovider.h>
 
-#include "CEIDCredential.h"
-#include "CMessageCredential.h"
 #include "helpers.h"
 
 #include "../EIDCardLibrary/CSmartCardNotifier.h"
 #include "../EIDCardLibrary/CContainerHolderFactory.h"
+#include "../EIDCardLibrary/Tracing.h"
 
 // Forward references for classes used here.
 class CEIDCredential;

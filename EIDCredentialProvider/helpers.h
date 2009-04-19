@@ -31,19 +31,6 @@
 #include "common.h"
 
 
-#include <CodeAnalysis/warnings.h>
-#pragma warning(push)
-#pragma warning(disable : ALL_CODE_ANALYSIS_WARNINGS)
-#include <strsafe.h>
-#pragma warning(pop)
-
-#pragma warning(push)
-#pragma warning(disable : 4995)
-#include <shlwapi.h>
-#pragma warning(pop)
-
-
-
 //makes a copy of a field descriptor using CoTaskMemAlloc
 HRESULT FieldDescriptorCoAllocCopy(
     const CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR& rcpfd,

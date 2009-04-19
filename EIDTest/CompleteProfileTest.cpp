@@ -60,13 +60,13 @@ void Menu_AP_Profile()
 
 	// ask for a username
 	UserName.Buffer = UserNameBuffer;
-	UserName.Length = (DWORD) wcslen(UserNameBuffer)*sizeof(WCHAR);
-	UserName.MaximumLength = (DWORD) (UserName.Length+sizeof(WCHAR));
+	UserName.Length = (USHORT) wcslen(UserNameBuffer)*sizeof(WCHAR);
+	UserName.MaximumLength = (USHORT) UserName.Length+sizeof(WCHAR);
 
 	// ask for a computer
 	ComputerName.Buffer = ComputerNameBuffer;
-	ComputerName.Length = wcslen(ComputerNameBuffer)*sizeof(WCHAR);
-	ComputerName.MaximumLength = ComputerName.Length+sizeof(WCHAR);
+	ComputerName.Length = (USHORT) wcslen(ComputerNameBuffer)*sizeof(WCHAR);
+	ComputerName.MaximumLength = (USHORT) ComputerName.Length+sizeof(WCHAR);
 
 	// function table
 	FunctionTable.AllocateClientBuffer = (PLSA_ALLOCATE_CLIENT_BUFFER)EIDCardLibraryTestMyAllocateClientBuffer;

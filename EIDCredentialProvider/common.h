@@ -96,18 +96,18 @@ static const FIELD_STATE_PAIR s_rgMessageFieldStatePairs[] =
 // The third is the name of the field, NOT the value which will appear in the field.
 static const CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR s_rgCredProvFieldDescriptors[] =
 {
-    { SFI_TILEIMAGE, CPFT_TILE_IMAGE, L"Image" },
-    { SFI_USERNAME, CPFT_LARGE_TEXT, L"Username" },
-	{ SFI_MESSAGE, CPFT_SMALL_TEXT, L"Test" },
-    { SFI_PIN, CPFT_PASSWORD_TEXT, L"Pin" },
-    { SFI_SUBMIT_BUTTON, CPFT_SUBMIT_BUTTON, L"Submit" },
-	{ SFI_CERTIFICATE, CPFT_COMMAND_LINK, L"Submit" },
+    { SFI_TILEIMAGE, CPFT_TILE_IMAGE },
+    { SFI_USERNAME, CPFT_LARGE_TEXT},
+	{ SFI_MESSAGE, CPFT_SMALL_TEXT},
+    { SFI_PIN, CPFT_PASSWORD_TEXT},
+    { SFI_SUBMIT_BUTTON, CPFT_SUBMIT_BUTTON},
+	{ SFI_CERTIFICATE, CPFT_COMMAND_LINK},
 };
 
 // Same as s_rgCredProvFieldDescriptors above, but for the CMessageCredential.
 static const CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR s_rgMessageCredProvFieldDescriptors[] =
 {
-    { SMFI_TILEIMAGE, CPFT_TILE_IMAGE, L"Image" },
-	{ SMFI_MESSAGE, CPFT_LARGE_TEXT, L"PleaseConnect" },
+    { SMFI_TILEIMAGE, CPFT_TILE_IMAGE},
+	{ SMFI_MESSAGE, CPFT_LARGE_TEXT},
 	{ SMFI_CANCELFORCEPOLICY, CPFT_COMMAND_LINK, L"Disable Force Smart Card Logon Policy" },
 };

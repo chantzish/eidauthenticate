@@ -34,6 +34,7 @@ BEGIN
       MENUITEM "&Stop",IDM_STOPWAITTHREAD
     END
     MENUITEM "Credential&List",IDM_CRED_LIST
+	MENUITEM "Retrieve Certificate context from CSP Info",IDM_CRED_CSPINFO
     MENUITEM "Certificate &Validation",IDM_CRED_CERT
     MENUITEM "UserTile",IDM_CRED_TILE
     MENUITEM "Test COM Object",IDM_CRED_COM

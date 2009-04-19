@@ -85,6 +85,7 @@ PCCERT_CONTEXT GetCertificateFromCspInfo(__in PEID_SMARTCARD_CSP_INFO pCspInfo)
 	}
 	EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"GetCertificateFromCspInfo");
 	HCRYPTPROV hProv;
+	DWORD dwError = 0;
 	PCCERT_CONTEXT pCertContext = NULL;
 	BOOL fSts = TRUE;
 	BYTE Data[4096];
@@ -99,7 +100,7 @@ PCCERT_CONTEXT GetCertificateFromCspInfo(__in PEID_SMARTCARD_CSP_INFO pCspInfo)
 		return NULL;
 	}
 
-	fSts = CryptAcquireContext(&hProv,szContainerName,szProviderName,PROV_RSA_FULL,CRYPT_VERIFYCONTEXT | CRYPT_SILENT);
+	fSts = CryptAcquireContext(&hProv,szContainerName,szProviderName,PROV_RSA_FULL, CRYPT_SILENT);
 	if (fSts)
 	{
 		HCRYPTKEY phUserKey;
@@ -125,17 +126,20 @@ PCCERT_CONTEXT GetCertificateFromCspInfo(__in PEID_SMARTCARD_CSP_INFO pCspInfo)
 				}
 				else
 				{
+					dwError = GetLastError();
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CertCreateCertificateContext : 0x%08x",GetLastError());
 				}
 			} 
 			else 
 			{
+				dwError = GetLastError();
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptGetKeyParam : 0x%08x",GetLastError());
 			}
 			CryptDestroyKey(phUserKey);
 		} 
 		else
 		{
+			dwError = GetLastError();
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptGetUserKey : 0x%08x",GetLastError());
 		}
 		
@@ -143,9 +147,10 @@ PCCERT_CONTEXT GetCertificateFromCspInfo(__in PEID_SMARTCARD_CSP_INFO pCspInfo)
 	}
 	else
 	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireContext : 0x%08x",GetLastError());
+		dwError = GetLastError();
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireContext : 0x%08x container='%s' provider='%s'",GetLastError(),szContainerName,szProviderName);
 	}
-	
+	SetLastError(dwError);
 	return pCertContext;
 }
 
@@ -189,6 +194,7 @@ LPCTSTR GetTrustErrorText(DWORD Status)
     }
 	return pszName;
 } 
+#undef ERRORTOTEXT
 
 BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt DWORD dwFlag)
 {
