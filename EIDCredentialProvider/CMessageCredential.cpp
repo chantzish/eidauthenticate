@@ -30,6 +30,11 @@
 #include "../EIDCardLibrary/guid.h"
 #include "../EIDCardLibrary/GPO.h"
 
+#include <CodeAnalysis/warnings.h>
+#pragma warning(push)
+#pragma warning(disable : 4995)
+#include <shlwapi.h>
+#pragma warning(pop)
 
 // CMessageCredential ////////////////////////////////////////////////////////
 
@@ -82,7 +87,9 @@ HRESULT CMessageCredential::Initialize(
     }
 	if (SUCCEEDED(hr))
     {
-        hr = SHStrDupW(L"Test", &(_rgFieldStrings[SMFI_CANCELFORCEPOLICY]));
+        WCHAR szDisableForcePolicy[256] = L"";
+		LoadStringW(g_hinst,IDS_DISABLEFORCEPOLICY,szDisableForcePolicy,ARRAYSIZE(szDisableForcePolicy));
+		hr = SHStrDupW(szDisableForcePolicy, &(_rgFieldStrings[SMFI_CANCELFORCEPOLICY]));
     }
 
     return S_OK;

@@ -40,7 +40,6 @@
 #include "dll.h"
 #include "resources.h"
 #include "../EIDCardLibrary/Tracing.h"
-
 #include "../EIDCardLibrary/CContainer.h"
 
 /**

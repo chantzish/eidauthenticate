@@ -56,7 +56,7 @@ BOOL IsElevated()
 	return fReturn;
 }
 
-BOOL ChangeRemovePolicy(BOOL fActivate)
+BOOL ChangeRemovePolicyElevated(BOOL fActivate)
 {
 	TCHAR szValueActivated[2]=TEXT("1");
 	TCHAR szValueDesactivated[2]=TEXT("0");
@@ -146,23 +146,120 @@ BOOL ChangeRemovePolicy(BOOL fActivate)
 		if (hServiceManager)
 			CloseServiceHandle(hServiceManager);
 	}
-	if (dwError)
-		MessageBoxWin32(dwError);
 	return dwError == 0;
+}
+
+BOOL ChangeRemovePolicy(BOOL fActivate)
+{
+	BOOL fReturn = FALSE;
+	DWORD dwError = 0;
+	if (IsElevated())
+	{	
+		return ChangeRemovePolicyElevated(fActivate);
+	}
+	else
+	{
+		// elevate
+		SHELLEXECUTEINFO shExecInfo;
+		TCHAR szName[1024];
+		GetModuleFileName(GetModuleHandle(NULL),szName, ARRAYSIZE(szName));
+		shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
+
+		shExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
+		shExecInfo.hwnd = NULL;
+		shExecInfo.lpVerb = TEXT("runas");
+		shExecInfo.lpFile = szName;
+		if (fActivate)
+		{
+			shExecInfo.lpParameters = TEXT("ACTIVATEREMOVEPOLICY");
+		}
+		else
+		{
+			shExecInfo.lpParameters = TEXT("DESACTIVATEREMOVEPOLICY");
+		}
+		shExecInfo.lpDirectory = NULL;
+		shExecInfo.nShow = SW_NORMAL;
+		shExecInfo.hInstApp = NULL;
+
+		if (!ShellExecuteEx(&shExecInfo))
+		{
+			dwError = GetLastError();
+		}
+		else
+		{
+			if (WaitForSingleObject(shExecInfo.hProcess, INFINITE) == WAIT_OBJECT_0)
+			{
+				fReturn = TRUE;
+			}
+			else
+			{
+				dwError = GetLastError();
+			}
+		}
+	}
+	SetLastError(dwError);
+	return fReturn;
 }
 
 BOOL ChangeForceSmartCardLogonPolicy(BOOL fActivate)
 {
 	DWORD dwValue;
-	if (fActivate)
+	BOOL fReturn = FALSE;
+	DWORD dwError = 0;
+	if (IsElevated())
 	{
-		dwValue = 1;
+		if (fActivate)
+		{
+			dwValue = 1;
+		}
+		else
+		{
+			dwValue = 0;
+		}
+		return RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+			TEXT("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Policies\\System"),
+			TEXT("scforceoption"), REG_DWORD, &dwValue,sizeof(dwValue)) == ERROR_SUCCESS;
 	}
 	else
 	{
-		dwValue = 0;
+	// elevate
+		SHELLEXECUTEINFO shExecInfo;
+		TCHAR szName[1024];
+		GetModuleFileName(GetModuleHandle(NULL),szName, ARRAYSIZE(szName));
+		shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
+
+		shExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
+		shExecInfo.hwnd = NULL;
+		shExecInfo.lpVerb = TEXT("runas");
+		shExecInfo.lpFile = szName;
+		if (fActivate)
+		{
+			shExecInfo.lpParameters = TEXT("ACTIVATEFORCEPOLICY");
+		}
+		else
+		{
+			shExecInfo.lpParameters = TEXT("DESACTIVATEFORCEPOLICY");
+		}
+		shExecInfo.lpDirectory = NULL;
+		shExecInfo.nShow = SW_NORMAL;
+		shExecInfo.hInstApp = NULL;
+
+		if (!ShellExecuteEx(&shExecInfo))
+		{
+			dwError = GetLastError();
+		}
+		else
+		{
+			if (WaitForSingleObject(shExecInfo.hProcess, INFINITE) == WAIT_OBJECT_0)
+			{
+				fReturn = TRUE;
+			}
+			else
+			{
+				dwError = GetLastError();
+			}
+		}
 	}
-	return RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
-		TEXT("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Policies\\System"),
-		TEXT("scforceoption"), REG_DWORD, &dwValue,sizeof(dwValue)) == ERROR_SUCCESS;
+	SetLastError(dwError);
+	return fReturn;
 }

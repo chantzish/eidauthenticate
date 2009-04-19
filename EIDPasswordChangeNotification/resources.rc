@@ -1,22 +1,26 @@
 #include "resources.h"
 
-IDR_VERSION1 VERSIONINFO
-FILEVERSION 1,0,0,0
-PRODUCTVERSION 1,0,0,0
-FILEOS 0x00000004
-FILETYPE 0x00000002
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION    	0,1,0,0
+PRODUCTVERSION 	0,1,0,0
+FILEOS         	4
+FILETYPE       	2
 BEGIN
   BLOCK "StringFileInfo"
   BEGIN
-    BLOCK "FFFF04B0"
+    BLOCK "040904B0"
     BEGIN
-      VALUE "FileVersion", "1.0.0.0\0"
-      VALUE "ProductVersion", "1.0.0.0\0"
+        VALUE "CompanyName",      "eidauthenticate.sourceforge.net\0"
+        VALUE "FileDescription",  "Password Change Notification\0"
+        VALUE "FileVersion",      "0.1.0.0\0"
+        VALUE "InternalName",     "EIDPasswordChangeNotification.dll\0"
+        VALUE "OriginalFilename", "EIDPasswordChangeNotification.dll\0"
+        VALUE "ProductName",      "EID Password Change Notification\0"
+        VALUE "ProductVersion",   "0.1.0.0\0"
     END
   END
   BLOCK "VarFileInfo"
   BEGIN
-    VALUE "Translation", 0xFFFF, 0x04B0
+      VALUE "Translation", 0x0409, 0x04B0
   END
 END
-

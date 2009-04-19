@@ -16,10 +16,14 @@ BOOL SelectFile(HWND hWnd)
 	// select file to open
 	IFileDialog *pfd;
 	PWSTR szFileName = NULL;
+	TCHAR szSpecContainer[256] = TEXT("");
+	TCHAR szSpecAll[256] = TEXT("");
+	LoadString(g_hinst,IDS_03CONTAINERFILES,szSpecContainer,ARRAYSIZE(szSpecContainer));
+	LoadString(g_hinst,IDS_03ALLFILES,szSpecAll,ARRAYSIZE(szSpecAll));
 	COMDLG_FILTERSPEC rgSpec[] =
 	{ 
-		{ TEXT("Container Files"), L"*.pfx;*.p12" },
-		{ TEXT("All Files"), L"*.*" },
+		{ szSpecContainer, L"*.pfx;*.p12" },
+		{ szSpecAll, L"*.*" },
 	};
     CoInitialize(NULL);
     // CoCreate the dialog object.
@@ -117,19 +121,22 @@ VOID UpdateCertificatePanel(HWND hWnd)
 {
 	TCHAR szBuffer[1024];
 	TCHAR szBuffer2[1024];
+	TCHAR szMessage[256] = TEXT("");
 	TCHAR szLocalDate[255], szLocalTime[255];
 	SYSTEMTIME st;
 	SendDlgItemMessage(hWnd,IDC_03CERTIFICATEPANEL,LB_RESETCONTENT,0,0);
 	// object : 
 	CertGetNameString(pRootCertificate,CERT_NAME_SIMPLE_DISPLAY_TYPE,0,NULL,szBuffer2,ARRAYSIZE(szBuffer2));
-	_stprintf_s(szBuffer, ARRAYSIZE(szBuffer), _T("%s : %s"), _T("Object"), szBuffer2);
+	LoadString(g_hinst, IDS_03OBJECT, szMessage, ARRAYSIZE(szMessage));
+	_stprintf_s(szBuffer, ARRAYSIZE(szBuffer), szMessage,  szBuffer2);
 	SendDlgItemMessage(hWnd,IDC_03CERTIFICATEPANEL,LB_ADDSTRING,0,(LPARAM) szBuffer);
 	// delivered :
 	FileTimeToSystemTime( &(pRootCertificate->pCertInfo->NotBefore), &st );
 	GetDateFormat( LOCALE_USER_DEFAULT, DATE_LONGDATE, &st, NULL, szLocalDate, ARRAYSIZE(szLocalDate));
     GetTimeFormat( LOCALE_USER_DEFAULT, 0, &st, NULL, szLocalTime, ARRAYSIZE(szLocalTime) );
 
-	_stprintf_s(szBuffer, ARRAYSIZE(szBuffer), _T("%s : %s %s"), _T("Delivered"), szLocalDate, szLocalTime);
+	LoadString(g_hinst, IDS_03DELIVERED, szMessage, ARRAYSIZE(szMessage));
+	_stprintf_s(szBuffer, ARRAYSIZE(szBuffer), szMessage, szLocalDate, szLocalTime);
 	SendDlgItemMessage(hWnd,IDC_03CERTIFICATEPANEL,LB_ADDSTRING,0,(LPARAM) szBuffer);
 
 	// expires :
@@ -137,7 +144,8 @@ VOID UpdateCertificatePanel(HWND hWnd)
 	GetDateFormat( LOCALE_USER_DEFAULT, DATE_LONGDATE, &st, NULL, szLocalDate, ARRAYSIZE(szLocalDate));
     GetTimeFormat( LOCALE_USER_DEFAULT, 0, &st, NULL, szLocalTime, ARRAYSIZE(szLocalTime) );
 
-	_stprintf_s(szBuffer, ARRAYSIZE(szBuffer), _T("%s : %s %s"), _T("Expires"), szLocalDate, szLocalTime);
+	LoadString(g_hinst, IDS_03EXPIRES, szMessage, ARRAYSIZE(szMessage));
+	_stprintf_s(szBuffer, ARRAYSIZE(szBuffer), szMessage, szLocalDate, szLocalTime);
 	SendDlgItemMessage(hWnd,IDC_03CERTIFICATEPANEL,LB_ADDSTRING,0,(LPARAM) szBuffer);
 
 	// select option
@@ -188,72 +196,63 @@ INT_PTR CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 				}
 				break;
 			case PSN_WIZNEXT:
-				if (AskForCard(szReader,ARRAYSIZE(szReader),szCard,ARRAYSIZE(szCard)))
+				if (IsDlgButtonChecked(hWnd,IDC_03DELETE))
 				{
-					if (IsDlgButtonChecked(hWnd,IDC_03DELETE))
+					// delete all data
+					if (!ClearCard(szReader, szCard))
 					{
-						// delete all data
-						if (!ClearCard(szReader, szCard))
-						{
-							MessageBoxWin32(GetLastError());
-							SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
-							return TRUE;
-						}
-					}
-					if (IsDlgButtonChecked(hWnd,IDC_03_CREATE))
-					{
-						// create self signed certificate as root
-						DWORD dwReturn = -1;
-						if (CreateRootCertificate())
-						{
-							if (CreateSmartCardCertificate(pRootCertificate, szReader, szCard))
-							{
-								//  OK
-							}
-							else
-							{
-								MessageBoxWin32(GetLastError());
-								SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
-								return TRUE;
-							}
-						}
-						// cancel
-						break;
-					}
-					else if (IsDlgButtonChecked(hWnd,IDC_03USETHIS))
-					{
-						if (!pRootCertificate)
-						{
-							SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
-							return TRUE;
-						}
-						if (!CreateSmartCardCertificate(pRootCertificate, szReader, szCard))
-						{
-							MessageBoxWin32(GetLastError());
-							SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
-							return TRUE;
-						}
-					}
-					else if (IsDlgButtonChecked(hWnd,IDC_03IMPORT))
-					{
-						TCHAR szFileName[1024] = TEXT("");
-						TCHAR szPassword[1024] = TEXT("");
-						GetWindowText(GetDlgItem(hWnd,IDC_03FILENAME),szFileName,ARRAYSIZE(szFileName));
-						GetWindowText(GetDlgItem(hWnd,IDC_03IMPORTPASSWORD),szPassword,ARRAYSIZE(szPassword));
-						if (!ImportFileToSmartCard(szFileName, szPassword, szReader, szCard))
-						{
-							MessageBoxWin32(GetLastError());
-							SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
-							return TRUE;
-						}
-
+						MessageBoxWin32(GetLastError());
+						SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
+						return TRUE;
 					}
 				}
-				else
+				if (IsDlgButtonChecked(hWnd,IDC_03_CREATE))
 				{
+					// create self signed certificate as root
+					DWORD dwReturn = -1;
+					if (CreateRootCertificate())
+					{
+						if (CreateSmartCardCertificate(pRootCertificate, szReader, szCard))
+						{
+							//  OK
+						}
+						else
+						{
+							MessageBoxWin32(GetLastError());
+							SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
+							return TRUE;
+						}
+					}
 					// cancel
-					SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
-					return TRUE;
+					break;
+				}
+				else if (IsDlgButtonChecked(hWnd,IDC_03USETHIS))
+				{
+					if (!pRootCertificate)
+					{
+						SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
+						return TRUE;
+					}
+					if (!CreateSmartCardCertificate(pRootCertificate, szReader, szCard))
+					{
+						MessageBoxWin32(GetLastError());
+						SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
+						return TRUE;
+					}
+				}
+				else if (IsDlgButtonChecked(hWnd,IDC_03IMPORT))
+				{
+					TCHAR szFileName[1024] = TEXT("");
+					TCHAR szPassword[1024] = TEXT("");
+					GetWindowText(GetDlgItem(hWnd,IDC_03FILENAME),szFileName,ARRAYSIZE(szFileName));
+					GetWindowText(GetDlgItem(hWnd,IDC_03IMPORTPASSWORD),szPassword,ARRAYSIZE(szPassword));
+					if (!ImportFileToSmartCard(szFileName, szPassword, szReader, szCard))
+					{
+						MessageBoxWin32(GetLastError());
+						SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
+						return TRUE;
+					}
+
 				}
 				break;
 		}
@@ -279,10 +278,12 @@ INT_PTR CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 			case IDC_03SHOW:
 				if (pRootCertificate)
 				{
+					TCHAR szTitle[256] = TEXT("");
+					LoadString(g_hinst, IDS_03CERTVIEWTITLE, szTitle, ARRAYSIZE(szTitle));
 					certViewInfo.dwSize = sizeof(CRYPTUI_VIEWCERTIFICATE_STRUCT);
 					certViewInfo.hwndParent = hWnd;
 					certViewInfo.dwFlags = CRYPTUI_DISABLE_EDITPROPERTIES | CRYPTUI_DISABLE_ADDTOSTORE | CRYPTUI_DISABLE_EXPORT | CRYPTUI_DISABLE_HTMLLINK;
-					certViewInfo.szTitle = TEXT("Info");
+					certViewInfo.szTitle = szTitle;
 					certViewInfo.pCertContext = pRootCertificate;
 					certViewInfo.cPurposes = 0;
 					certViewInfo.rgszPurposes = 0;

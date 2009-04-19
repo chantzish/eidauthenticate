@@ -30,12 +30,6 @@
 #define WIN32_NO_STATUS
 #include <windows.h>
 
-#include <CodeAnalysis/warnings.h>
-#pragma warning(push)
-#pragma warning(disable : ALL_CODE_ANALYSIS_WARNINGS)
-#include <strsafe.h>
-#pragma warning(pop)
-
 //#include <shlguid.h>
 #include "helpers.h"
 #include "dll.h"

@@ -19,6 +19,7 @@
 #include "../EIDCardLibrary/CertificateUtilities.h"
 #include "../EIDCardLibrary/BEID.h"
 #include "../EIDCardLibrary/Package.h"
+#include "../EIDCardLibrary/Tracing.h"
 #include <lm.h>
 #include <WinCred.h>
 
@@ -212,6 +213,7 @@ BOOL CContainerHolderFactory<T>::CreateItemFromCertificateBlob(__in LPCTSTR szRe
 	pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, Data, DataSize);
 	if (pCertContext)
 	{
+		BOOL fAdd = TRUE;
 		CRYPT_KEY_PROV_INFO KeyProvInfo;
 		KeyProvInfo.dwFlags = 0;
 		KeyProvInfo.dwKeySpec = KeySpec;
@@ -221,49 +223,62 @@ BOOL CContainerHolderFactory<T>::CreateItemFromCertificateBlob(__in LPCTSTR szRe
 		KeyProvInfo.rgProvParam = 0;
 		KeyProvInfo.cProvParam = NULL;
 		CertSetCertificateContextProperty(pCertContext, CERT_KEY_PROV_INFO_PROP_ID, 0, &KeyProvInfo);
-		if (_cpus == CPUS_CREDUI || IsTrustedCertificate(pCertContext))
+		if (_cpus == CPUS_CREDUI && !(_dwFlags & CREDUIWIN_ENUMERATE_CURRENT_USER) && !(_dwFlags & CREDUIWIN_ENUMERATE_ADMINS))
 		{
-			BOOL fAdd = TRUE;
-			CContainer* pContainer = new CContainer(szReaderName,szCardName,szProviderName,szWideContainerName, KeySpec, ActivityCount, pCertContext);
-			// check if the Container meet the requirement
-			if ((_dwFlags & CREDUIWIN_ENUMERATE_CURRENT_USER) || (_dwFlags & CREDUIWIN_ENUMERATE_ADMINS) || (_cpus == CPUS_UNLOCK_WORKSTATION) || (_cpus == CPUS_LOGON))
+			fAdd = IsTrustedCertificate(pCertContext);
+			if (!fAdd)
 			{
-				PTSTR UserName = pContainer->GetUserName();
-				if (UserName)
-				{
-					if (_cpus == CPUS_LOGON)
-					{
-						fAdd = HasAccountOnCurrentComputer(UserName);
-					}
-					if (((_dwFlags & CREDUIWIN_ENUMERATE_CURRENT_USER) || (_cpus == CPUS_UNLOCK_WORKSTATION)) && fAdd)
-					{
-						fAdd = IsCurrentUser(UserName);
-					}
-					if ((_dwFlags & CREDUIWIN_ENUMERATE_ADMINS) && fAdd)
-					{
-						fAdd = IsAdmin(UserName);
-					}
-				}
-				else
-				{
-					fAdd = FALSE;
-				}
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Untrusted certificate 0x%x",GetLastError());
 			}
-			if (fAdd)
+		}
+			
+		CContainer* pContainer = new CContainer(szReaderName,szCardName,szProviderName,szWideContainerName, KeySpec, ActivityCount, pCertContext);
+		// check if the Container meet the requirement
+		if ((_dwFlags & CREDUIWIN_ENUMERATE_CURRENT_USER) || (_dwFlags & CREDUIWIN_ENUMERATE_ADMINS))
+		{
+			PTSTR UserName = pContainer->GetUserName();
+			if (UserName)
 			{
-				T* ContainerHolder = new T(pContainer);
-				ContainerHolder->SetUsageScenario(_cpus, _dwFlags);
-				_CredentialList.push_back(ContainerHolder);
-				fReturn = TRUE;
+				if ((_cpus == CPUS_LOGON || _cpus == CPUS_UNLOCK_WORKSTATION) && fAdd)
+				{
+					fAdd = HasAccountOnCurrentComputer(UserName);
+					if (!fAdd)
+					{
+						EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"HasAccountOnCurrentComputer 0x%x",GetLastError());
+					}
+				}
+				if (((_dwFlags & CREDUIWIN_ENUMERATE_CURRENT_USER) || (_cpus == CPUS_UNLOCK_WORKSTATION)) && fAdd)
+				{
+					fAdd = IsCurrentUser(UserName);
+					if (!fAdd)
+					{
+						EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"IsCurrentUser 0x%x",GetLastError());
+					}
+				}
+				if ((_dwFlags & CREDUIWIN_ENUMERATE_ADMINS) && fAdd)
+				{
+					fAdd = IsAdmin(UserName);
+					if (!fAdd)
+					{
+						EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"IsAdmin 0x%x",GetLastError());
+					}
+				}
 			}
 			else
 			{
-				delete pContainer;
+				fAdd = FALSE;
 			}
+		}
+		if (fAdd)
+		{
+			T* ContainerHolder = new T(pContainer);
+			ContainerHolder->SetUsageScenario(_cpus, _dwFlags);
+			_CredentialList.push_back(ContainerHolder);
+			fReturn = TRUE;
 		}
 		else
 		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Untrusted certificate 0x%x",GetLastError());
+			delete pContainer;
 		}
 	}
 	else
@@ -345,6 +360,6 @@ T* CContainerHolderFactory<T>::GetContainerHolderAt(DWORD dwIndex)
 		return NULL;
 	}
 	std::list<T*>::iterator it = _CredentialList.begin();
-	std::advance(it, dwIndex); //pour acceder avancer sur le 5eme element
+	std::advance(it, dwIndex);
 	return *it;
 }

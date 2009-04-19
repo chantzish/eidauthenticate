@@ -777,12 +777,15 @@ BOOL LsaEIDRemoveStoredCredential(__in_opt PWSTR szUsername)
     HANDLE hLsa;
 	DWORD dwSize;
 	NTSTATUS status;
+	DWORD dwError = 0;
 
 	dwSize = sizeof(EID_CALLPACKAGE_BUFFER);
 	pBuffer = (PEID_CALLPACKAGE_BUFFER) malloc(dwSize);
 	if( !pBuffer) 
 	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pBuffer null");
+		dwError = GetLastError();
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pBuffer null 0x%08X",dwError);
+		SetLastError(dwError);
 		return FALSE;
 	}
 	if (!szUsername) 
@@ -796,13 +799,15 @@ BOOL LsaEIDRemoveStoredCredential(__in_opt PWSTR szUsername)
 	pBuffer->MessageType = EIDCMRemoveStoredCredential;
 	if (!pBuffer->dwRid)
 	{
+		dwError = GetLastError();
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"dwRid = 0");
 		free(pBuffer);
+		SetLastError(dwError);
 		return FALSE;
 	}
 
     status = LsaConnectUntrusted(&hLsa);
-    if (SUCCEEDED(HRESULT_FROM_NT(status)))
+    if (status == STATUS_SUCCESS)
     {
 
         ULONG ulAuthPackage;
@@ -821,19 +826,23 @@ BOOL LsaEIDRemoveStoredCredential(__in_opt PWSTR szUsername)
 			else
 			{
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaCallAuthenticationPackage 0x%08x",status);
+				dwError = pBuffer->dwError;
 			}
         }
 		else
 		{
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaLookupAuthenticationPackage 0x%08x",status);
+			dwError = status;
 		}
     }
 	else
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaConnectUntrusted 0x%08x",status);
+		dwError = status;
 	}
 	LsaClose(hLsa);
 	free(pBuffer);
+	SetLastError(dwError);
 	return fReturn;
 }
 

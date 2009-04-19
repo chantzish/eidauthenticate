@@ -47,7 +47,6 @@ NTSTATUS UserNameToToken(__in PLSA_UNICODE_STRING AccountName,
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
 	PLSA_TOKEN_INFORMATION_V2 TokenInformation;
 	PTOKEN_GROUPS pTokenGroups=NULL;
-	//NET_API_STATUS nas;
 	PGROUP_USERS_INFO_1 pGroupInfo;
 	PGROUP_USERS_INFO_0 pLocalGroupInfo;
 
@@ -60,7 +59,7 @@ NTSTATUS UserNameToToken(__in PLSA_UNICODE_STRING AccountName,
 	DWORD i;
 	NTSTATUS Status;
 	LARGE_INTEGER ExpirationTime;
-	// convert AuthenticatingAuthority & AccountName to WSTR
+	// convert AccountName to WSTR
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Convert");
 	WCHAR UserName[UNLEN+1];
 
@@ -288,8 +287,8 @@ void DebugPrintSid(WCHAR* Name, PSID Sid)
 NTSTATUS CheckAuthorization(PWSTR UserName, NTSTATUS *SubStatus, LARGE_INTEGER *ExpirationTime)
 {
 	NTSTATUS Status;
-	USER_INFO_4 *UserInfo = NULL;
-	if((Status=NetUserGetInfo(NULL, UserName, 4, (LPBYTE*)&UserInfo))!=0)
+	USER_INFO_4 *pUserInfo = NULL;
+	if((Status=NetUserGetInfo(NULL, UserName, 4, (LPBYTE*)&pUserInfo))!=0)
 	{
 		switch(Status)
 		{
@@ -310,33 +309,26 @@ NTSTATUS CheckAuthorization(PWSTR UserName, NTSTATUS *SubStatus, LARGE_INTEGER *
 			Status = STATUS_NO_SUCH_USER;
 			break;
 		}
-		if(UserInfo) NetApiBufferFree(UserInfo);
+		if(pUserInfo) NetApiBufferFree(pUserInfo);
 		return Status;
 	}
 
-	if(UserInfo->usri4_flags&UF_ACCOUNTDISABLE)
+	if(pUserInfo->usri4_flags&UF_ACCOUNTDISABLE)
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Account disabled: ACCOUNT_DISABLED");
 		*SubStatus = STATUS_ACCOUNT_DISABLED;
-		if(UserInfo) NetApiBufferFree(UserInfo);
+		if(pUserInfo) NetApiBufferFree(pUserInfo);
 		return STATUS_ACCOUNT_RESTRICTION;
 	}
-	/*if(UserInfo->usri1_flags&UF_PASSWORD_EXPIRED)
-	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Password expired: PASSWORD_EXPIRED");
-		*SubStatus = STATUS_PASSWORD_EXPIRED;
-		if(UserInfo) NetApiBufferFree(UserInfo);
-		return STATUS_ACCOUNT_RESTRICTION;
-	}*/
 	ExpirationTime->QuadPart = 9223372036854775807;
-	if (UserInfo->usri4_logon_hours)
+	if (pUserInfo->usri4_logon_hours)
 	{
 		DWORD dwPosLogon, dwPosLogoff, dwHours;
 		SYSTEMTIME SystemTime;
 		FILETIME FileTime;
 		GetSystemTime(&SystemTime);
 		dwPosLogon = SystemTime.wDayOfWeek*24 + SystemTime.wHour;
-		if (!((UserInfo->usri4_logon_hours[dwPosLogon/8] >> (dwPosLogon % 8)) & 1))
+		if (!((pUserInfo->usri4_logon_hours[dwPosLogon/8] >> (dwPosLogon % 8)) & 1))
 		{
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"STATUS_INVALID_LOGON_HOURS");
 			*SubStatus = STATUS_INVALID_LOGON_HOURS;
@@ -349,7 +341,7 @@ NTSTATUS CheckAuthorization(PWSTR UserName, NTSTATUS *SubStatus, LARGE_INTEGER *
 			for (dwHours = 1 ; dwHours < 7 * 24 + 1; dwHours++)
 			{
 				dwPosLogoff = (dwPosLogon + dwHours) % (7 * 24);
-				if (!((UserInfo->usri4_logon_hours[dwPosLogoff/8] >> (dwPosLogoff % 8)) & 1))
+				if (!((pUserInfo->usri4_logon_hours[dwPosLogoff/8] >> (dwPosLogoff % 8)) & 1))
 				{
 					// Logon authorized not everytime
 					LARGE_INTEGER Hour;
@@ -367,14 +359,14 @@ NTSTATUS CheckAuthorization(PWSTR UserName, NTSTATUS *SubStatus, LARGE_INTEGER *
 			}
 		}
 	}
-	if (wcscmp(UserInfo->usri4_logon_server,L"\\\\*") != 0)
+	if (wcscmp(pUserInfo->usri4_logon_server,L"\\\\*") != 0)
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"STATUS_INVALID_WORKSTATION");
 		*SubStatus = STATUS_INVALID_WORKSTATION;
 		return STATUS_ACCOUNT_RESTRICTION;
 	}
 
-	NetApiBufferFree(UserInfo);
+	NetApiBufferFree(pUserInfo);
 	return STATUS_SUCCESS;
 }
 

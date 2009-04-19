@@ -35,6 +35,7 @@
 
 #include "CEIDProvider.h"
 #include "CEIDCredential.h"
+#include "CMessageCredential.h"
 
 #include <credentialprovider.h>
 

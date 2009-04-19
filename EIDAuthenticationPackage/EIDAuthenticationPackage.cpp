@@ -80,7 +80,7 @@ extern "C"
 
 	PLSA_UNICODE_STRING LsaInitializeUnicodeStringFromWideString(PWSTR Source)
 	{
-		DWORD Size = sizeof(WCHAR)*wcslen(Source);
+		DWORD Size = (DWORD) (sizeof(WCHAR)*wcslen(Source));
 		PWSTR Buffer = (PWSTR)MyLsaDispatchTable->AllocateLsaHeap((DWORD) (Size+sizeof(WCHAR)));
 		if (Buffer == NULL) {
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"No Memory Buffer");
@@ -173,11 +173,11 @@ extern "C"
 		UNREFERENCED_PARAMETER(ClientRequest);
 		UNREFERENCED_PARAMETER(ReturnBufferLength);
 		UNREFERENCED_PARAMETER(ProtocolReturnBuffer);
-		UNREFERENCED_PARAMETER(ProtocolStatus);
 		UNREFERENCED_PARAMETER(SubmitBufferLength);
 		__try
 		{
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
+			*ProtocolStatus = STATUS_SUCCESS;
 			PEID_CALLPACKAGE_BUFFER pBuffer = (PEID_CALLPACKAGE_BUFFER) ProtocolSubmitBuffer;
 			pBuffer->dwError = 0;
 			switch (pBuffer->MessageType)
@@ -386,7 +386,7 @@ extern "C"
 		PLSA_TOKEN_INFORMATION_V2 MyTokenInformation = NULL;
 		__try
 		{
-			if (SubStatus) *SubStatus = STATUS_SUCCESS;
+			*SubStatus = STATUS_SUCCESS;
 
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"LogonType = %d",LogonType);
@@ -477,7 +477,10 @@ extern "C"
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"UserNameToToken failed %d",Status);
 				return STATUS_LOGON_FAILURE;
 			}
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"TokenInformation OK");
+			
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"TokenInformation OK substatus = 0x%08X",*SubStatus);
+			*SubStatus = STATUS_SUCCESS;
+
 			PSID pSid = MyTokenInformation->User.User.Sid;
 			DWORD dwRid = *GetSidSubAuthority(pSid,*GetSidSubAuthorityCount(pSid) -1);
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"RID = %d", dwRid);
@@ -489,7 +492,6 @@ extern "C"
 				return STATUS_SMARTCARD_WRONG_PIN;
 			}
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"RetrieveStoredCredential OK");
-EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Password = %s",szPassword);
 
 			CertFreeCertificateContext(pCertContext);
 
@@ -539,7 +541,6 @@ EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Password = %s",szPassword);
 				free(szPassword);
 			}
 			Status = STATUS_SUCCESS;
-			*SubStatus = STATUS_SUCCESS;
 
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Success !!");
 			return Status;

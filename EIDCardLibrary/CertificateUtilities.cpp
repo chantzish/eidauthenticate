@@ -223,7 +223,7 @@ BOOL AskForCard(LPWSTR szReader, DWORD ReaderLength,LPWSTR szCard,DWORD CardLeng
 	SCARDCONTEXT     hSC;
 	OPENCARDNAME_EX  dlgStruct;
 	LONG             lReturn;
-	DWORD dwErr = 0;
+	BOOL			 fReturn = FALSE;
 	// Establish a context.
 	// It will be assigned to the structure's hSCardContext field.
 	lReturn = SCardEstablishContext(SCARD_SCOPE_USER,
@@ -253,8 +253,12 @@ BOOL AskForCard(LPWSTR szReader, DWORD ReaderLength,LPWSTR szCard,DWORD CardLeng
 	{
 		szReader[0]=0;
 		szCard[0]=0;
-		dwErr = 1;
-		MessageBox(NULL,L"No reader available",L"",0);
+		fReturn = FALSE;
+		MessageBoxWin32(lReturn);
+	}
+	else
+	{
+		fReturn = TRUE;
 	}
 
 	// Free the context.
@@ -263,7 +267,7 @@ BOOL AskForCard(LPWSTR szReader, DWORD ReaderLength,LPWSTR szCard,DWORD CardLeng
 	lReturn = SCardReleaseContext(hSC);
 	if ( SCARD_S_SUCCESS != lReturn )
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed SCardReleaseContext 0x%08X",lReturn);
-	return dwErr==0;
+	return fReturn;
 }
 
 BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)

@@ -1,5 +1,6 @@
 #include <windows.h>
 #include <tchar.h>
+#include <Cryptuiapi.h>
 
 #include "../EIDCardLibrary/Tracing.h"
 #include "../EIDCardLibrary/CContainer.h"
@@ -11,7 +12,7 @@
 extern HWND hMainWnd;
 
 
-class CContainerHolderTest : public IContainerHolderList
+class CContainerHolderTest
 {
 public:
 	CContainerHolderTest(CContainer* pContainer)
@@ -55,6 +56,72 @@ void menu_CREDENTIAL_List()
 			{
 				CContainerHolderTest* MyTest = MyCredentialList.GetContainerHolderAt(dwI);
 				MessageBox(hMainWnd,MyTest->GetContainer()->GetUserNameW(),_T("test"),0);
+			}
+		}
+		else
+		{
+			MessageBox(hMainWnd,_T("No Credential"),_T("test"),0);
+		}
+		MyCredentialList.DisconnectNotification(szReader);
+	}
+}
+
+void menu_CREDENTIAL_CspInfo()
+{
+	WCHAR szReader[256];
+	WCHAR szCard[256];
+	if (AskForCard(szReader,256,szCard,256))
+	{
+		CContainerHolderFactory<CContainerHolderTest> MyCredentialList;
+		MyCredentialList.ConnectNotification(szReader,szCard,0);
+		if (MyCredentialList.HasContainerHolder())
+		{
+			DWORD dwMax = MyCredentialList.ContainerHolderCount();
+			for (DWORD dwI = 0; dwI < dwMax ; dwI++)
+			{
+				PEID_SMARTCARD_CSP_INFO pCspInfo;
+				CContainerHolderTest* MyTest = MyCredentialList.GetContainerHolderAt(dwI);
+				pCspInfo = MyTest->GetContainer()->GetCSPInfo();
+				if (pCspInfo)
+				{
+					PCCERT_CONTEXT pCertContext = GetCertificateFromCspInfo(pCspInfo);
+					if (pCertContext)
+					{
+						BOOL fPropertiesChanged;
+						CRYPTUI_VIEWCERTIFICATE_STRUCT certViewInfo;
+						certViewInfo.dwSize = sizeof(CRYPTUI_VIEWCERTIFICATE_STRUCT);
+						certViewInfo.hwndParent = hMainWnd;
+						certViewInfo.dwFlags = CRYPTUI_DISABLE_EDITPROPERTIES | CRYPTUI_DISABLE_ADDTOSTORE | CRYPTUI_DISABLE_EXPORT | CRYPTUI_DISABLE_HTMLLINK;
+						certViewInfo.szTitle = TEXT("");
+						certViewInfo.pCertContext = pCertContext;
+						certViewInfo.cPurposes = 0;
+						certViewInfo.rgszPurposes = 0;
+						certViewInfo.pCryptProviderData = NULL;
+						certViewInfo.hWVTStateData = NULL;
+						certViewInfo.fpCryptProviderDataTrustedUsage = FALSE;
+						certViewInfo.idxSigner = 0;
+						certViewInfo.idxCert = 0;
+						certViewInfo.fCounterSigner = FALSE;
+						certViewInfo.idxCounterSigner = 0;
+						certViewInfo.cStores = 0;
+						certViewInfo.rghStores = NULL;
+						certViewInfo.cPropSheetPages = 0;
+						certViewInfo.rgPropSheetPages = NULL;
+						certViewInfo.nStartPage = 0;
+
+						CryptUIDlgViewCertificate(&certViewInfo,&fPropertiesChanged);
+						CertFreeCertificateContext(pCertContext);
+					}
+					else
+					{
+						MessageBoxWin32(GetLastError());
+					}
+					MyTest->GetContainer()->FreeCSPInfo(pCspInfo);
+				}
+				else
+				{
+					MessageBox(hMainWnd,_T("Erreur"),_T("test"),0);
+				}
 			}
 		}
 		else

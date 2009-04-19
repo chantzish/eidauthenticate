@@ -3,23 +3,28 @@
 
 IDB_TILE_IMAGE BITMAP DISCARDABLE "SmartcardCredentialProvider.bmp"
 
-IDR_VERSION1 VERSIONINFO
-FILEVERSION 1,0,0,0
-PRODUCTVERSION 1,0,0,0
-FILEOS 0x00000004
-FILETYPE 0x00000002
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION    	0,1,0,0
+PRODUCTVERSION 	0,1,0,0
+FILEOS         	4
+FILETYPE       	2
 BEGIN
   BLOCK "StringFileInfo"
   BEGIN
-    BLOCK "FFFF04B0"
+    BLOCK "040904B0"
     BEGIN
-      VALUE "FileVersion", "1.0.0.0\0"
-      VALUE "ProductVersion", "1.0.0.0\0"
+        VALUE "CompanyName",      "eidauthenticate.sourceforge.net\0"
+        VALUE "FileDescription",  "Credential Provider\0"
+        VALUE "FileVersion",      "0.1.0.0\0"
+        VALUE "InternalName",     "EIDCredentialProvider.dll\0"
+        VALUE "OriginalFilename", "EIDCredentialProvider.dll\0"
+        VALUE "ProductName",      "EID Credential Provider\0"
+        VALUE "ProductVersion",   "0.1.0.0\0"
     END
   END
   BLOCK "VarFileInfo"
   BEGIN
-    VALUE "Translation", 0xFFFF, 0x04B0
+      VALUE "Translation", 0x0409, 0x04B0
   END
 END
 
@@ -34,8 +39,14 @@ BEGIN
   CONTROL "Username:",IDC_STC1,"Static",WS_CHILD|WS_VISIBLE,9,39,64,9
   CONTROL "Password:",IDC_STC2,"Static",WS_CHILD|WS_VISIBLE,9,69,64,9
   CONTROL "OK",IDC_OK,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_DEFPUSHBUTTON|0x000000C0,171,135,51,15
-  CONTROL "<a id=""idinfo"">Reset password</a>",IDC_LINK,"SysLink",WS_CHILD|WS_VISIBLE|WS_TABSTOP|0x00000003,9,99,184,12
+  CONTROL "<a id=""idinfo"">Reset password</a>",IDC_LINK,"SysLink",WS_CHILD|WS_VISIBLE|WS_TABSTOP|0x00000003|1,9,99,184,12
   CONTROL "Cancel",IDC_CANCEL,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|0x000000C0,228,135,51,15
   CONTROL "Please logon using an administrator account",IDC_STC3,"Static",WS_CHILD|WS_VISIBLE,9,9,117,21
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+  IDS_DISABLEFORCEPOLICY "Disable Force Smart Card Logon Policy"
+  IDS_CERTIFICATEDETAIL "Certificate Detail"
 END
 

@@ -8,6 +8,7 @@
 #include "../EIDCardLibrary/EIDCardLibrary.h"
 #include "../EIDCardLibrary/Package.h"
 #include "../EIDCardLibrary/Registration.h"
+#include "../EIDCardLibrary/CertificateUtilities.h"
 
 #pragma comment(lib,"comctl32")
 
@@ -33,6 +34,10 @@ BOOL fHasAlreadySmartCardCredential = FALSE;
 BOOL fShowNewCertificatePanel;
 BOOL fGotoNewScreen = FALSE;
 HINSTANCE g_hinst;
+WCHAR szReader[256];
+DWORD dwReaderSize = ARRAYSIZE(szReader);
+WCHAR szCard[256];
+DWORD dwCardSize = ARRAYSIZE(szCard);
 
 int APIENTRY _tWinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
@@ -44,7 +49,9 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 
 	if (!IsEIDPackageAvailable())
 	{
-		MessageBox(NULL,TEXT("Authentication package not available"),TEXT("Error"),MB_ICONERROR);
+		TCHAR szMessage[256] = TEXT("");
+		LoadString(g_hinst,IDS_EIDNOTAVAILABLE, szMessage, ARRAYSIZE(szMessage));
+		MessageBox(NULL,szMessage,TEXT("Error"),MB_ICONERROR);
 		return -1;
 	}
 	g_hinst = hInstance;
@@ -81,7 +88,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	}
 
 	HPROPSHEETPAGE ahpsp[5];
-
+	TCHAR szTitle[256] = TEXT("");
 	fHasAlreadySmartCardCredential = TRUE;
 
 	PROPSHEETPAGE psp = { sizeof(psp) };   
@@ -89,27 +96,32 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	psp.dwFlags =  PSP_USEHEADERTITLE;
 	psp.lParam = 0;//(LPARAM) &wizdata;
 	
-	psp.pszHeaderTitle = TEXT("Credential managment");
+	LoadString(g_hinst,IDS_TITLE0, szTitle, ARRAYSIZE(szTitle));
+	psp.pszHeaderTitle = szTitle;
 	psp.pszTemplate = MAKEINTRESOURCE(IDD_01MAIN);
 	psp.pfnDlgProc = WndProc_01MAIN;
 	ahpsp[0] = CreatePropertySheetPage(&psp);
 
-	psp.pszHeaderTitle = TEXT("Configure smart card logon");
+	LoadString(g_hinst,IDS_TITLE1, szTitle, ARRAYSIZE(szTitle));
+	psp.pszHeaderTitle = szTitle;
 	psp.pszTemplate = MAKEINTRESOURCE(IDD_02ENABLE);
 	psp.pfnDlgProc = WndProc_02ENABLE;
 	ahpsp[1] = CreatePropertySheetPage(&psp);
 
-	psp.pszHeaderTitle = TEXT("Configure a smart card");
+	LoadString(g_hinst,IDS_TITLE2, szTitle, ARRAYSIZE(szTitle));
+	psp.pszHeaderTitle = szTitle;
 	psp.pszTemplate = MAKEINTRESOURCE(IDD_03NEW);
 	psp.pfnDlgProc = WndProc_03NEW;
 	ahpsp[2] = CreatePropertySheetPage(&psp);
 
-	psp.pszHeaderTitle = TEXT("Check the status of the smart card");
+	LoadString(g_hinst,IDS_TITLE3, szTitle, ARRAYSIZE(szTitle));
+	psp.pszHeaderTitle = szTitle;
 	psp.pszTemplate = MAKEINTRESOURCE(IDD_04CHECKS);
 	psp.pfnDlgProc = WndProc_04CHECKS;
 	ahpsp[3] = CreatePropertySheetPage(&psp);
 
-	psp.pszHeaderTitle = TEXT("Enter your password");
+	LoadString(g_hinst,IDS_TITLE4, szTitle, ARRAYSIZE(szTitle));
+	psp.pszHeaderTitle = szTitle;
 	psp.pszTemplate = MAKEINTRESOURCE(IDD_05PASSWORD);
 	psp.pfnDlgProc = WndProc_05PASSWORD;
 	ahpsp[4] = CreatePropertySheetPage(&psp);
@@ -118,22 +130,34 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	psh.hInstance = hInstance;
 	psh.hwndParent = NULL;
 	psh.phpage = ahpsp;
-	psh.dwFlags = PSH_WIZARD | PSH_AEROWIZARD | PSH_USEHICON;
+	psh.dwFlags = PSH_WIZARD | PSH_AEROWIZARD | PSH_USEHICON ;
 	psh.pszbmWatermark = 0;
 	psh.pszbmHeader = 0;
 	psh.nStartPage = 1;
 	psh.nPages = ARRAYSIZE(ahpsp);
-	psh.pszCaption = TEXT("Smart Card Logon Configuration");
+	psh.hIcon = NULL;
+	LoadString(g_hinst,IDS_CAPTION, szTitle, ARRAYSIZE(szTitle));
+	psh.pszCaption = szTitle;
 
 	HMODULE hDll = LoadLibrary(TEXT("imageres.dll") );
-	psh.hIcon = LoadIcon(hDll, MAKEINTRESOURCE(58));
-	FreeLibrary(hDll);
+	if (hDll)
+	{
+		psh.hIcon = LoadIcon(hDll, MAKEINTRESOURCE(58));
+		FreeLibrary(hDll);
+	}
 
 	fHasAlreadySmartCardCredential = LsaEIDHasStoredCredential(NULL);
 
 	 if (fGotoNewScreen)
 	{
-		psh.nStartPage = 2;
+		if (AskForCard(szReader, dwReaderSize, szCard, dwCardSize))
+		{
+			psh.nStartPage = 2;
+		}
+		else
+		{
+			psh.nStartPage = 1;
+		}
 	}
 	else if (fHasAlreadySmartCardCredential)
 	{

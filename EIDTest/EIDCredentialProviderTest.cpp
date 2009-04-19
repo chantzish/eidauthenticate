@@ -56,8 +56,6 @@ void Menu_CREDENTIALUID_GENERIC(DWORD dwFlag)
 		/* Find the setuid package and call it */
 		err = LsaLogonUser(hLsa, &Origin, (SECURITY_LOGON_TYPE)  Interactive , authPackage, authBuffer,authBufferSize,NULL, &Source, (PVOID*)&Profile, &ProfileLen, &Luid, &Token, &Quota, &stat);
 		DWORD dwSize = sizeof(MSV1_0_INTERACTIVE_PROFILE);
-		BYTE ProfileB[142];
-		memcpy(ProfileB,Profile,ProfileLen);
 		LsaDeregisterLogonProcess(hLsa);
 		if (err)
 		{

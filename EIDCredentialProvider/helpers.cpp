@@ -37,6 +37,17 @@
 #include "../EIDCardLibrary/Tracing.h"
 #include "../EIDCardLibrary/Package.h"
 
+#include <CodeAnalysis/warnings.h>
+
+#pragma warning(push)
+#pragma warning(disable : 4995)
+#include <shlwapi.h>
+#pragma warning(pop)
+#pragma warning(push)
+#pragma warning(disable : 4995)
+#include <strsafe.h>
+#pragma warning(pop)
+
 #pragma comment(lib,"shlwapi")
 #pragma comment(lib,"comctl32")
 // 
@@ -236,7 +247,7 @@ HRESULT ProtectIfNecessaryAndCopyPassword(
 }
 
 typedef BOOL (NTAPI * PRShowRestoreFromMsginaW) (DWORD, DWORD, PWSTR, DWORD);
-static BOOL CALLBACK CancelForcePolicyWizardCallBack(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM lParam) 
+static INT_PTR CALLBACK CancelForcePolicyWizardCallBack(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM lParam) 
 { 
  
     switch (message) 

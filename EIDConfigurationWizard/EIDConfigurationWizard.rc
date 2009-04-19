@@ -1,71 +1,75 @@
 #include <windows.h>
 #include "EIDConfigurationWizard.h"
 
-IDR_VERSION1 VERSIONINFO
-FILEVERSION 1,0,0,0
-PRODUCTVERSION 1,0,0,0
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION 0,1,0,0
+PRODUCTVERSION 0,1,0,0
 FILEOS 0x00000004
 FILETYPE 0x00000002
 BEGIN
   BLOCK "StringFileInfo"
   BEGIN
-    BLOCK "FFFF04B0"
+    BLOCK "040904B0"
     BEGIN
-      VALUE "FileVersion", "1.0.0.0\0"
-      VALUE "ProductVersion", "1.0.0.0\0"
+      VALUE "CompanyName", "eidauthenticate.sourceforge.net\0"
+      VALUE "FileDescription", "Configuration Wizard\0"
+      VALUE "FileVersion", "0.1.0.0\0"
+      VALUE "InternalName", "EIDConfigurationWizard.exe\0"
+      VALUE "OriginalFilename", "EIDConfigurationWizard.exe\0"
+      VALUE "ProductName", "EID Configuration Wizard\0"
+      VALUE "ProductVersion", "0.1.0.0\0"
     END
   END
   BLOCK "VarFileInfo"
   BEGIN
-    VALUE "Translation", 0xFFFF, 0x04B0
+    VALUE "Translation", 0x0409, 0x04B0
   END
 END
 
-IDD_01MAIN DIALOGEX -2,-13,253,154
-CAPTION "IDD_DLG"
-FONT 8,"MS Sans Serif",0,0,0
+IDD_01MAIN DIALOGEX 0,0,273,209
+FONT 9,"Segoe UI",0,0,0
 STYLE WS_POPUP|WS_VISIBLE|WS_CAPTION|WS_SYSMENU|DS_MODALFRAME|DS_SETFONT
 BEGIN
-  CONTROL "Change Smart Card Credential",IDC_01CHANGE,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|0x0000000E,21,21,216,33
-  CONTROL "Disable Smart Card Logon",IDC_01DELETE,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|0x0000000E,21,69,216,33
+  CONTROL "Change Smart Card Credential",IDC_01CHANGE,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_COMMANDLINK,21,21,216,33
+  CONTROL "Disable Smart Card Logon",IDC_01DELETE,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_COMMANDLINK,21,69,216,33
 END
 
-IDD_02ENABLE DIALOGEX -4,-16,253,154
-CAPTION "IDD_DLG"
-FONT 8,"MS Sans Serif",0,0,0
+IDD_02ENABLE DIALOGEX 0,0,273,209
+FONT 9,"Segoe UI",0,0,0
 STYLE WS_POPUP|WS_VISIBLE|WS_CAPTION|WS_SYSMENU|DS_MODALFRAME|DS_SETFONT
 BEGIN
-  CONTROL "Use preconfigured Card",IDC_02EXISTING,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|0x0000000E,21,21,216,33
-  CONTROL "Configure a new set of credential",IDC_02NEW,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|0x0000000E,21,69,216,33
+  CONTROL "Use preconfigured Card",IDC_02EXISTING,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_COMMANDLINK,21,21,216,33
+  CONTROL "Configure a new set of credential",IDC_02NEW,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_COMMANDLINK,21,69,216,33
 END
 
-IDD_05PASSWORD DIALOGEX -2,-13,337,178
-CAPTION "IDD_DLG"
-FONT 8,"MS Sans Serif",0,0,0
+IDD_05PASSWORD DIALOGEX 0,0,273,209
+FONT 9,"Segoe UI",0,0,0
 STYLE WS_POPUP|WS_VISIBLE|WS_CAPTION|WS_SYSMENU|DS_MODALFRAME|DS_SETFONT
 BEGIN
-  CONTROL "Password :",-1,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,21,22,60,10
-  CONTROL "",IDC_05PASSWORD,"Edit",WS_CHILD|WS_VISIBLE|WS_TABSTOP|ES_AUTOHSCROLL|ES_PASSWORD,111,22,109,11,WS_EX_CLIENTEDGE
-  CONTROL "Launch a test after the completion of this wizard",IDC_05TEST,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_AUTOCHECKBOX,15,123,282,12
-  CONTROL "Enable",IDC_05RemovePolicy,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP,18,60,78,15
-  CONTROL "Enable",IDC_05ForcePolicy,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP,18,81,78,15
-  CONTROL "Remove Policy",IDC_STC4,"Static",WS_CHILD|WS_VISIBLE,102,60,144,15
-  CONTROL "Force Smart Card Logon Policy",IDC_STC5,"Static",WS_CHILD|WS_VISIBLE,102,81,144,15
+  CONTROL "Password :",-1,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,9,112,60,10
+  CONTROL "",IDC_05PASSWORD,"Edit",WS_CHILD|WS_VISIBLE|WS_TABSTOP|ES_AUTOHSCROLL|ES_PASSWORD,99,112,109,11,WS_EX_CLIENTEDGE
+  CONTROL "Launch a test after the completion of this wizard",IDC_05TEST,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_AUTOCHECKBOX,3,156,264,12
+  CONTROL "Remove Policy",IDC_05REMOVEPOLICYLINK,"SysLink",WS_CHILD|WS_VISIBLE,22,171,234,15
+  CONTROL "Force Smart Card Logon Policy",IDC_05FORCEPOLICYLINK,"SysLink",WS_CHILD|WS_VISIBLE,25,189,231,15
+  CONTROL "",IDC_05REMOVEPOLICYICON,"Static",WS_CHILD|WS_VISIBLE|SS_CENTERIMAGE|SS_ICON,6,171,15,12
+  CONTROL "",IDC_05FORCEPOLICYICON,"Static",WS_CHILD|WS_VISIBLE|SS_CENTERIMAGE|SS_ICON,5,189,15,12
+  CONTROL "Select a certificate",IDC_STC4,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,0,0,272,20
+  CONTROL "",IDC_05LIST,"SysListView32",WS_CHILD|WS_VISIBLE|WS_TABSTOP|LVS_SHOWSELALWAYS|LVS_SINGLESEL,0,24,273,51,WS_EX_CLIENTEDGE
+  CONTROL "Type your password",IDC_STC5,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,0,84,272,20
 END
 
-IDD_03NEW DIALOGEX -2,-11,273,209
-FONT 10,"MS Shell Dlg",0,0,0
-LANGUAGE 12,1
+IDD_03NEW DIALOGEX 0,0,273,209
+FONT 9,"Segoe UI",0,0,0
 STYLE WS_POPUP|WS_VISIBLE|WS_CAPTION|WS_SYSMENU|DS_MODALFRAME|DS_SETFONT
 BEGIN
   CONTROL "Select a root certificate",1007,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,0,0,272,20
   CONTROL "&Use this certificate",IDC_03USETHIS,"Button",WS_CHILD|WS_VISIBLE|WS_GROUP|WS_TABSTOP|BS_AUTORADIOBUTTON,3,48,163,10
-  CONTROL "&Create a self signed certificate",IDC_03_CREATE,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_AUTORADIOBUTTON,3,30,185,10
+  CONTROL "&Create a self signed root certificate",IDC_03_CREATE,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_AUTORADIOBUTTON,3,30,185,10
   CONTROL "&Import a p12 file into the smart card",IDC_03IMPORT,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_AUTORADIOBUTTON,3,138,185,10
-  CONTROL "&Détails du certificat :",1009,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,12,78,250,10
+  CONTROL "&Details of the certificate :",1009,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,12,78,250,10
   CONTROL "Certificat par défaut",IDC_03CERTIFICATEPANEL,"ListBox",WS_VISIBLE|WS_BORDER|WS_TABSTOP|LBS_NOSEL,9,90,175,45
-  CONTROL "&Afficher le certificat",IDC_03SHOW,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP,192,87,81,12
-  CONTROL "&Sélectionner un certificat",IDC_03SELECT,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP,192,105,81,12
+  CONTROL "&Show the certificate",IDC_03SHOW,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP,192,87,81,12
+  CONTROL "&Select a certificate",IDC_03SELECT,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP,192,105,81,12
   CONTROL "",IDC_03IMPORTPASSWORD,"Edit",WS_CHILD|WS_VISIBLE|WS_TABSTOP|ES_AUTOHSCROLL|ES_PASSWORD,96,171,162,11,WS_EX_CLIENTEDGE
   CONTROL "Password :",IDC_STC2,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,6,171,60,10
   CONTROL "File :",IDC_STC3,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,6,153,60,10
@@ -74,12 +78,62 @@ BEGIN
   CONTROL "Delete all certificates before processing",IDC_03DELETE,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_AUTOCHECKBOX,9,192,261,9
 END
 
-IDD_04CHECKS DIALOGEX -4,-16,310,184
-CAPTION "IDD_DLG"
-FONT 8,"MS Sans Serif",0,0,0
+IDD_04CHECKS DIALOGEX 0,0,273,209
+FONT 9,"Segoe UI",0,0,0
 STYLE WS_POPUP|WS_VISIBLE|WS_CAPTION|WS_SYSMENU|DS_MODALFRAME|DS_SETFONT
 BEGIN
-  CONTROL "",IDC_04CHECKS,"SysListView32",WS_CHILD|WS_VISIBLE|WS_TABSTOP|LVS_NOCOLUMNHEADER|LVS_AUTOARRANGE|LVS_SINGLESEL|LVS_REPORT,15,66,261,96,WS_EX_CLIENTEDGE
-  CONTROL "Select a root certificate",IDC_STC1,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,0,0,272,20
+  CONTROL "",IDC_04LIST,"SysListView32",WS_CHILD|WS_VISIBLE|WS_TABSTOP|LVS_SHOWSELALWAYS|LVS_SINGLESEL,0,24,273,51,WS_EX_CLIENTEDGE
+  CONTROL "",IDC_04CHECKS,"SysListView32",WS_CHILD|WS_VISIBLE|WS_TABSTOP|LVS_NOCOLUMNHEADER|LVS_AUTOARRANGE|LVS_SINGLESEL|LVS_REPORT,0,123,273,84,WS_EX_CLIENTEDGE
+  CONTROL "Select a certificate",IDC_STC1,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,0,0,272,20
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+  IDS_AREYOUSURE "Are you sure ?"
+  IDS_EIDNOTAVAILABLE "Authentication package not available"
+  IDS_TITLE0 "Credential managment"
+  IDS_TITLE1 "Configure smart card logon"
+  IDS_TITLE2 "Configure a smart card"
+  IDS_TITLE3 "Check the status of the smart card"
+  IDS_TITLE4 "Enter your password"
+  IDS_CAPTION "Smart Card Logon Configuration"
+  IDS_03OBJECT "Object : %s"
+  IDS_03DELIVERED "Delivered : %s %s"
+  IDS_03EXPIRES "Expires : %s %s"
+  IDS_03CONTAINERFILES "Container Files"
+  IDS_03ALLFILES "All Files"
+  IDS_03CERTVIEWTITLE "Info"
+  IDS_05CREDINFOMESSAGE ""
+  IDS_05CREDINFOCAPTION "Test"
+  IDS_05CREDINFOCONFIRMTITLE "result"
+  IDS_05CREDINFOCONFIRMMESSAGE "Credential Valid"
+  IDS_04USERNAMEOK "The username of the certificate matchs current username"
+  IDS_04USERNAMENOK "The username of the certificate doesn't match current username"
+  IDS_04TRUSTOK "The certificate is valid"
+  IDS_04TRUSTNOK "error"
+  IDS_04ENCRYPTIONOK "The card supports encryption"
+  IDS_04ENCRYPTIONNOK "The card doesn't support encryption"
+  IDS_05ACTIVATEREMOVE "<a id=""idActRemove"">Activate the remove policy</a>"
+  IDS_05DESACTIVATEREMOVE "<a id=""idDesActRemove"">Desactivate the remove policy</a>"
+  IDS_05ACTIVATEFORCE "<a id=""idActForce"">Activate the force smart card logon policy</a>"
+  IDS_05DESACTIVATEFORCE "<a id=""idDesActForce"">Desactivate the force smart card logon policy</a>"
+  IDS_04TESTUSERNAME "Username"
+  IDS_04TESTTRUST "Trust"
+  IDS_04TESTCRYPTO "Crypto"
+  IDS_CERT_TRUST_NO_ERROR "No error found for this certificate or chain."
+  IDS_CERT_TRUST_IS_NOT_TIME_VALID "This certificate or one of the certificates in the certificate chain is not time-valid."
+  IDS_CERT_TRUST_IS_NOT_TIME_NESTED "Certificates in the chain are not properly time-nested."
+  IDS_CERT_TRUST_IS_REVOKED "Trust for this certificate or one of the certificates in the certificate chain has been revoked."
+  IDS_CERT_TRUST_IS_NOT_SIGNATURE_VALID "The certificate or one of the certificates in the certificate chain does not have a valid signature."
+  IDS_CERT_TRUST_IS_NOT_VALID_FOR_USAGE "The certificate or certificate chain is not valid in its proposed usage."
+  IDS_CERT_TRUST_IS_UNTRUSTED_ROOT "The certificate or certificate chain is based on an untrusted root."
+  IDS_CERT_TRUST_REVOCATION_STATUS_UNKNOWN "The revocation status of the certificate or one of the certificates in the certificate chain is unknown."
+  IDS_CERT_TRUST_IS_CYCLIC "One of the certificates in the chain was issued by a certification authority that the original certificate had certified."
+  IDS_CERT_TRUST_IS_PARTIAL_CHAIN "The certificate chain is not complete."
+  IDS_CERT_TRUST_CTL_IS_NOT_TIME_VALID "A CTL used to create this chain was not time-valid."
+  IDS_CERT_TRUST_CTL_IS_NOT_SIGNATURE_VALID "A CTL used to create this chain did not have a valid signature."
+  IDS_CERT_TRUST_CTL_IS_NOT_VALID_FOR_USAGE "A CTL used to create this chain is not valid for this usage."
+  IDS_CERT_TRUST_UNKOWN_ERROR "Unknown error"
+  IDS_NO_CERTIFICATE "There is no certificate"
 END
 

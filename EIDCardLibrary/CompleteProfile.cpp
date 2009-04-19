@@ -63,24 +63,24 @@ NTSTATUS UserNameToProfile(__in PLSA_UNICODE_STRING AccountName,
 
 	wcsncpy_s(UserName,UNCLEN,AccountName->Buffer,AccountName->Length/2);
 	UserName[AccountName->Length/2]=0;
-	
 	dwSize = ARRAYSIZE(DomainName);
 	GetComputerNameW(DomainName, &dwSize);
 	// fill info into a dummy structure
 	EID_INTERACTIVE_PROFILE MyProfileBuffer;
 	MyProfileBuffer.MessageType = EIDInteractiveProfile;
-	USER_INFO_4 *UserInfo = NULL;
-	if((Status=NetUserGetInfo(NULL, UserName, 4, (LPBYTE*)&UserInfo))!=0)
+	PUSER_INFO_4 pUserInfo = NULL;
+	Status=NetUserGetInfo(NULL, UserName, 4, (LPBYTE*)&pUserInfo);
+	if (Status!=0)
 	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"No NetUserGetInfo");
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"No NetUserGetInfo 0x%08X",Status);
 		if (ProfileBufferLength) *ProfileBufferLength=0;
 		return STATUS_BAD_VALIDATION_CLASS;
 	}
-	MyProfileBuffer.LogonCount = (USHORT)UserInfo->usri4_num_logons;
-	MyProfileBuffer.BadPasswordCount = (USHORT)UserInfo->usri4_bad_pw_count;
+	MyProfileBuffer.LogonCount = (USHORT)pUserInfo->usri4_num_logons;
+	MyProfileBuffer.BadPasswordCount = (USHORT)pUserInfo->usri4_bad_pw_count;
 	// time in s since 1970
-	MyProfileBuffer.LogonTime = SecondsSince1970ToTime(UserInfo->usri4_last_logon);
-	if (TIMEQ_FOREVER == UserInfo->usri4_acct_expires)
+	MyProfileBuffer.LogonTime = SecondsSince1970ToTime(pUserInfo->usri4_last_logon);
+	if (TIMEQ_FOREVER == pUserInfo->usri4_acct_expires)
 	{
 		// infinite
 		MyProfileBuffer.LogoffTime.QuadPart = 9223372036854775807;
@@ -88,29 +88,27 @@ NTSTATUS UserNameToProfile(__in PLSA_UNICODE_STRING AccountName,
 	}
 	else
 	{
-		MyProfileBuffer.LogoffTime = SecondsSince1970ToTime(UserInfo->usri4_acct_expires);
-		MyProfileBuffer.KickOffTime = SecondsSince1970ToTime(UserInfo->usri4_acct_expires);
+		MyProfileBuffer.LogoffTime = SecondsSince1970ToTime(pUserInfo->usri4_acct_expires);
+		MyProfileBuffer.KickOffTime = SecondsSince1970ToTime(pUserInfo->usri4_acct_expires);
 	}
-	MyProfileBuffer.PasswordLastSet.QuadPart = UserInfo->usri4_password_age * 10000000;
+	MyProfileBuffer.PasswordLastSet.QuadPart = pUserInfo->usri4_password_age * 10000000;
 	// can change now
 	MyProfileBuffer.PasswordCanChange.QuadPart = MyProfileBuffer.PasswordLastSet.QuadPart;
 	// never must change
 	MyProfileBuffer.PasswordMustChange.QuadPart = 9223372036854775807;
-
 #define MYMACRO(MYSTRING1,MYSTRING2) \
 	MYSTRING1.Length = (USHORT) wcslen(MYSTRING2)*sizeof(WCHAR);\
 	MYSTRING1.MaximumLength = (MYSTRING1.Length?MYSTRING1.Length+2:0);
 
-	MYMACRO(MyProfileBuffer.LogonScript,UserInfo->usri4_script_path)
-	MYMACRO(MyProfileBuffer.HomeDirectory,UserInfo->usri4_home_dir)
-	MYMACRO(MyProfileBuffer.FullName,UserInfo->usri4_full_name)
-	MYMACRO(MyProfileBuffer.ProfilePath,UserInfo->usri4_profile)
-	MYMACRO(MyProfileBuffer.HomeDirectoryDrive,UserInfo->usri4_home_dir_drive)
+	MYMACRO(MyProfileBuffer.LogonScript,pUserInfo->usri4_script_path)
+	MYMACRO(MyProfileBuffer.HomeDirectory,pUserInfo->usri4_home_dir)
+	MYMACRO(MyProfileBuffer.FullName,pUserInfo->usri4_full_name)
+	MYMACRO(MyProfileBuffer.ProfilePath,pUserInfo->usri4_profile)
+	MYMACRO(MyProfileBuffer.HomeDirectoryDrive,pUserInfo->usri4_home_dir_drive)
 	MYMACRO(MyProfileBuffer.LogonServer,DomainName)
 #undef MYMACRO
 
-	MyProfileBuffer.UserFlags = LOGON_EXTRA_SIDS | LOGON_NTLMV2_ENABLED;
-	
+	MyProfileBuffer.UserFlags = 0;
 	// alocate memory
 	Length = sizeof(EID_INTERACTIVE_PROFILE) +
 			MyProfileBuffer.LogonScript.MaximumLength +
@@ -124,7 +122,7 @@ NTSTATUS UserNameToProfile(__in PLSA_UNICODE_STRING AccountName,
 	Status = FunctionTable->AllocateClientBuffer (ClientRequest, Length, (PVOID*)ProfileBuffer);
 	if (Status)
 	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"AllocateClientBuffer failed: 0x%08lx\n", Status);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"AllocateClientBuffer failed: 0x%08lx\n", Status);
 		if (ProfileBufferLength) *ProfileBufferLength=0;
 		return Status;
 	}
@@ -141,18 +139,11 @@ NTSTATUS UserNameToProfile(__in PLSA_UNICODE_STRING AccountName,
 
 
 	// copy data to client
-	/*#define MYMACRO(MYSTRING1,MYSTRING2) \
-	MYSTRING1.Buffer = NULL; \
-	if (MYSTRING1.MaximumLength) { \
-		Status = FunctionTable->AllocateClientBuffer (ClientRequest, MYSTRING1.MaximumLength, (PVOID*)&(MYSTRING1.Buffer)); \
-		FunctionTable->CopyToClientBuffer(ClientRequest,MYSTRING1.MaximumLength,MYSTRING1.Buffer,MYSTRING2); \
-	} */
-
-	MYMACRO(MyProfileBuffer.LogonScript,UserInfo->usri4_script_path)
-	MYMACRO(MyProfileBuffer.HomeDirectory,UserInfo->usri4_home_dir)
-	MYMACRO(MyProfileBuffer.FullName,UserInfo->usri4_full_name)
-	MYMACRO(MyProfileBuffer.ProfilePath,UserInfo->usri4_profile)
-	MYMACRO(MyProfileBuffer.HomeDirectoryDrive,UserInfo->usri4_home_dir_drive)
+	MYMACRO(MyProfileBuffer.LogonScript,pUserInfo->usri4_script_path)
+	MYMACRO(MyProfileBuffer.HomeDirectory,pUserInfo->usri4_home_dir)
+	MYMACRO(MyProfileBuffer.FullName,pUserInfo->usri4_full_name)
+	MYMACRO(MyProfileBuffer.ProfilePath,pUserInfo->usri4_profile)
+	MYMACRO(MyProfileBuffer.HomeDirectoryDrive,pUserInfo->usri4_home_dir_drive)
 	MYMACRO(MyProfileBuffer.LogonServer,DomainName)
 #undef MYMACRO
 	
@@ -161,7 +152,7 @@ NTSTATUS UserNameToProfile(__in PLSA_UNICODE_STRING AccountName,
 		*ProfileBufferLength=Length;
 	}
 	// copy struct 
-	NetApiBufferFree(UserInfo);
+	NetApiBufferFree(pUserInfo);
 
 	FunctionTable->CopyToClientBuffer(ClientRequest,sizeof(EID_INTERACTIVE_PROFILE),*ProfileBuffer,&MyProfileBuffer);
 

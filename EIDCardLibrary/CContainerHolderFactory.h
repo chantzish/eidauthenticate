@@ -17,13 +17,6 @@
 
 #include <credentialprovider.h>
 
-class IContainerHolderList
-{
-	public:
-	virtual ~IContainerHolderList() {}
-	virtual CContainer* GetContainer() {return NULL;};
-};
-
 template <typename T> 
 
 class CContainerHolderFactory
