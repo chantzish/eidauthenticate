@@ -24,6 +24,8 @@ extern DWORD dwCurrentCredential;
 extern BOOL PopulateListViewListData(HWND hWndListView);
 extern BOOL InitListViewListIcon(HWND hWndListView);
 
+extern BOOL fHasDeselected;
+
 BOOL WizardFinishButton(PTSTR szPassword)
 {
 	BOOL fReturn = FALSE;
@@ -34,11 +36,13 @@ BOOL WizardFinishButton(PTSTR szPassword)
 	
 	CContainerHolderTest* MyTest = pCredentialList->GetContainerHolderAt(dwCurrentCredential);
 	CContainer* container = MyTest->GetContainer();
-	fReturn = LsaEIDCreateStoredCredential(szUserName, szPassword, container->GetContainer());
+	PCCERT_CONTEXT pCertContext = container->GetCertificate();
+	fReturn = LsaEIDCreateStoredCredential(szUserName, szPassword, pCertContext);
 	if (!fReturn)
 	{
 		dwError = GetLastError();
 	}
+	CertFreeCertificateContext(pCertContext);
 	SetLastError(dwError);
 	return fReturn;
 }
@@ -149,6 +153,7 @@ BOOL IsForceSmartCardLogonPolicyActive()
 	return GetPolicyValue(scforceoption) > 0;
 }
 
+#define WM_MYMESSAGE WM_USER + 10
 INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	TCHAR szPassword[1024];
@@ -167,6 +172,14 @@ INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPAR
 			SendMessage(GetDlgItem(hWnd,IDC_05REMOVEPOLICYICON),STM_SETICON ,(WPARAM)ShieldIcon,0);
 		}
 		InitListViewListIcon(GetDlgItem(hWnd,IDC_05LIST));
+		break;
+	case WM_MYMESSAGE:
+		if (fHasDeselected)
+		{
+			ListView_SetItemState(GetDlgItem(hWnd,IDC_05LIST), dwCurrentCredential, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+			ListView_Update(GetDlgItem(hWnd,IDC_05LIST), dwCurrentCredential);
+		}
+		return TRUE;
 		break;
 	case WM_NOTIFY :
         LPNMHDR pnmh = (LPNMHDR)lParam;
@@ -244,6 +257,7 @@ INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPAR
 					{
 						if ((DWORD)(((LPNMITEMACTIVATE)lParam)->iItem) < pCredentialList->ContainerHolderCount())
 						{
+							fHasDeselected = FALSE;
 							dwCurrentCredential = ((LPNMITEMACTIVATE)lParam)->iItem;
 							if (pCredentialList->GetContainerHolderAt(dwCurrentCredential)->GetIconIndex())
 							{
@@ -257,7 +271,9 @@ INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPAR
 					}
 					else
 					{
+						fHasDeselected = TRUE;
 						PropSheet_SetWizButtons(hWnd, PSWIZB_BACK);
+						PostMessage(hWnd, WM_MYMESSAGE, 0, 0);
 					}
 				}
 				break;

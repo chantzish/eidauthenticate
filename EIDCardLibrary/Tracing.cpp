@@ -96,7 +96,7 @@ void EIDCardLibraryTraceEx(LPCSTR szFile, DWORD dwLine, LPCSTR szFunction, UCHAR
 	swprintf_s(Buffer2,356,L"%S(%d) : %S - %s\r\n",szFile,dwLine,szFunction,Buffer);
 	OutputDebugString(Buffer2);
 #endif
-	swprintf_s(Buffer2,356,L"%S : %s",szFunction,Buffer);
+	swprintf_s(Buffer2,356,L"%S(%d) : %s",szFunction,dwLine,Buffer);
 	EventWriteString(hPub,dwLevel,0,Buffer2);
 
 }

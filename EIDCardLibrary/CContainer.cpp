@@ -23,6 +23,7 @@
 #include "Tracing.h"
 #include "CContainer.h"
 #include "CertificateValidation.h"
+#include "GPO.h"
 
 #pragma comment(lib, "Cryptui.lib")
 
@@ -75,7 +76,7 @@ DWORD CContainer::GetKeySpec()
 	return _KeySpec;
 }
 
-PCCERT_CONTEXT CContainer::GetContainer()
+PCCERT_CONTEXT CContainer::GetCertificate()
 {
 	PCCERT_CONTEXT pCertContext = CertDuplicateCertificateContext(_pCertContext);
 	return pCertContext;
@@ -132,7 +133,7 @@ BOOL CContainer::ViewCertificate(HWND hWnd)
 {
 	CRYPTUI_VIEWCERTIFICATE_STRUCT certViewInfo;
 	BOOL fPropertiesChanged = FALSE;
-
+	LPCSTR					szOid;
 	certViewInfo.dwSize = sizeof(CRYPTUI_VIEWCERTIFICATE_STRUCT);
 	certViewInfo.hwndParent = hWnd;
 	certViewInfo.dwFlags = CRYPTUI_DISABLE_EDITPROPERTIES | CRYPTUI_DISABLE_ADDTOSTORE | CRYPTUI_DISABLE_EXPORT | CRYPTUI_DISABLE_HTMLLINK;
@@ -140,6 +141,12 @@ BOOL CContainer::ViewCertificate(HWND hWnd)
 	certViewInfo.pCertContext = _pCertContext;
 	certViewInfo.cPurposes = 0;
 	certViewInfo.rgszPurposes = 0;
+	if (!GetPolicyValue(AllowCertificatesWithNoEKU))
+	{
+		certViewInfo.cPurposes = 1;
+		szOid = szOID_KP_SMARTCARD_LOGON;
+		certViewInfo.rgszPurposes = & szOid;
+	}
 	certViewInfo.pCryptProviderData = NULL;
 	certViewInfo.hWVTStateData = NULL;
 	certViewInfo.fpCryptProviderDataTrustedUsage = FALSE;

@@ -151,6 +151,16 @@ extern "C"
 		DisableLogging();
 	}
 
+	void NTAPI EIDPatch()
+	{
+		BEID_Patch();
+	}
+
+	void NTAPI EIDUnPatch()
+	{
+		BEID_UnPatch();
+	}
+
 	/** Called when the authentication package's identifier has been specified in a call
 	to LsaCallAuthenticationPackage by an application using an untrusted connection. 
 	This function is used for communicating with processes that do not have the SeTcbPrivilege privilege.*/

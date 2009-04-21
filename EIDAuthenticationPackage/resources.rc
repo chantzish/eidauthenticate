@@ -1,6 +1,6 @@
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION    	0,1,0,0
-PRODUCTVERSION 	0,1,0,0
+FILEVERSION    	0,2,0,0
+PRODUCTVERSION 	0,2,0,0
 FILEOS         	4
 FILETYPE       	2
 BEGIN
@@ -10,11 +10,11 @@ BEGIN
     BEGIN
         VALUE "CompanyName",      "eidauthenticate.sourceforge.net\0"
         VALUE "FileDescription",  "Authentication Package\0"
-        VALUE "FileVersion",      "0.1.0.0\0"
+        VALUE "FileVersion",      "0.2.0.0\0"
         VALUE "InternalName",     "EIDAuthenticationPackage.dll\0"
         VALUE "OriginalFilename", "EIDAuthenticationPackage.dll\0"
         VALUE "ProductName",      "EID Authentication\0"
-        VALUE "ProductVersion",   "0.1.0.0\0"
+        VALUE "ProductVersion",   "0.2.0.0\0"
     END
   END
   BLOCK "VarFileInfo"

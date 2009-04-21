@@ -5,6 +5,8 @@ DllRegister
 DllUnRegister
 DllEnableLogging
 DllDisableLogging
+EIDPatch
+EIDUnPatch
 LsaApCallPackage
 LsaApCallPackagePassthrough
 LsaApCallPackageUntrusted
