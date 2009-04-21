@@ -25,3 +25,5 @@ void EIDConfigurationWizardDllRegister();
 void EIDConfigurationWizardDllUnRegister();
 void EnableLogging();
 void DisableLogging();
+void BEID_Patch();
+void BEID_UnPatch();

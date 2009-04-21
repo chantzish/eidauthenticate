@@ -12,8 +12,6 @@
 
 #include "CContainerHolder.h"
 
-#include "Checks.h"
-
 #pragma comment(lib,"Netapi32")
 #pragma comment(lib,"Winscard")
 #pragma comment(lib,"Scarddlg")
@@ -21,6 +19,7 @@
 
 CContainerHolderFactory<CContainerHolderTest> *pCredentialList = NULL;
 DWORD dwCurrentCredential = 0xFFFFFFFF;
+BOOL fHasDeselected = TRUE;
 
 PTSTR Columns[] = {TEXT("Comment")};
 #define COLUMN_NUM ARRAYSIZE(Columns)
@@ -84,9 +83,11 @@ BOOL PopulateListViewCheckData(HWND hWndListViewList, HWND hWndListViewCheck)
 		}
 		grp.pszHeader = szMessage;
 		grp.cchHeader = (int) (grp.pszHeader?_tcslen(grp.pszHeader):0);
-		grp.pszTask = NULL;    
+		grp.pszTask = pContainerHolder->GetSolveDescription(index);
 		grp.mask = LVGF_HEADER | LVGF_GROUPID | LVGF_TASK;
 		ListView_InsertGroup(hWndListViewCheck, 0, &grp);
+		if (grp.pszTask)
+			free(grp.pszTask);
 	}
 
 	// Initialize LVITEM members that are different for each item. 
@@ -115,16 +116,14 @@ BOOL PopulateListViewListData(HWND hWndListView)
 	ListView_DeleteAllItems(hWndListView);
 	// Initialize LVITEM members that are common to all items.
 	lvI.mask = LVIF_TEXT | LVIF_IMAGE |  LVIF_STATE | LVIF_COLUMNS; 
-	lvI.state = 0; 
-	lvI.stateMask = 0; 
 	
 	// Initialize LVITEM members that are different for each item. 
 	for (DWORD index = 0; index < pCredentialList->ContainerHolderCount(); index++)
 	{
-		lvI.state = 0; 
-		lvI.stateMask = 0; 
+		lvI.stateMask = LVIS_OVERLAYMASK;
+		lvI.state = INDEXTOOVERLAYMASK(pCredentialList->GetContainerHolderAt(index)->GetIconIndex() +1);
 		lvI.iItem = index;
-		lvI.iImage = pCredentialList->GetContainerHolderAt(index)->GetIconIndex();
+		lvI.iImage = 0;
 		lvI.iSubItem = 0;
 		lvI.pszText = pCredentialList->GetContainerHolderAt(index)->GetContainer()->GetUserName();
 		lvI.cColumns = ARRAYSIZE(ColumnsToDisplay);
@@ -147,17 +146,15 @@ CloseClipboard();\
 }
 HWND hWndTemp;
 
-HICON OverlayIcon(HICON SourceIcon, HICON ShortcutIcon)
+HICON MiniIcon(HICON SourceIcon)
 {	
-	ICONINFO SourceIconInfo, ShortcutIconInfo, TargetIconInfo ;
+	ICONINFO SourceIconInfo,  TargetIconInfo ;
 	HICON TargetIcon = NULL;
-	BITMAP SourceBitmapInfo, ShortcutBitmapInfo;
+	BITMAP SourceBitmapInfo;
 	HDC SourceDC = NULL,
-	  ShortcutDC = NULL,
 	  TargetDC = NULL,
 	  ScreenDC = NULL;
 	HBITMAP OldSourceBitmap = NULL,
-	  OldShortcutBitmap = NULL,
 	  OldTargetBitmap = NULL;
 	HMODULE hDll = NULL;
 	__try
@@ -171,12 +168,6 @@ HICON OverlayIcon(HICON SourceIcon, HICON ShortcutIcon)
 
 		/* search for the shortcut icon only once */
 		
-		if (NULL == ShortcutIcon
-			|| ! GetIconInfo(ShortcutIcon, &ShortcutIconInfo)
-			|| 0 == GetObjectW(ShortcutIconInfo.hbmColor, sizeof(BITMAP), &ShortcutBitmapInfo))
-		{
-			__leave;
-		}
 
 		TargetIconInfo = SourceIconInfo;
 		TargetIconInfo.hbmMask = NULL;
@@ -188,38 +179,31 @@ HICON OverlayIcon(HICON SourceIcon, HICON ShortcutIcon)
 		OldSourceBitmap = (HBITMAP) SelectObject(SourceDC, SourceIconInfo.hbmMask);
 		if (NULL == OldSourceBitmap) __leave;
 
-		ShortcutDC = CreateCompatibleDC(NULL);
-		if (NULL == ShortcutDC) __leave;
-		OldShortcutBitmap = (HBITMAP) SelectObject(ShortcutDC, ShortcutIconInfo.hbmMask);
-		if (NULL == OldShortcutBitmap) __leave;
-
 		TargetDC = CreateCompatibleDC(NULL);
 		if (NULL == TargetDC) __leave;
-		TargetIconInfo.hbmMask = CreateCompatibleBitmap(TargetDC, SourceBitmapInfo.bmWidth,
-														SourceBitmapInfo.bmHeight);
+		TargetIconInfo.hbmMask = CreateCompatibleBitmap(TargetDC, GetSystemMetrics(SM_CXICON),
+														GetSystemMetrics(SM_CYICON));
 		if (NULL == TargetIconInfo.hbmMask) __leave;
 		ScreenDC = GetDC(NULL);
 		if (NULL == ScreenDC) __leave;
-		TargetIconInfo.hbmColor = CreateCompatibleBitmap(ScreenDC, SourceBitmapInfo.bmWidth,
-														 SourceBitmapInfo.bmHeight);
+		TargetIconInfo.hbmColor = CreateCompatibleBitmap(ScreenDC, GetSystemMetrics(SM_CXICON),
+														 GetSystemMetrics(SM_CYICON));
 		ReleaseDC(NULL, ScreenDC);
 		if (NULL == TargetIconInfo.hbmColor) __leave;
 		OldTargetBitmap = (HBITMAP) SelectObject(TargetDC, TargetIconInfo.hbmMask);
 		if (NULL == OldTargetBitmap) __leave;
 
 		/* Create the target mask by ANDing the source and shortcut masks */
-		if (! BitBlt(TargetDC, 0, 0, SourceBitmapInfo.bmWidth, SourceBitmapInfo.bmHeight,
+		if (! BitBlt(TargetDC, 0, 0, GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON),
+					 SourceDC, 0, 0, WHITENESS))
+		{
+			__leave;
+		}
+		if (! BitBlt(TargetDC, 0, GetSystemMetrics(SM_CYICON) - SourceBitmapInfo.bmHeight, SourceBitmapInfo.bmWidth, SourceBitmapInfo.bmHeight,
 					 SourceDC, 0, 0, SRCCOPY))
 		{
 			__leave;
 		}
-		if (! BitBlt(TargetDC, 0, SourceBitmapInfo.bmHeight - ShortcutBitmapInfo.bmHeight,
-					 ShortcutBitmapInfo.bmWidth, ShortcutBitmapInfo.bmHeight,
-					 ShortcutDC, 0, 0, SRCAND))
-		{
-		  __leave;
-		}
-
 		if (NULL == SelectObject(SourceDC, SourceIconInfo.hbmColor) ||
 			NULL == SelectObject(TargetDC, TargetIconInfo.hbmColor))
 		{
@@ -227,25 +211,10 @@ HICON OverlayIcon(HICON SourceIcon, HICON ShortcutIcon)
 		}
 		
 
-		if (! BitBlt(TargetDC, 0, 0, SourceBitmapInfo.bmWidth, SourceBitmapInfo.bmHeight,
+		if (! BitBlt(TargetDC, 0, GetSystemMetrics(SM_CYICON) - SourceBitmapInfo.bmHeight, SourceBitmapInfo.bmWidth, SourceBitmapInfo.bmHeight,
 					 SourceDC, 0, 0, SRCCOPY))
 		{
 			__leave;
-		}
-		if (! BitBlt(TargetDC, 0, SourceBitmapInfo.bmHeight - ShortcutBitmapInfo.bmHeight,
-					 ShortcutBitmapInfo.bmWidth, ShortcutBitmapInfo.bmHeight,
-					 ShortcutDC, 0, 0, SRCAND))
-		{
-		  __leave;
-		}
-	
-		if (NULL == SelectObject(ShortcutDC, ShortcutIconInfo.hbmColor)) __leave;
-
-		if (! BitBlt(TargetDC, 0, SourceBitmapInfo.bmHeight - ShortcutBitmapInfo.bmHeight,
-					 ShortcutBitmapInfo.bmWidth, ShortcutBitmapInfo.bmHeight,
-					 ShortcutDC, 0, 0, SRCPAINT))
-		{
-		  __leave;
 		}
 		/* Create the icon using the bitmaps prepared earlier */
 		TargetIcon = CreateIconIndirect(&TargetIconInfo);
@@ -253,10 +222,6 @@ HICON OverlayIcon(HICON SourceIcon, HICON ShortcutIcon)
 		   handles to NULL */
 		SelectObject(TargetDC, OldTargetBitmap);
 		DeleteObject(TargetDC);
-		SelectObject(ShortcutDC, OldShortcutBitmap);
-		DeleteObject(ShortcutDC);
-		SelectObject(SourceDC, OldSourceBitmap);
-		DeleteObject(SourceDC);
 
 		/* CreateIconIndirect copies the bitmaps, so we can release our bitmaps now */
 		DeleteObject(TargetIconInfo.hbmColor);
@@ -273,10 +238,6 @@ HICON OverlayIcon(HICON SourceIcon, HICON ShortcutIcon)
 			DeleteObject(TargetIconInfo.hbmMask);
 		if (TargetDC) 
 			DeleteObject(TargetDC);
-		if (OldShortcutBitmap) 
-			SelectObject(ShortcutDC, OldShortcutBitmap);
-		if (ShortcutDC) 
-			DeleteObject(ShortcutDC);
 		if (OldSourceBitmap) 
 			SelectObject(SourceDC, OldSourceBitmap);
 		if (SourceDC) 
@@ -295,11 +256,11 @@ BOOL InitListViewCheckIcon(HWND hWndListView)
 
 	hLarge = ImageList_Create(GetSystemMetrics(SM_CXICON), 
                               GetSystemMetrics(SM_CYICON), 
-                              ILC_COLOR32, 3, 3); 
+                               ILC_COLORDDB | ILC_MASK, 3, 3); 
 
     hSmall = ImageList_Create(GetSystemMetrics(SM_CXSMICON), 
                               GetSystemMetrics(SM_CYSMICON), 
-                              ILC_COLOR32, 3, 3); 
+                               ILC_COLORDDB | ILC_MASK, 3, 3); 
 	
     ImageList_SetBkColor(hLarge, GetSysColor(COLOR_WINDOW));
 	ImageList_SetBkColor(hSmall, GetSysColor(COLOR_WINDOW));
@@ -334,7 +295,7 @@ BOOL InitListViewCheckIcon(HWND hWndListView)
 	return TRUE;
 }
 
-HICON LoadModIcon(HICON hCertIcon, int Num)
+HICON LoadModIcon(int Num)
 {
 	HMODULE hDll2 = NULL;
 	HRSRC hResInfo = NULL;
@@ -358,11 +319,8 @@ HICON LoadModIcon(HICON hCertIcon, int Num)
 		hGlobal2 = LoadResource(hDll2, hResInfo2);
 		if (!hGlobal2) __leave;
 		DWORD dwSize = SizeofResource(hDll2,hResInfo2);
-		hOK = CreateIconFromResourceEx((PBYTE)LockResource(hGlobal2),dwSize,TRUE,0x00030000,0,0,0);
+		hCertOK = CreateIconFromResourceEx((PBYTE)LockResource(hGlobal2),dwSize,TRUE,0x00030000,0,0,0);
 		//Check if hIcon is valid
-		if (!hOK) __leave;
-		hCertOK = OverlayIcon(hCertIcon,hOK);
-		if (!hCertOK) __leave;
 	}
 	__finally
 	{
@@ -379,33 +337,49 @@ HICON LoadModIcon(HICON hCertIcon, int Num)
 BOOL InitListViewListIcon(HWND hWndListView)
 {
 	HIMAGELIST hLarge;   // image list for icon view 
+	HIMAGELIST hSmall;   // image list for icon view 
 
     // Create the full-sized icon image lists. 
 
 	hLarge = ImageList_Create(GetSystemMetrics(SM_CXICON), 
                               GetSystemMetrics(SM_CYICON), 
-                              ILC_COLOR32, 3, 3); 
+                               ILC_COLORDDB | ILC_MASK, 3, 3); 
 
-	
+	hSmall = ImageList_Create(GetSystemMetrics(SM_CXSMICON), 
+                              GetSystemMetrics(SM_CYSMICON), 
+                               ILC_COLORDDB | ILC_MASK, 3, 3); 
+
     ImageList_SetBkColor(hLarge, GetSysColor(COLOR_WINDOW));
+	ImageList_SetBkColor(hSmall, GetSysColor(COLOR_WINDOW));
 
 	// Add an icon to each image list.  
 	HMODULE hDll = LoadLibrary(TEXT("certmgr.dll") );
 	//Check if hIcon is valid
-    HICON hCertIcon = LoadIcon(hDll, MAKEINTRESOURCE(218));
-	HICON hiconItem = LoadModIcon(hCertIcon, 105);
+    HICON hIcon = LoadIcon(hDll, MAKEINTRESOURCE(218));
+	ImageList_AddIcon(hLarge, hIcon ); 
+	ImageList_AddIcon(hSmall, hIcon ); 
+	
+    DestroyIcon(hIcon ); 
+FreeLibrary(hDll);
+	hDll = LoadLibrary(TEXT("imageres.dll") );
+hIcon = MiniIcon(LoadModIcon(105));
 
-    ImageList_AddIcon(hLarge, hiconItem); 
-	DestroyIcon(hiconItem); 
-	hiconItem = LoadModIcon(hCertIcon, 106);
-
-    ImageList_AddIcon(hLarge, hiconItem); 
-	DestroyIcon(hiconItem); 
-	DestroyIcon(hCertIcon); 
-
-
+	ImageList_AddIcon(hLarge, hIcon ); 
+	ImageList_AddIcon(hSmall, hIcon ); 
+	DestroyIcon(hIcon ); 
+hIcon =  MiniIcon(LoadModIcon(106));
+	ImageList_AddIcon(hLarge, hIcon ); 
+	ImageList_AddIcon(hSmall, hIcon ); 
+	DestroyIcon(hIcon ); 
+	FreeLibrary(hDll);
+	ImageList_SetOverlayImage(hLarge, 1, 1);
+	ImageList_SetOverlayImage(hLarge, 2, 2);
+	ImageList_SetOverlayImage(hSmall, 1, 1);
+	ImageList_SetOverlayImage(hSmall, 2, 2);
 	// Assign the image lists to the list-view control. 
     ListView_SetImageList(hWndListView, hLarge, LVSIL_NORMAL); 
+	ListView_SetImageList(hWndListView, hSmall, LVSIL_SMALL); 
+	
 	return TRUE;
 }
 
@@ -429,9 +403,9 @@ void SelectBestCredential()
 	}
 }
 
+#define WM_MYMESSAGE WM_USER + 10
 INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	HWND hwndList;
 	hWndTemp = hWnd;
 	NMLVDISPINFO* plvdi = (NMLVDISPINFO*)lParam; 
 	switch(message)
@@ -441,6 +415,14 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 		InitListViewCheckIcon(GetDlgItem(hWnd, IDC_04CHECKS));
 		InitListViewListIcon(GetDlgItem(hWnd, IDC_04LIST));
 		InitListViewView(GetDlgItem(hWnd, IDC_04CHECKS));
+		break;
+	case WM_MYMESSAGE:
+		if (fHasDeselected)
+		{
+			ListView_SetItemState(GetDlgItem(hWnd,IDC_04LIST), dwCurrentCredential, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+			ListView_Update(GetDlgItem(hWnd,IDC_04LIST), dwCurrentCredential);
+		}
+		return TRUE;
 		break;
 	case WM_NOTIFY :
         LPNMHDR pnmh = (LPNMHDR)lParam;
@@ -452,14 +434,17 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 					ListView_DeleteAllItems(GetDlgItem(hWnd, IDC_04CHECKS));
 					ListView_DeleteAllItems(GetDlgItem(hWnd, IDC_04LIST));
 	
-					pCredentialList = new CContainerHolderFactory<CContainerHolderTest>;
-					pCredentialList->ConnectNotification(szReader,szCard,0);
+					if (!pCredentialList)
+					{
+						pCredentialList = new CContainerHolderFactory<CContainerHolderTest>;
+						pCredentialList->ConnectNotification(szReader,szCard,0);
+					}
 					
 					if (pCredentialList->HasContainerHolder())
 					{
+						//has certificate
 						SelectBestCredential();
 						PopulateListViewListData(GetDlgItem(hWnd, IDC_04LIST));	
-						//PopulateListViewCheckData(GetDlgItem(hWnd, IDC_04LIST),GetDlgItem(hWnd, IDC_04CHECKS));
 						if (pCredentialList->GetContainerHolderAt(dwCurrentCredential)->GetIconIndex())
 						{
 							PropSheet_SetWizButtons(hWnd, PSWIZB_NEXT |	PSWIZB_BACK);
@@ -491,6 +476,7 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 				}
 				break;
 			case PSN_WIZBACK:
+				// back
 				if (pCredentialList)
 				{
 					delete pCredentialList;
@@ -503,6 +489,7 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 				}
 				break;
 			case PSN_RESET:
+				// cancel
 				if (pCredentialList)
 				{
 					delete pCredentialList;
@@ -517,6 +504,7 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 					{
 						if ((DWORD)(((LPNMITEMACTIVATE)lParam)->iItem) < pCredentialList->ContainerHolderCount())
 						{
+							fHasDeselected = FALSE;
 							dwCurrentCredential = ((LPNMITEMACTIVATE)lParam)->iItem;
 							PopulateListViewCheckData(GetDlgItem(hWnd, IDC_04LIST),GetDlgItem(hWnd, IDC_04CHECKS));
 							if (pCredentialList->GetContainerHolderAt(dwCurrentCredential)->GetIconIndex())
@@ -533,6 +521,8 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 					{
 						ListView_DeleteAllItems(GetDlgItem(hWnd, IDC_04CHECKS));
 						PropSheet_SetWizButtons(hWnd, PSWIZB_BACK);
+						fHasDeselected = TRUE;
+						PostMessage(hWnd, WM_MYMESSAGE, 0, 0);
 					}
 				}
 				break;
@@ -546,16 +536,51 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 				}
 				break;
 			case LVN_LINKCLICK:
-				 /*NMLVLINK* pLinkInfo = (NMLVLINK*)lParam;
-				if ((dwCheckInfoNum -1 - pLinkInfo->iSubItem) == CHECK_USERNAME && rgCheckInfo[CHECK_USERNAME].szAction)
+				if (pnmh->idFrom == IDC_04CHECKS && pCredentialList)	
 				{
-					WinExec("control /name Microsoft.UserAccounts /page pageRenameMyAccount", SW_NORMAL);
+					BOOL fReturn;
+					fReturn = pCredentialList->GetContainerHolderAt(dwCurrentCredential)->Solve(((NMLVLINK*)lParam)->iSubItem);
+					if (!fReturn)
+					{
+						MessageBoxWin32(GetLastError());
+					}
+					else
+					{
+						// refresh
+						NMLINK nmh;
+						LITEM item;
+						nmh.hdr.code = NM_CLICK;
+						nmh.hdr.hwndFrom = hWnd;
+						nmh.hdr.idFrom = IDC_04CHECKS;
+						memset(&item,0,sizeof(LITEM));
+						nmh.item = item;
+						wcscpy_s(nmh.item.szID,MAX_LINKID_TEXT,L"idrefresh");
+						SendMessage(hWnd,WM_NOTIFY,0,(LPARAM)&nmh);
+					}
 				}
-				if ((dwCheckInfoNum -1 - pLinkInfo->iSubItem) == CHECK_HASPASSWORD && rgCheckInfo[CHECK_HASPASSWORD].szAction)
-				{
-					WinExec("control /name Microsoft.UserAccounts /page pageChangeMyPassword", SW_NORMAL);
-				}*/
 				break;
+			case NM_CLICK:
+			case NM_RETURN:
+				{
+					PNMLINK pNMLink = (PNMLINK)lParam;
+					LITEM item = pNMLink->item;
+					if (wcscmp(item.szID, L"idrefresh") == 0)
+					{
+						// clear all data
+						PropSheet_SetWizButtons(hWnd, PSWIZB_BACK);
+						pCredentialList->DisconnectNotification(szReader);
+						dwCurrentCredential = 0xFFFFFFFF;
+						ListView_DeleteAllItems(GetDlgItem(hWnd, IDC_04LIST));
+						ListView_DeleteAllItems(GetDlgItem(hWnd, IDC_04CHECKS));
+						if (AskForCard(szReader,dwReaderSize,szCard,dwCardSize))
+						{
+							NMHDR nmh;
+							nmh.code = PSN_SETACTIVE;
+							pCredentialList->ConnectNotification(szReader,szCard,0);
+							SendMessage(hWnd, WM_NOTIFY, 0, (LPARAM)&nmh);
+						}
+					}
+				}
 		}
     }
 	return FALSE;

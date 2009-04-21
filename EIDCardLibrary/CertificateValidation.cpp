@@ -228,7 +228,7 @@ BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt DWORD dwFla
 		EnhkeyUsage.rgpszUsageIdentifier=& szOid;
 	}
 
-	if (dwFlag | EID_CERTIFICATE_FLAG_USERSTORE)
+	if (dwFlag & EID_CERTIFICATE_FLAG_USERSTORE)
 	{
 		hChainEngine = HCCE_CURRENT_USER;
 	}
@@ -252,7 +252,7 @@ BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt DWORD dwFla
     // Build a chain using CertGetCertificateChain
     
     if(CertGetCertificateChain(
-        hChainEngine,pCertContext,NULL,NULL,&ChainPara,0,NULL,&pChainContext))
+        hChainEngine,pCertContext,NULL,NULL,&ChainPara,CERT_CHAIN_ENABLE_PEER_TRUST,NULL,&pChainContext))
     {
 		   
 		if (pChainContext->TrustStatus.dwErrorStatus)
@@ -315,4 +315,139 @@ BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt DWORD dwFla
 	}
 	SetLastError(dwError);
 	return fValidation;
+}
+
+BOOL MakeTrustedCertifcate(PCCERT_CONTEXT pCertContext)
+{
+
+	BOOL fReturn = FALSE;
+	PCCERT_CHAIN_CONTEXT     pChainContext     = NULL;
+	CERT_ENHKEY_USAGE        EnhkeyUsage       = {0};
+	CERT_USAGE_MATCH         CertUsage         = {0};  
+	CERT_CHAIN_PARA          ChainPara         = {0};
+	CERT_CHAIN_POLICY_PARA   ChainPolicy       = {0};
+	CERT_CHAIN_POLICY_STATUS PolicyStatus      = {0};
+	LPSTR					szOid;
+	HCERTSTORE hRootStore = NULL;
+	HCERTSTORE hTrustStore = NULL;
+	HCERTSTORE hTrustedPeople = NULL;
+	// because machine cert are trusted by user,
+	// build the chain in user context (if used certifcates are trusted only by the user
+	// - think about program running in user space)
+	HCERTCHAINENGINE		hChainEngine		= HCCE_CURRENT_USER;
+	DWORD dwError = 0;
+
+	//---------------------------------------------------------
+    // Initialize data structures for chain building.
+
+	if (GetPolicyValue(AllowCertificatesWithNoEKU))
+	{
+		EnhkeyUsage.cUsageIdentifier = 0;
+		EnhkeyUsage.rgpszUsageIdentifier=NULL;
+	}
+	else
+	{
+		EnhkeyUsage.cUsageIdentifier = 1;
+		szOid = szOID_KP_SMARTCARD_LOGON;
+		EnhkeyUsage.rgpszUsageIdentifier=& szOid;
+	}
+
+	CertUsage.dwType = USAGE_MATCH_TYPE_AND;
+    CertUsage.Usage  = EnhkeyUsage;
+
+	memset(&ChainPara, 0, sizeof(CERT_CHAIN_PARA));
+    ChainPara.cbSize = sizeof(CERT_CHAIN_PARA);
+    ChainPara.RequestedUsage=CertUsage;
+
+	memset(&ChainPolicy, 0, sizeof(CERT_CHAIN_POLICY_PARA));
+    ChainPolicy.cbSize = sizeof(CERT_CHAIN_POLICY_PARA);
+
+	memset(&PolicyStatus, 0, sizeof(CERT_CHAIN_POLICY_STATUS));
+    PolicyStatus.cbSize = sizeof(CERT_CHAIN_POLICY_STATUS);
+    PolicyStatus.lChainIndex = -1;
+    PolicyStatus.lElementIndex = -1;
+
+    //-------------------------------------------------------------------
+    // Build a chain using CertGetCertificateChain
+    __try
+	{
+		fReturn = CertGetCertificateChain(hChainEngine,pCertContext,NULL,NULL,&ChainPara,CERT_CHAIN_ENABLE_PEER_TRUST,NULL,&pChainContext);
+		if (!fReturn)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CertGetCertificateChain", dwError);
+			__leave;
+		}
+		// pChainContext->cChain -1 is the final chain num
+		DWORD dwCertificateCount = pChainContext->rgpChain[pChainContext->cChain -1]->cElement;
+		if (dwCertificateCount == 1)
+		{
+			hTrustedPeople = CertOpenStore(CERT_STORE_PROV_SYSTEM,0,NULL,CERT_SYSTEM_STORE_LOCAL_MACHINE,_T("TrustedPeople"));
+			if (!hTrustedPeople)
+			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CertOpenStore", dwError);
+				fReturn = FALSE;
+				__leave;
+			}
+			fReturn = CertAddCertificateContextToStore(hTrustedPeople,
+					pChainContext->rgpChain[pChainContext->cChain -1]->rgpElement[0]->pCertContext,
+					CERT_STORE_ADD_USE_EXISTING,NULL);
+		}
+		else
+		{
+			hRootStore = CertOpenStore(CERT_STORE_PROV_SYSTEM,0,NULL,CERT_SYSTEM_STORE_LOCAL_MACHINE,_T("Root"));
+			if (!hRootStore)
+			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CertOpenStore", dwError);
+				fReturn = FALSE;
+				__leave;
+			}
+			hTrustStore = CertOpenStore(CERT_STORE_PROV_SYSTEM,0,NULL,CERT_SYSTEM_STORE_LOCAL_MACHINE,_T("CA"));
+			if (!hTrustStore)
+			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CertOpenStore", dwError);
+				fReturn = FALSE;
+				__leave;
+			}
+			for (DWORD i = dwCertificateCount - 1 ; i > 0 ; i--)
+			{
+				if (i < dwCertificateCount - 1)
+				{
+					// second & so on don't have to be trusted
+					fReturn = CertAddCertificateContextToStore(hTrustStore,
+						pChainContext->rgpChain[pChainContext->cChain -1]->rgpElement[i]->pCertContext,
+						CERT_STORE_ADD_USE_EXISTING,NULL);
+				}
+				else
+				{
+					// first must be trusted
+					fReturn = CertAddCertificateContextToStore(hRootStore,
+						pChainContext->rgpChain[pChainContext->cChain -1]->rgpElement[i]->pCertContext,
+						CERT_STORE_ADD_USE_EXISTING,NULL);
+				}
+				if (!fReturn)
+				{
+					dwError = GetLastError();
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CertAddCertificateContextToStore", dwError);
+					__leave;
+				}
+			}
+		}
+	}
+	__finally
+	{
+		if (hTrustedPeople)
+			CertCloseStore(hTrustedPeople,0);
+		if (hRootStore)
+			CertCloseStore(hRootStore,0);
+		if (hTrustStore)
+			CertCloseStore(hTrustStore,0);
+		if (pChainContext)
+			CertFreeCertificateChain(pChainContext);
+	}
+	SetLastError(dwError);
+	return fReturn;
 }

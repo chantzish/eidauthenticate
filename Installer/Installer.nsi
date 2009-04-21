@@ -37,6 +37,7 @@
 ;Languages
  
   !insertmacro MUI_LANGUAGE "English"
+  !insertmacro MUI_LANGUAGE "French"
 
 
 
@@ -71,15 +72,27 @@ Section "Core" SecCore
 
 SectionEnd
 
+Section /o "Belgium EID Patch" SecBeid
+
+  System::Call "EIDAuthenticationPackage.dll::EIDPatch()"
+  CopyFiles  "$PROGRAMFILES\Belgium Identity Card\beid35libCpp.dll" "$SYSDIR"
+
+SectionEnd
+
 ;--------------------------------
 ;Descriptions
 
   ;Language strings
   LangString DESC_SecCore ${LANG_ENGLISH} "Core"
+  LangString DESC_SecCore ${LANG_FRENCH} "Core"
+
+  LangString DESC_SecBeid ${LANG_ENGLISH} "Insert missing configuration parameters required to use Belgium EID Card"
+  LangString DESC_SecBeid ${LANG_FRENCH} "Insère des paramètres de configuration nécessaires pour l'utilisation de la carte d'identité belge"
 
   ;Assign language strings to sections
   !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
     !insertmacro MUI_DESCRIPTION_TEXT ${SecCore} $(DESC_SecCore)
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecBeid} $(DESC_SecBeid)
   !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 ;--------------------------------
@@ -89,6 +102,7 @@ Section "Uninstall"
 
 
   System::Call "EIDAuthenticationPackage.dll::DllUnRegister()"
+  System::Call "EIDAuthenticationPackage.dll::EIDUnPatch()"
 
   Delete /REBOOTOK "$INSTDIR\EIDUninstall.exe"
   Delete /REBOOTOK "$INSTDIR\EIDAuthenticationPackage.dll"
@@ -103,3 +117,13 @@ Section "Uninstall"
 
 SectionEnd
 
+Function .onInit
+IfFileExists "$PROGRAMFILES\Belgium Identity Card\beid35libCpp.dll" CheckOk CheckEnd
+CheckOk:
+  ; This is what is done by sections.nsh SelectSection macro
+   !insertmacro SelectSection ${SecBeid}
+
+ 
+CheckEnd:
+
+FunctionEnd

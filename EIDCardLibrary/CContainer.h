@@ -34,7 +34,7 @@ class CContainer
 	PTSTR GetContainerName();
 	DWORD GetKeySpec();
 
-	PCCERT_CONTEXT GetContainer();
+	PCCERT_CONTEXT GetCertificate();
 	BOOL IsOnReader(__in LPCTSTR szReaderName);
 	
 	PEID_SMARTCARD_CSP_INFO GetCSPInfo();

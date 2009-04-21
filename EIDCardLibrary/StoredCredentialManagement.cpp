@@ -18,6 +18,7 @@
 #include <ntstatus.h>
 #define WIN32_NO_STATUS
 #include <windows.h>
+#include <tchar.h>
 #define SECURITY_WIN32
 #include <sspi.h>
 
@@ -1556,12 +1557,14 @@ NTSTATUS LoadSamSrv()
 
 NTSTATUS CheckPassword( __in DWORD dwRid, __in PWSTR szPassword)
 {
-#ifdef _DEBUG
-	UNREFERENCED_PARAMETER(dwRid);
-	UNREFERENCED_PARAMETER(szPassword);
-	return STATUS_SUCCESS;
-#else
 	NTSTATUS Status = STATUS_SUCCESS;
+#ifdef _DEBUG
+	TCHAR szName[256] = TEXT("");
+	GetModuleFileName(GetModuleHandle(NULL),szName, ARRAYSIZE(szName));
+	if (_tcsstr(szName,TEXT("EIDTest.exe")) == NULL)
+	{
+#endif
+	
 	LSA_OBJECT_ATTRIBUTES connectionAttrib;
     LSA_HANDLE handlePolicy = NULL;
     PPOLICY_ACCOUNT_DOMAIN_INFO structInfoPolicy = NULL;// -> http://msdn2.microsoft.com/en-us/library/ms721895(VS.85).aspx.
@@ -1654,6 +1657,8 @@ NTSTATUS CheckPassword( __in DWORD dwRid, __in PWSTR szPassword)
 			FreeLibrary(samsrvDll);
 	}
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave with status = %d",Status);
-	return Status;
+#ifdef _DEBUG
+	}
 #endif
+	return Status;
 }

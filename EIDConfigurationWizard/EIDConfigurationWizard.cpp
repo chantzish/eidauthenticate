@@ -9,6 +9,7 @@
 #include "../EIDCardLibrary/Package.h"
 #include "../EIDCardLibrary/Registration.h"
 #include "../EIDCardLibrary/CertificateUtilities.h"
+#include "../EIDCardLibrary/CertificateValidation.h"
 
 #pragma comment(lib,"comctl32")
 
@@ -83,6 +84,32 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 		else if (_tcscmp(pszCommandLine[0],TEXT("DESACTIVATEFORCEPOLICY")) == 0)
 		{
 			ChangeForceSmartCardLogonPolicy(FALSE);
+			return 0;
+		} 
+		else if (_tcscmp(pszCommandLine[0],TEXT("ENABLENOEKU")) == 0)
+		{
+			DWORD dwValue = 1;
+			RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+				TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\SmartCardCredentialProvider"),
+				TEXT("AllowCertificatesWithNoEKU"), REG_DWORD, &dwValue,sizeof(dwValue));
+		}
+		else if (_tcscmp(pszCommandLine[0],TEXT("TRUST")) == 0)
+		{
+			if (iNumArgs < 2)
+			{
+				return 0;
+			}
+			DWORD dwSize = 0;
+			CryptStringToBinary(pszCommandLine[1],0,CRYPT_STRING_BASE64,NULL,&dwSize,NULL,NULL);
+			PBYTE pbCertificate = (PBYTE) malloc(dwSize);
+			CryptStringToBinary(pszCommandLine[1],0,CRYPT_STRING_BASE64,pbCertificate,&dwSize,NULL,NULL);
+			PCCERT_CONTEXT pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING,pbCertificate, dwSize);
+			if (pCertContext)
+			{
+				MakeTrustedCertifcate(pCertContext);
+				CertFreeCertificateContext(pCertContext);
+			}
+			free(pbCertificate);
 			return 0;
 		} 
 	}
