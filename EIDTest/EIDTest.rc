@@ -34,7 +34,7 @@ BEGIN
       MENUITEM "&Stop",IDM_STOPWAITTHREAD
     END
     MENUITEM "Credential&List",IDM_CRED_LIST
-	MENUITEM "Retrieve Certificate context from CSP Info",IDM_CRED_CSPINFO
+    MENUITEM "Retrieve Certificate context from CSP Info",IDM_CRED_CSPINFO
     MENUITEM "Certificate &Validation",IDM_CRED_CERT
     MENUITEM "UserTile",IDM_CRED_TILE
     MENUITEM "Test COM Object",IDM_CRED_COM
@@ -80,6 +80,7 @@ BEGIN
     MENUITEM "Compute SHA1 Hash",IDM_INFO_HASHSHA1
     MENUITEM "Compute NT Hash",IDM_INFO_HASHNT
     MENUITEM "View Tracing",IDM_INFO_TRACING
+    MENUITEM "Test KSP",IDM_SM_KSP
   END
 END
 
