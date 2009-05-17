@@ -30,6 +30,7 @@
 #include "EIDTestInfo.h"
 #include "CertificateValidationTest.h"
 #include "StoredCredentialManagementTest.h"
+#include "SmartCardModuleTest.h"
 #include "../EIDCardLibrary/Registration.h"
 
 #ifdef UNICODE
@@ -325,6 +326,9 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		case IDM_INFO_HASHNT:
 			menu_INFO_ComputeHashNT();
+			break;
+		case IDM_SM_KSP:
+			test_SmartCardModule();
 			break;
 		case IDM_EXIT:
 			DestroyWindow(hWnd);

@@ -498,6 +498,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\smartcardmodule.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\StoredCredentialManagement.cpp"
 				>
 			</File>
@@ -561,6 +565,10 @@
 			</File>
 			<File
 				RelativePath=".\Registration.h"
+				>
+			</File>
+			<File
+				RelativePath=".\SmartCardModule.h"
 				>
 			</File>
 			<File
