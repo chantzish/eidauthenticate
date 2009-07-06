@@ -115,9 +115,9 @@ BEGIN
   IDS_04ENCRYPTIONOK "The card supports encryption"
   IDS_04ENCRYPTIONNOK "The card doesn't support encryption"
   IDS_05ACTIVATEREMOVE "<a id=""idActRemove"">Activate the remove policy</a>"
-  IDS_05DESACTIVATEREMOVE "<a id=""idDesActRemove"">Desactivate the remove policy</a>"
+  IDS_05DESACTIVATEREMOVE "<a id=""idDesActRemove"">Deactivate the remove policy</a>"
   IDS_05ACTIVATEFORCE "<a id=""idActForce"">Activate the force smart card logon policy</a>"
-  IDS_05DESACTIVATEFORCE "<a id=""idDesActForce"">Desactivate the force smart card logon policy</a>"
+  IDS_05DESACTIVATEFORCE "<a id=""idDesActForce"">Deactivate the force smart card logon policy</a>"
   IDS_04TESTUSERNAME "Username"
   IDS_04TESTTRUST "Trust"
   IDS_04TESTCRYPTO "Crypto"
@@ -139,5 +139,7 @@ BEGIN
   IDS_04USERNAMERENAME "Rename your account"
   IDS_04TRUSTMAKETRUSTED "Make this certificate trusted"
   IDS_04TRUSTENABLENOEKU "Don't check EKU"
+  IDS_RENAME "Your session has to be closed to rename your user account. Do you want to proceed ?"
+  IDS_RENAMECONF "Your account has been renamed to ""%s""."
 END
 

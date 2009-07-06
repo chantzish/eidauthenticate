@@ -63,15 +63,16 @@ NTSTATUS UserNameToToken(__in PLSA_UNICODE_STRING AccountName,
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Convert");
 	WCHAR UserName[UNLEN+1];
 
-	wcsncpy_s(UserName,UNCLEN,AccountName->Buffer,AccountName->Length/2);
+	wcsncpy_s(UserName,ARRAYSIZE(UserName),AccountName->Buffer,AccountName->Length/2);
 	UserName[AccountName->Length/2]=0;
-	
+	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"CheckAuthorization");
 	// check authorization
 	Status = CheckAuthorization(UserName, SubStatus, &ExpirationTime);
 	if (Status != STATUS_SUCCESS)
 	{
 		return Status;
 	}
+	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"GetGroups");
 	// get the number of groups
 	bResult = GetGroups(UserName,&pGroupInfo,&NumberOfGroups);
 	if (!bResult)
@@ -79,6 +80,7 @@ NTSTATUS UserNameToToken(__in PLSA_UNICODE_STRING AccountName,
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetGroups error");
 		return STATUS_DATA_ERROR;
 	}
+	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"GetLocalGroups");
 	bResult = GetLocalGroups(UserName,&pLocalGroupInfo,&NumberOfLocalGroups);
 	if (!bResult)
 	{
@@ -168,6 +170,7 @@ NTSTATUS UserNameToToken(__in PLSA_UNICODE_STRING AccountName,
 		DebugPrintSid(pGroupInfo[i].grui1_name, pGroupSid[i]);
 		FunctionTable->FreeLsaHeap(pGroupSid[i]);
 	}
+	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Group 2");
 	for (i=0; i<NumberOfLocalGroups; i++)
 	{
 		// get the attributes of group since the struct doesn't containt attributes

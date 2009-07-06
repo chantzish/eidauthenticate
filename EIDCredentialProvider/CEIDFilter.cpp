@@ -18,6 +18,11 @@
 #include "CEIDFilter.h"
 #include "../EIDCardLibrary/GPO.h"
 
+CEIDFilter::CEIDFilter():
+    _cRef(1)
+{
+}
+
 HRESULT CEIDFilter::UpdateRemoteCredential(      
     const CREDENTIAL_PROVIDER_CREDENTIAL_SERIALIZATION *pcpcsIn,
     CREDENTIAL_PROVIDER_CREDENTIAL_SERIALIZATION *pcpcsOut

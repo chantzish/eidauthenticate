@@ -187,6 +187,9 @@ void EIDCredentialProviderDllRegister()
 	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Providers\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"), 
 		NULL, REG_SZ, TEXT("EidCredentialProvider"),sizeof(TEXT("EidCredentialProvider")));
+	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+		TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Provider Filters\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"), 
+		NULL, REG_SZ, TEXT("EidCredentialProvider"),sizeof(TEXT("EidCredentialProvider")));
 	RegSetKeyValue(	HKEY_CLASSES_ROOT, 
 		TEXT("CLSID\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"), 
 		NULL, REG_SZ, TEXT("EidCredentialProvider"),sizeof(TEXT("EidCredentialProvider")));
@@ -203,6 +206,8 @@ void EIDCredentialProviderDllUnRegister()
 	RegDeleteTree(HKEY_CLASSES_ROOT, TEXT("CLSID\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"));
 	RegDeleteTree(HKEY_LOCAL_MACHINE, 
 		TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Providers\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"));
+	RegDeleteTree(HKEY_LOCAL_MACHINE, 
+		TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Provider Filters\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"));
 }
 
 void EIDConfigurationWizardDllRegister()
@@ -316,14 +321,12 @@ void EnableLogging()
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"), 
 		TEXT("Status"), REG_DWORD,&dwValue,sizeof(DWORD));
 	
-	dwValue = 1;
 	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"), 
-		TEXT("MatchAllKeyword"), REG_QWORD,qdwValue,sizeof(REG_QWORD));
-	dwValue = 1;
+		TEXT("MatchAllKeyword"), REG_QWORD,&qdwValue,sizeof(REG_QWORD));
 	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"), 
-		TEXT("MatchAnyKeyword"), REG_QWORD,qdwValue,sizeof(REG_QWORD));
+		TEXT("MatchAnyKeyword"), REG_QWORD,&qdwValue,sizeof(REG_QWORD));
 	
 }
 

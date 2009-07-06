@@ -43,8 +43,8 @@ enum SAMPLE_FIELD_ID
     SFI_USERNAME        = 1,
 	SFI_MESSAGE         = 2,
     SFI_PIN		        = 3,
-    SFI_SUBMIT_BUTTON   = 4, 
-	SFI_CERTIFICATE		= 5,
+    SFI_CERTIFICATE		= 4,
+	SFI_SUBMIT_BUTTON   = 5, 
     SFI_NUM_FIELDS      = 6,  // Note: if new fields are added, keep NUM_FIELDS last.  This is used as a count of the number of fields
 };
 
@@ -79,7 +79,7 @@ static const FIELD_STATE_PAIR s_rgFieldStatePairs[] =
 	{ CPFS_DISPLAY_IN_BOTH, CPFIS_NONE },                   // SFI_MESSAGE
     { CPFS_DISPLAY_IN_SELECTED_TILE, CPFIS_FOCUSED },       // SFI_PIN
     { CPFS_DISPLAY_IN_SELECTED_TILE, CPFIS_NONE    },       // SFI_SUBMIT_BUTTON   
-	{ CPFS_DISPLAY_IN_SELECTED_TILE, CPFIS_FOCUSED },       // SFI_CERTIFICATE
+	{ CPFS_DISPLAY_IN_SELECTED_TILE, CPFIS_NONE    },       // SFI_CERTIFICATE
 };
 
 // Same as s_rgFieldStatePairs above, but for the CMessageCredential.
@@ -96,18 +96,19 @@ static const FIELD_STATE_PAIR s_rgMessageFieldStatePairs[] =
 // The third is the name of the field, NOT the value which will appear in the field.
 static const CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR s_rgCredProvFieldDescriptors[] =
 {
-    { SFI_TILEIMAGE, CPFT_TILE_IMAGE },
-    { SFI_USERNAME, CPFT_LARGE_TEXT},
-	{ SFI_MESSAGE, CPFT_SMALL_TEXT},
-    { SFI_PIN, CPFT_PASSWORD_TEXT},
-    { SFI_SUBMIT_BUTTON, CPFT_SUBMIT_BUTTON},
-	{ SFI_CERTIFICATE, CPFT_COMMAND_LINK},
+    { SFI_TILEIMAGE, CPFT_TILE_IMAGE ,L""},
+    { SFI_USERNAME, CPFT_LARGE_TEXT,L""},
+	{ SFI_MESSAGE, CPFT_SMALL_TEXT,L""},
+    { SFI_PIN, CPFT_PASSWORD_TEXT,L""},
+	{ SFI_CERTIFICATE, CPFT_COMMAND_LINK,L""},
+    { SFI_SUBMIT_BUTTON, CPFT_SUBMIT_BUTTON, L""},
+	
 };
 
 // Same as s_rgCredProvFieldDescriptors above, but for the CMessageCredential.
 static const CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR s_rgMessageCredProvFieldDescriptors[] =
 {
-    { SMFI_TILEIMAGE, CPFT_TILE_IMAGE},
-	{ SMFI_MESSAGE, CPFT_LARGE_TEXT},
-	{ SMFI_CANCELFORCEPOLICY, CPFT_COMMAND_LINK, L"Disable Force Smart Card Logon Policy" },
+    { SMFI_TILEIMAGE, CPFT_TILE_IMAGE, L""},
+	{ SMFI_MESSAGE, CPFT_LARGE_TEXT, L""},
+	{ SMFI_CANCELFORCEPOLICY, CPFT_COMMAND_LINK, L"" },
 };

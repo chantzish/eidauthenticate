@@ -1,8 +1,12 @@
 #include <windows.h>
 #include <tchar.h>
+#include <Lm.h>
 
 #include "../EIDCardLibrary/GPO.h"
 #include "../EIDCardLibrary/Tracing.h"
+#include "EIDConfigurationWizard.h"
+
+extern HINSTANCE g_hinst;
 
 VOID CenterWindow(HWND hWnd)
 {
@@ -262,4 +266,44 @@ BOOL ChangeForceSmartCardLogonPolicy(BOOL fActivate)
 	}
 	SetLastError(dwError);
 	return fReturn;
+}
+
+BOOL RenameAccount(PTSTR szNewUsername)
+{
+	BOOL fReturn = FALSE;
+	DWORD dwError;
+
+	TCHAR szOldUsername[21];
+	DWORD dwSize = ARRAYSIZE(szOldUsername);
+	GetUserName(szOldUsername, &dwSize);
+	
+	TCHAR szMessage[200];
+	TCHAR szBuffer[200];
+	LoadString(g_hinst,IDS_RENAME,szMessage, ARRAYSIZE(szMessage));
+	if (IDOK != MessageBox(NULL,szMessage,L"",MB_OKCANCEL|MB_DEFBUTTON1))
+	{
+		return TRUE;
+	}
+
+	// full name
+	USER_INFO_1011 userInfo11;
+	userInfo11.usri1011_full_name = szNewUsername;
+	dwError = NetUserSetInfo( NULL, szOldUsername,  1011, (LPBYTE)&userInfo11,NULL);
+	if (dwError)
+	{
+		MessageBoxWin32(dwError);
+		return FALSE;
+	}
+	USER_INFO_0 userInfo0;
+	userInfo0.usri0_name = szNewUsername;
+	dwError = NetUserSetInfo( NULL, szOldUsername,  0, (LPBYTE)&userInfo0,NULL);
+	if (dwError)
+	{
+		MessageBoxWin32(dwError);
+		return FALSE;
+	}
+	LoadString(g_hinst,IDS_RENAMECONF,szBuffer, ARRAYSIZE(szBuffer));
+	_stprintf_s(szMessage,ARRAYSIZE(szMessage),szBuffer,szNewUsername);
+	MessageBox(NULL,szMessage,L"",0);
+	return ExitWindowsEx(EWX_LOGOFF,SHTDN_REASON_MAJOR_APPLICATION|SHTDN_REASON_MINOR_MAINTENANCE);
 }

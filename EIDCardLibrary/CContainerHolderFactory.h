@@ -32,6 +32,8 @@ public:
 															   __in LPCTSTR szProviderName, __in LPCTSTR szContainerName,
 															   __in DWORD KeySpec, __in USHORT ActivityCount,
 															   __in PBYTE Data, __in DWORD DataSize);
+	VOID Lock();
+	VOID Unlock();
 	BOOL HasContainerHolder();
 	DWORD ContainerHolderCount();
 	T* GetContainerHolderAt(DWORD dwIndex);
@@ -42,6 +44,7 @@ private:
 	CREDENTIAL_PROVIDER_USAGE_SCENARIO _cpus;
     DWORD _dwFlags;
 	std::list<T*> _CredentialList;
+	CRITICAL_SECTION CriticalSection;
 	
 };
 

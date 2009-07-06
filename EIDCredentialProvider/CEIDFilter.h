@@ -27,6 +27,7 @@
 class CEIDFilter : public ICredentialProviderFilter
 {
 	public:
+	CEIDFilter();
 	// IUnknown
     STDMETHOD_(ULONG, AddRef)()
     {
@@ -51,7 +52,7 @@ class CEIDFilter : public ICredentialProviderFilter
     {
         HRESULT hr;
         if (IID_IUnknown == riid || 
-            IID_ICredentialProvider == riid)
+            IID_ICredentialProviderFilter == riid)
         {
             *ppv = this;
             reinterpret_cast<IUnknown*>(*ppv)->AddRef();

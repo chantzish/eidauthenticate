@@ -31,14 +31,26 @@
 
 CContainer::CContainer(LPCTSTR szReaderName, LPCTSTR szCardName, LPCTSTR szProviderName, LPCTSTR szContainerName, DWORD KeySpec,__in USHORT ActivityCount,PCCERT_CONTEXT pCertContext)
 {
-	_szReaderName = new TCHAR[_tcslen(szReaderName)+1];
-	_tcscpy_s(_szReaderName,_tcslen(szReaderName)+1,szReaderName);
-	_szProviderName = new TCHAR[_tcslen(szProviderName)+1];
-	_tcscpy_s(_szProviderName,_tcslen(szProviderName)+1,szProviderName);
-	_szContainerName = new TCHAR[_tcslen(szContainerName)+1];
-	_tcscpy_s(_szContainerName,_tcslen(szContainerName)+1,szContainerName);
-	_szCardName = new TCHAR[_tcslen(szCardName)+1];
-	_tcscpy_s(_szCardName,_tcslen(szCardName)+1,szCardName);
+	_szReaderName = (LPTSTR) malloc (sizeof(TCHAR)*(_tcslen(szReaderName)+1));
+	if (_szReaderName)
+	{
+		_tcscpy_s(_szReaderName,_tcslen(szReaderName)+1,szReaderName);
+	}
+	_szProviderName = (LPTSTR) malloc (sizeof(TCHAR)*(_tcslen(szProviderName)+1));
+	if (_szProviderName)
+	{
+		_tcscpy_s(_szProviderName,_tcslen(szProviderName)+1,szProviderName);
+	}
+	_szContainerName = (LPTSTR) malloc (sizeof(TCHAR)*(_tcslen(szContainerName)+1));
+	if (_szContainerName)
+	{
+		_tcscpy_s(_szContainerName,_tcslen(szContainerName)+1,szContainerName);
+	}
+	_szCardName = (LPTSTR) malloc (sizeof(TCHAR)*(_tcslen(szCardName)+1));
+	if (_szCardName)
+	{
+		_tcscpy_s(_szCardName,_tcslen(szCardName)+1,szCardName);
+	}
 	_szUserName = NULL;
 	_KeySpec = KeySpec;
 	_ActivityCount = ActivityCount;
@@ -47,11 +59,16 @@ CContainer::CContainer(LPCTSTR szReaderName, LPCTSTR szCardName, LPCTSTR szProvi
 
 CContainer::~CContainer()
 {
-	delete[] _szReaderName;
-	delete[] _szCardName;
-	delete[] _szProviderName;
-	delete[] _szContainerName;
-	if (_szUserName) delete[] _szUserName;
+	if (_szReaderName)
+		free(_szReaderName);
+	if (_szCardName)
+		free(_szCardName);
+	if (_szProviderName)
+		free(_szProviderName);
+	if (_szContainerName)
+		free(_szContainerName);
+	if (_szUserName) 
+		free(_szUserName);
 	if (_pCertContext) {
 		CertFreeCertificateContext(_pCertContext);
 	}

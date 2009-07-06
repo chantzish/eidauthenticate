@@ -217,7 +217,51 @@ BOOL CContainerHolderTest::Solve(DWORD dwCheckNum)
 	switch(dwCheckNum)
 	{
 	case CHECK_USERNAME:
-		WinExec("control /name Microsoft.UserAccounts /page pageRenameMyAccount", SW_NORMAL);
+		//WinExec("control /name Microsoft.UserAccounts /page pageRenameMyAccount", SW_NORMAL);
+		{
+			
+			
+				
+			if (IsElevated())
+			{
+				RenameAccount(_pContainer->GetUserName());
+			}
+			else
+			{
+				SHELLEXECUTEINFO shExecInfo;
+				TCHAR szName[1024];
+				TCHAR szParameter[50] = TEXT("RENAMEUSER ");
+				GetModuleFileName(GetModuleHandle(NULL),szName, ARRAYSIZE(szName));
+				_tcscat_s(szParameter, ARRAYSIZE(szParameter), _pContainer->GetUserName());
+
+				shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
+
+				shExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
+				shExecInfo.hwnd = NULL;
+				shExecInfo.lpVerb = TEXT("runas");
+				shExecInfo.lpFile = szName;
+				shExecInfo.lpParameters = szParameter;
+				shExecInfo.lpDirectory = NULL;
+				shExecInfo.nShow = SW_NORMAL;
+				shExecInfo.hInstApp = NULL;
+
+				if (!ShellExecuteEx(&shExecInfo))
+				{
+					dwError = GetLastError();
+				}
+				else
+				{
+					if (WaitForSingleObject(shExecInfo.hProcess, INFINITE) == WAIT_OBJECT_0)
+					{
+						fReturn = TRUE;
+					}
+					else
+					{
+						dwError = GetLastError();
+					}
+				}
+			}
+		}
 		fReturn = TRUE;
 		break;
 	case CHECK_TRUST:

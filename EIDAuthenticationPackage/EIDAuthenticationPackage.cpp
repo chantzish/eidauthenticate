@@ -470,7 +470,7 @@ extern "C"
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Username <>");
 				return STATUS_LOGON_FAILURE;
 			}
-			delete[] szUserName;
+			free(szUserName);
 			if (!IsTrustedCertificate(pCertContext))
 			{
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Untrusted certificate 0x%x",GetLastError());
@@ -497,8 +497,13 @@ extern "C"
 			PWSTR szPassword = NULL;
 			if (!RetrieveStoredCredential(dwRid,pCertContext, pPin, &szPassword))
 			{
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"RetrieveStoredCredential failed");
+				DWORD dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"RetrieveStoredCredential failed %d", dwError);
 				MyLsaDispatchTable->FreeLsaHeap(MyTokenInformation);
+				if (dwError == 0x80090015)
+				{
+					return STATUS_SMARTCARD_NO_KEYSET;
+				}
 				return STATUS_SMARTCARD_WRONG_PIN;
 			}
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"RetrieveStoredCredential OK");

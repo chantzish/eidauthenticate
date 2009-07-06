@@ -279,7 +279,7 @@ static INT_PTR CALLBACK CancelForcePolicyWizardCallBack(HWND hwndDlg, UINT messa
 							MessageBoxWin32(0x5);
 							__leave;
 						}
-						lStatus = RegSetKeyValue(	HKEY_CLASSES_ROOT, 
+						lStatus = RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 								TEXT("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Policies\\System"), 
 								TEXT("scforceoption"), REG_DWORD, &dwValue,sizeof(DWORD));
 						if (lStatus != ERROR_SUCCESS)

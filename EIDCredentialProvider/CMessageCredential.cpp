@@ -153,7 +153,7 @@ HRESULT CMessageCredential::GetFieldState(
     {
         *pcpfis = _rgFieldStatePairs[dwFieldID].cpfis;
 		*pcpfs = _rgFieldStatePairs[dwFieldID].cpfs;
-		if (dwFieldID == SMFI_CANCELFORCEPOLICY && _cpus == CPUS_CREDUI)
+		if (dwFieldID == SMFI_CANCELFORCEPOLICY && (_cpus == CPUS_LOGON || _cpus == CPUS_UNLOCK_WORKSTATION))
 		{
 			if (GetPolicyValue(scforceoption))
 			{
