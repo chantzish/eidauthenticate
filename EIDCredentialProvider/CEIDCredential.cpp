@@ -91,14 +91,9 @@ CEIDCredential::~CEIDCredential()
 
 // Initializes one credential with the field information passed in.
 // Set the value of the SFI_USERNAME field to pwzUsername.
-HRESULT CEIDCredential::Initialize(
-    //CREDENTIAL_PROVIDER_USAGE_SCENARIO cpus,
-    //const CREDENTIAL_PROVIDER_FIELD_DESCRIPTOR* rgcpfd,
-    //const FIELD_STATE_PAIR* rgfsp
-    )
+HRESULT CEIDCredential::Initialize()
 {
     HRESULT hr = S_OK;
-//    _cpus = cpus;
 
     // Copy the field descriptors for each field. This is useful if you want to vary the field
     // descriptors based on what Usage scenario the credential was created for.
@@ -138,6 +133,10 @@ HRESULT CEIDCredential::Initialize(
 		LoadStringW(g_hinst,IDS_CERTIFICATEDETAIL,szCertificateDetail,ARRAYSIZE(szCertificateDetail));
 		hr = SHStrDupW(szCertificateDetail, &_rgFieldStrings[SFI_CERTIFICATE]);
     }
+	else
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"not SUCCEEDED");
+	}
     return S_OK;
 }
 
@@ -186,6 +185,7 @@ HRESULT CEIDCredential::UnAdvise()
 HRESULT CEIDCredential::SetSelected(BOOL* pbAutoLogon)  
 {
 	*pbAutoLogon = FALSE;  
+	//EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"");
     return S_OK;
 }
 
@@ -211,8 +211,13 @@ HRESULT CEIDCredential::SetDeselected()
         if (SUCCEEDED(hr) && _pCredProvCredentialEvents)
         {
             _pCredProvCredentialEvents->SetFieldString(this, SFI_PIN, _rgFieldStrings[SFI_PIN]);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"");
         }
     }
+	if (!SUCCEEDED(hr))
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"not SUCCEEDED hr=0x%08x",hr);
+	}
 
     return hr;
 }
@@ -230,13 +235,18 @@ HRESULT CEIDCredential::GetFieldState(
     {
         *pcpfis = _rgFieldStatePairs[dwFieldID].cpfis;
         *pcpfs = _rgFieldStatePairs[dwFieldID].cpfs;
-
+		//EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"dwFieldID = %d cpfis = %d cpfs = %d",dwFieldID, *pcpfis, *pcpfs);
         hr = S_OK;
     }
     else
     {
         hr = E_INVALIDARG;
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"E_INVALIDARG");
     }
+	if (!SUCCEEDED(hr))
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"not SUCCEEDED hr=0x%08x",hr);
+	}
     return hr;
 }
 
@@ -253,12 +263,17 @@ HRESULT CEIDCredential::GetStringValue(
         // Make a copy of the string and return that. The caller
         // is responsible for freeing it.
         hr = SHStrDupW(_rgFieldStrings[dwFieldID], ppwsz);
+		//EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"dwFieldId = %d pwsz = '%s'",dwFieldID,*ppwsz);
     }
     else
     {
         hr = E_INVALIDARG;
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"E_INVALIDARG");
     }
-
+	if (!SUCCEEDED(hr))
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"not SUCCEEDED hr=0x%08x",hr);
+	}
     return hr;
 }
 
@@ -277,6 +292,7 @@ HRESULT CEIDCredential::GetBitmapValue(
 		if (hbmp != NULL)
 		{
 			hr = S_OK;
+			//EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"");
 			*phbmp = hbmp;
 		}
 		else
@@ -287,7 +303,12 @@ HRESULT CEIDCredential::GetBitmapValue(
     else
     {
         hr = E_INVALIDARG;
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"E_INVALIDARG");
     }
+	if (!SUCCEEDED(hr))
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"not SUCCEEDED hr=0x%08x",hr);
+	}
     return hr;
 }
 
@@ -300,7 +321,7 @@ HRESULT CEIDCredential::GetSubmitButtonValue(
     DWORD* pdwAdjacentTo
     )
 {
-    HRESULT hr;
+    HRESULT hr = E_INVALIDARG;
     if (SFI_SUBMIT_BUTTON == dwFieldID && pdwAdjacentTo)
     {
         // pdwAdjacentTo is a pointer to the fieldID you want the submit button to 
@@ -311,7 +332,12 @@ HRESULT CEIDCredential::GetSubmitButtonValue(
     else
     {
         hr = E_INVALIDARG;
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"E_INVALIDARG");
     }
+	if (!SUCCEEDED(hr))
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"not SUCCEEDED hr=0x%08x",hr);
+	}
     return hr;
 }
 
@@ -331,12 +357,18 @@ HRESULT CEIDCredential::SetStringValue(
         PWSTR* ppwszStored = &_rgFieldStrings[dwFieldID];
         CoTaskMemFree(*ppwszStored);
 
-        hr = SHStrDupW(pwz, ppwszStored);
+        //EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"%s",pwz);
+		hr = SHStrDupW(pwz, ppwszStored);
     }
     else
     {
         hr = E_INVALIDARG;
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"E_INVALIDARG");
     }
+	if (!SUCCEEDED(hr))
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"not SUCCEEDED hr=0x%08x",hr);
+	}
     return hr;
 }
 
@@ -411,6 +443,7 @@ HRESULT CEIDCredential::CommandLinkClicked(DWORD dwFieldID)
 		if (_pCredProvCredentialEvents)
 		{
 			HWND hWnd;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"");
 			_pCredProvCredentialEvents->OnCreatingWindow(&hWnd);
 			_pContainer->ViewCertificate(hWnd);  
 		}
@@ -419,8 +452,13 @@ HRESULT CEIDCredential::CommandLinkClicked(DWORD dwFieldID)
     else
     {
         hr = E_INVALIDARG;
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"E_INVALIDARG");
     }
-    return S_OK;
+	if (!SUCCEEDED(hr))
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"not SUCCEEDED hr=0x%08x",hr);
+	}
+    return hr;
 }
 //------ end of methods for controls we don't have in our tile ----//
 
@@ -494,7 +532,10 @@ HRESULT CEIDCredential::GetSerialization(
         DWORD dwErr = GetLastError();
         hr = HRESULT_FROM_WIN32(dwErr);
     }
-
+	if (!SUCCEEDED(hr))
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"not SUCCEEDED hr=0x%08x",hr);
+	}
     return hr;
 }
 

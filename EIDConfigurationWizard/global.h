@@ -14,3 +14,5 @@ VOID CenterWindow(HWND hWnd);
 BOOL IsElevated();
 BOOL ChangeRemovePolicy(BOOL fActivate);
 BOOL ChangeForceSmartCardLogonPolicy(BOOL fActivate);
+BOOL RenameAccount(PTSTR szNewUsername);
+

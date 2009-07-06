@@ -112,6 +112,11 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 			free(pbCertificate);
 			return 0;
 		} 
+		else if (_tcscmp(pszCommandLine[0],TEXT("RENAMEUSER")) == 0)
+		{
+			RenameAccount(lpCmdLine + 11);
+			return 0;
+		}
 	}
 
 	HPROPSHEETPAGE ahpsp[5];

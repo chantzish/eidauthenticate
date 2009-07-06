@@ -86,9 +86,11 @@ void CEIDProvider::Callback(EID_CREDENTIAL_PROVIDER_READER_STATE Message, __in L
 			if (_pcpe != NULL)
 			{
 				_pcpe->CredentialsChanged(_upAdviseContext);
+				Sleep(100);
 			}
 			_CredentialList.ConnectNotification(szReader,szCardName,ActivityCount);
 			if (_pMessageCredential) _pMessageCredential->SetStatus(EndReading);
+			
 			if (_pcpe != NULL)
 			{
 				_pcpe->CredentialsChanged(_upAdviseContext);
@@ -104,9 +106,11 @@ void CEIDProvider::Callback(EID_CREDENTIAL_PROVIDER_READER_STATE Message, __in L
 		if (_pcpe != NULL)
 		{
 			_pcpe->CredentialsChanged(_upAdviseContext);
+			Sleep(100);
 		}		
 		_CredentialList.DisconnectNotification(szReader);
 		if (_pMessageCredential) _pMessageCredential->SetStatus(EndReading);
+		
 		if (_pcpe != NULL)
 		{
 			_pcpe->CredentialsChanged(_upAdviseContext);
@@ -152,13 +156,16 @@ HRESULT CEIDProvider::SetUsageScenario(
             {
   
 			    hr = _pMessageCredential->Initialize(s_rgMessageCredProvFieldDescriptors, s_rgMessageFieldStatePairs, L"Please connect");
+				_CredentialList.Lock();
 				_CredentialList.SetUsageScenario(cpus,dwFlags);
+				_CredentialList.Unlock();
 				_pMessageCredential->SetUsageScenario(cpus,dwFlags);
 				_pSmartCardConnectionNotifier = new CSmartCardConnectionNotifier(this);
             }
             else
             {
                 hr = E_OUTOFMEMORY;
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"E_OUTOFMEMORY");
             }
         }
         else
@@ -168,11 +175,13 @@ HRESULT CEIDProvider::SetUsageScenario(
         }
         break;
     case CPUS_CHANGE_PASSWORD:
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"E_NOTIMPL");
         hr = E_NOTIMPL;
         break;
 
     default:
         hr = E_INVALIDARG;
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"E_INVALIDARG");
         break;
     }
 
@@ -250,6 +259,7 @@ HRESULT CEIDProvider::GetFieldDescriptorCount(
     DWORD* pdwCount
     )
 {
+	_CredentialList.Lock();
 	if (_CredentialList.HasContainerHolder())
     {
         *pdwCount = SFI_NUM_FIELDS;
@@ -258,7 +268,8 @@ HRESULT CEIDProvider::GetFieldDescriptorCount(
     {
         *pdwCount = SMFI_NUM_FIELDS;
     }
-  
+   _CredentialList.Unlock();
+   EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"pdwCount %d",*pdwCount);
     return S_OK;
 }
 
@@ -270,6 +281,7 @@ HRESULT CEIDProvider::GetFieldDescriptorAt(
     )
 {    
     HRESULT hr;
+	_CredentialList.Lock();
     if (_CredentialList.HasContainerHolder())
     {
         // Verify dwIndex is a valid field.
@@ -314,12 +326,14 @@ HRESULT CEIDProvider::GetFieldDescriptorAt(
 				else
 				{
 					hr = E_OUTOFMEMORY;
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"E_OUTOFMEMORY");
 				}
 			}
         }
         else
         { 
             hr = E_INVALIDARG;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"E_INVALIDARG");
         }
     }
     else
@@ -332,9 +346,15 @@ HRESULT CEIDProvider::GetFieldDescriptorAt(
         else
         { 
             hr = E_INVALIDARG;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"E_INVALIDARG");
         }
     }
-
+	if (!SUCCEEDED(hr))
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"not SUCCEEDED hr=0x%08x",hr);
+	}
+	_CredentialList.Unlock();
+	//EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"dwIndex %d pszLabel %s dwFieldID %d cpft %d",dwIndex,(*ppcpfd)->pszLabel, (*ppcpfd)->dwFieldID, (*ppcpfd)->cpft );
     return hr;
 }
 
@@ -352,16 +372,24 @@ HRESULT CEIDProvider::GetCredentialCount(
 	}
 	else
 	{
+		_CredentialList.Lock();
 		if (_CredentialList.HasContainerHolder())
 		{
 			*pdwCount = _CredentialList.ContainerHolderCount();
-			*pdwDefault = 0;
+			if (*pdwCount > 1)
+			{
+				*pdwDefault = CREDENTIAL_PROVIDER_NO_DEFAULT;
+			}
+			else
+			{
+				*pdwDefault = 0;
+			}
 		}
 		else
 		{
-			// show the tile when :
-			// not in Logon
-			// Smart Card Logon requiered not active
+			// hide the tile when :
+			// in Logon
+			// and Smart Card Logon requiered active
 			*pdwCount = 1;
 			if (_cpus == CPUS_LOGON)
 			{
@@ -373,8 +401,10 @@ HRESULT CEIDProvider::GetCredentialCount(
 			
 			*pdwDefault = CREDENTIAL_PROVIDER_NO_DEFAULT;
 		}
+		_CredentialList.Unlock();
 	}
     *pbAutoLogonWithDefault = FALSE;
+	//EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"pdwCount %d, pdwDefault %d", *pdwCount, *pdwDefault);
     return S_OK;
 }
 
@@ -390,7 +420,8 @@ HRESULT CEIDProvider::GetCredentialAt(
 	// Make sure the parameters are valid.
     if (ppcpc)
     {
-        if (_CredentialList.HasContainerHolder())
+        _CredentialList.Lock();
+		if (_CredentialList.HasContainerHolder())
         {
 			CEIDCredential* EIDCredential = _CredentialList.GetContainerHolderAt(dwIndex);
 			if (EIDCredential != NULL)
@@ -400,6 +431,7 @@ HRESULT CEIDProvider::GetCredentialAt(
 			else
 			{
 				hr = E_INVALIDARG;
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EIDCredential NULL");
 			}
 			
         }
@@ -407,12 +439,17 @@ HRESULT CEIDProvider::GetCredentialAt(
         {
             hr = _pMessageCredential->QueryInterface(IID_ICredentialProviderCredential, reinterpret_cast<void**>(ppcpc));
         }
+		_CredentialList.Unlock();
     }
     else
     {
         hr = E_INVALIDARG;
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"ppcpc NULL");
     }
-        
+    if (!SUCCEEDED(hr))
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"not SUCCEEDED hr=0x%08x",hr);
+	}
     return hr;
 }
 
@@ -431,8 +468,12 @@ HRESULT CEIDProvider_CreateInstance(REFIID riid, void** ppv)
     else
     {
         hr = E_OUTOFMEMORY;
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"E_OUTOFMEMORY");
     }
-    
+    if (!SUCCEEDED(hr))
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"not SUCCEEDED hr=0x%08x",hr);
+	}
     return hr;
 }
 

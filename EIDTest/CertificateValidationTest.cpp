@@ -30,7 +30,7 @@ void menu_CREDENTIAL_Certificate()
 			{
 				MessageBox(NULL,_T("UserName not found"),_T("UserName not found"),0);
 			}
-			
+			free(szUserName);
 			if (IsTrustedCertificate(pCertContext))
 			{
 				MessageBox(NULL,_T("The Certificate is valid"),_T("The Certificate is valid"),0);

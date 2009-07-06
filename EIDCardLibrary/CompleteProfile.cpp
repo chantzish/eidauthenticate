@@ -61,7 +61,7 @@ NTSTATUS UserNameToProfile(__in PLSA_UNICODE_STRING AccountName,
 	PBYTE Offset;
 	DWORD dwSize;
 
-	wcsncpy_s(UserName,UNCLEN,AccountName->Buffer,AccountName->Length/2);
+	wcsncpy_s(UserName,ARRAYSIZE(UserName),AccountName->Buffer,AccountName->Length/2);
 	UserName[AccountName->Length/2]=0;
 	dwSize = ARRAYSIZE(DomainName);
 	GetComputerNameW(DomainName, &dwSize);

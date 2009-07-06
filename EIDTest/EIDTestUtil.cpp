@@ -93,7 +93,8 @@ void menu_UTIL_CreateCert()
 			}
 			else
 			{
-
+				CertificateInfo.szCard = szCard;
+				CertificateInfo.szReader = szReader;
 			}
 		}
 		if (bContinue)

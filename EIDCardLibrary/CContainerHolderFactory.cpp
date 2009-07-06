@@ -29,12 +29,26 @@ CContainerHolderFactory<T>::CContainerHolderFactory()
 {
 	_cpus = CPUS_INVALID;
 	_dwFlags = 0;
+	InitializeCriticalSection(&CriticalSection);
 }
 
 template <typename T> 
 CContainerHolderFactory<T>::~CContainerHolderFactory()
 {
 	CleanList();
+	DeleteCriticalSection(&CriticalSection);
+}
+
+template <typename T> 
+VOID CContainerHolderFactory<T>::Lock()
+{
+	EnterCriticalSection(&CriticalSection);
+}
+
+template <typename T> 
+VOID CContainerHolderFactory<T>::Unlock()
+{
+	LeaveCriticalSection(&CriticalSection);
 }
 
 template <typename T> 
@@ -76,7 +90,7 @@ BOOL CContainerHolderFactory<T>::ConnectNotificationGeneric(__in LPCTSTR szReade
 	HCRYPTKEY hKey;
 	// remove existing entries
 	//DisconnectNotification(szReaderName);
-
+	EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Connect Reader %s CardName %s",szReaderName,szCardName);
 	// get provider name
 	if (!SchGetProviderNameFromCardName(szCardName, szProviderName, &dwProviderNameLen))
 	{
@@ -84,7 +98,7 @@ BOOL CContainerHolderFactory<T>::ConnectNotificationGeneric(__in LPCTSTR szReade
 	}
 
 	size_t ulNameLen = _tcslen(szReaderName);
-	LPTSTR szMainContainerName = (LPTSTR) new TCHAR[ulNameLen + 6];
+	LPTSTR szMainContainerName = (LPTSTR) malloc(sizeof(TCHAR)*(ulNameLen + 6));
 	if (!szMainContainerName)
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"szMainContainerName %d",GetLastError());
@@ -121,12 +135,12 @@ BOOL CContainerHolderFactory<T>::ConnectNotificationGeneric(__in LPCTSTR szReade
 		// convert the container name to unicode
 #ifdef UNICODE
 		int wLen = MultiByteToWideChar(CP_ACP, 0, szContainerName, -1, NULL, 0);
-		LPTSTR szWideContainerName = (LPTSTR) new TCHAR[wLen];
+		LPTSTR szWideContainerName = (LPTSTR) malloc(sizeof(TCHAR)*wLen);
 		if (szWideContainerName)
 		{
 			MultiByteToWideChar(CP_ACP, 0, szContainerName, -1, szWideContainerName, wLen);
 #else
-		LPTSTR szWideContainerName = (LPTSTR) new TCHAR[_tcslen(szContainerName)+1];
+		LPTSTR szWideContainerName = (LPTSTR) malloc(sizeof(TCHAR)*(_tcslen(szContainerName)+1));
 		if (szWideContainerName)
 			{
 			_tcscpy_s(szWideContainerName,_tcslen(szContainerName)+1,szContainerName);
@@ -166,10 +180,10 @@ BOOL CContainerHolderFactory<T>::ConnectNotificationGeneric(__in LPCTSTR szReade
 		}
 		dwFlags = CRYPT_NEXT;
 		dwContainerNameLen = 1024;
-		delete[] szWideContainerName;
+		free(szWideContainerName);
 	}
 	CryptReleaseContext(HCryptProv,0);
-	delete[] szMainContainerName;
+	free(szMainContainerName);
 	return TRUE;
 }
 
@@ -222,8 +236,10 @@ BOOL CContainerHolderFactory<T>::CreateItemFromCertificateBlob(__in LPCTSTR szRe
 		KeyProvInfo.pwszProvName = (LPTSTR) szProviderName;
 		KeyProvInfo.rgProvParam = 0;
 		KeyProvInfo.cProvParam = NULL;
+		CContainer* pContainer = NULL;
 		CertSetCertificateContextProperty(pCertContext, CERT_KEY_PROV_INFO_PROP_ID, 0, &KeyProvInfo);
-		if (_cpus == CPUS_CREDUI && !(_dwFlags & CREDUIWIN_ENUMERATE_CURRENT_USER) && !(_dwFlags & CREDUIWIN_ENUMERATE_ADMINS))
+
+		if (_cpus != CPUS_CREDUI)
 		{
 			fAdd = IsTrustedCertificate(pCertContext);
 			if (!fAdd)
@@ -231,11 +247,10 @@ BOOL CContainerHolderFactory<T>::CreateItemFromCertificateBlob(__in LPCTSTR szRe
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Untrusted certificate 0x%x",GetLastError());
 			}
 		}
-			
-		CContainer* pContainer = new CContainer(szReaderName,szCardName,szProviderName,szWideContainerName, KeySpec, ActivityCount, pCertContext);
-		// check if the Container meet the requirement
-		if ((_dwFlags & CREDUIWIN_ENUMERATE_CURRENT_USER) || (_dwFlags & CREDUIWIN_ENUMERATE_ADMINS))
+		if (fAdd)
 		{
+			pContainer = new CContainer(szReaderName,szCardName,szProviderName,szWideContainerName, KeySpec, ActivityCount, pCertContext);
+			// check if the Container meet the requirement
 			PTSTR UserName = pContainer->GetUserName();
 			if (UserName)
 			{
@@ -271,14 +286,17 @@ BOOL CContainerHolderFactory<T>::CreateItemFromCertificateBlob(__in LPCTSTR szRe
 		}
 		if (fAdd)
 		{
+			this->Lock();
 			T* ContainerHolder = new T(pContainer);
 			ContainerHolder->SetUsageScenario(_cpus, _dwFlags);
 			_CredentialList.push_back(ContainerHolder);
+			this->Unlock();
 			fReturn = TRUE;
 		}
 		else
 		{
-			delete pContainer;
+			if (pContainer)
+				delete pContainer;
 		}
 	}
 	else
@@ -299,12 +317,12 @@ BOOL CContainerHolderFactory<T>::DisconnectNotification(LPCTSTR szReaderName)
 
 #ifndef UNICODE
 		int wLen = MultiByteToWideChar(CP_ACP, 0, szReaderName, -1, NULL, 0);
-		LPWSTR szWideReaderName = (LPWSTR) new WCHAR[wLen];
+		LPWSTR szWideReaderName = (LPWSTR) malloc(sizeof(WCHAR)*wLen);
 		if (szWideReaderName)
 		{
 			MultiByteToWideChar(CP_ACP, 0, szReaderName, -1, szWideReaderName, wLen);
 #else
-		LPWSTR szWideReaderName = (LPWSTR) new WCHAR[_tcslen(szReaderName)+1];
+		LPWSTR szWideReaderName = (LPWSTR) malloc(sizeof(WCHAR)*(_tcslen(szReaderName)+1));
 		if (szWideReaderName)
 			{
 			_tcscpy_s(szWideReaderName,_tcslen(szReaderName)+1,szReaderName);
@@ -320,7 +338,7 @@ BOOL CContainerHolderFactory<T>::DisconnectNotification(LPCTSTR szReaderName)
 			{
 				++l_iter;
 			}
-			delete[] szWideReaderName;
+			free(szWideReaderName);
 		}
 	}
 	return TRUE;
