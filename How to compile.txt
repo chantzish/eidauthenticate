@@ -1,0 +1,3 @@
+download lastest version of 
+windows sdk
+Microsoft CNG Development Kit

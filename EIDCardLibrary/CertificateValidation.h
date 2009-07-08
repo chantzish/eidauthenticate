@@ -18,5 +18,6 @@
 PCCERT_CONTEXT GetCertificateFromCspInfo(__in PEID_SMARTCARD_CSP_INFO pCspInfo);
 LPTSTR GetUserNameFromCertificate(__in PCCERT_CONTEXT pCertContext);
 BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt DWORD dwFlag = 0);
+BOOL HasCertificateRightEKU(__in PCCERT_CONTEXT pCertContext);
 LPCTSTR GetTrustErrorText(DWORD Status);
 BOOL MakeTrustedCertifcate(PCCERT_CONTEXT pCertContext);

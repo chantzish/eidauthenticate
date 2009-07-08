@@ -1,0 +1,127 @@
+#include <windows.h>
+#include "EIDConfigurationWizard.h"
+#include "EIDConfigurationWizard.fr.h"
+
+IDD_01MAIN DIALOGEX 0,0,273,209
+FONT 9,"Segoe UI",0,0,0
+LANGUAGE 12,1
+STYLE WS_POPUP|WS_VISIBLE|WS_CAPTION|WS_SYSMENU|DS_MODALFRAME|DS_SETFONT
+BEGIN
+  CONTROL "Modifier les informations d'identification",IDC_01CHANGE,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_COMMANDLINK,21,21,216,33
+  CONTROL "Désactiver l'ouverture de session par carte à puce",IDC_01DELETE,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_COMMANDLINK,21,69,216,33
+END
+
+IDD_02ENABLE DIALOGEX 0,0,273,209
+FONT 9,"Segoe UI",0,0,0
+LANGUAGE 12,1
+STYLE WS_POPUP|WS_VISIBLE|WS_CAPTION|WS_SYSMENU|DS_MODALFRAME|DS_SETFONT
+BEGIN
+  CONTROL "Utiliser une carte à puce préconfigurée",IDC_02EXISTING,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_COMMANDLINK,21,21,216,33
+  CONTROL "Définir un nouveau jeu d'informations d'authentification",IDC_02NEW,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_COMMANDLINK,21,69,216,33
+END
+
+IDD_05PASSWORD DIALOGEX 0,0,273,209
+FONT 9,"Segoe UI",0,0,0
+LANGUAGE 12,1
+STYLE WS_POPUP|WS_VISIBLE|WS_CAPTION|WS_SYSMENU|DS_MODALFRAME|DS_SETFONT
+BEGIN
+  CONTROL "Mot de passe :",-1,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,9,111,60,10
+  CONTROL "",IDC_05PASSWORD,"Edit",WS_CHILD|WS_VISIBLE|WS_TABSTOP|ES_AUTOHSCROLL|ES_PASSWORD,99,112,109,11,WS_EX_CLIENTEDGE
+  CONTROL "Exécuter un test de connection à la fin de cet assistant",IDC_05TEST,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_AUTOCHECKBOX,12,156,255,13
+  CONTROL "Remove Policy",IDC_05REMOVEPOLICYLINK,"SysLink",WS_CHILD|WS_VISIBLE,24,180,234,12
+  CONTROL "Force Smart Card Logon Policy",IDC_05FORCEPOLICYLINK,"SysLink",WS_CHILD|WS_VISIBLE,24,195,237,12
+  CONTROL "",IDC_05REMOVEPOLICYICON,"Static",WS_CHILD|WS_VISIBLE|SS_CENTERIMAGE|SS_ICON,6,177,15,12
+  CONTROL "",IDC_05FORCEPOLICYICON,"Static",WS_CHILD|WS_VISIBLE|SS_CENTERIMAGE|SS_ICON,6,192,15,12
+  CONTROL "Selectionner un certificat",IDC_STC4,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,0,0,272,20
+  CONTROL "",IDC_05LIST,"SysListView32",WS_CHILD|WS_VISIBLE|WS_TABSTOP|LVS_SHOWSELALWAYS|LVS_SINGLESEL,0,24,273,51,WS_EX_CLIENTEDGE
+  CONTROL "Veuillez saisir votre mot de passe",IDC_STC5,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,0,84,272,20
+END
+
+IDD_03NEW DIALOGEX -1,-10,273,209
+FONT 9,"Segoe UI",0,0,0
+LANGUAGE 12,1
+STYLE WS_POPUP|WS_VISIBLE|WS_CAPTION|WS_SYSMENU|DS_MODALFRAME|DS_SETFONT
+BEGIN
+  CONTROL "Sélectionner un certificat racine",1007,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,0,0,272,20
+  CONTROL "&Utiliser ce certificat",IDC_03USETHIS,"Button",WS_CHILD|WS_VISIBLE|WS_GROUP|WS_TABSTOP|BS_AUTORADIOBUTTON,3,48,163,10
+  CONTROL "&Créer un certificat racine auto-signé",IDC_03_CREATE,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_AUTORADIOBUTTON,3,30,185,10
+  CONTROL "&Importer un fichier p12 sur la carte à puce",IDC_03IMPORT,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_AUTORADIOBUTTON,3,138,185,10
+  CONTROL "&Détails du certificat :",1009,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,12,78,250,10
+  CONTROL "Certificat par défaut",IDC_03CERTIFICATEPANEL,"ListBox",WS_VISIBLE|WS_BORDER|WS_TABSTOP|LBS_NOSEL,9,90,175,45
+  CONTROL "&Afficher le certificat",IDC_03SHOW,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP,192,87,81,12
+  CONTROL "&Sélectionner un certificat",IDC_03SELECT,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP,192,105,81,12
+  CONTROL "",IDC_03IMPORTPASSWORD,"Edit",WS_CHILD|WS_VISIBLE|WS_TABSTOP|ES_AUTOHSCROLL|ES_PASSWORD,96,171,162,11,WS_EX_CLIENTEDGE
+  CONTROL "Mot de passe :",IDC_STC2,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,6,171,60,10
+  CONTROL "Fichier :",IDC_STC3,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,6,153,60,10
+  CONTROL "",IDC_03FILENAME,"Edit",WS_CHILD|WS_VISIBLE|WS_TABSTOP|ES_AUTOHSCROLL,96,153,162,11,WS_EX_CLIENTEDGE
+  CONTROL "...",IDC_03SELECTFILE,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP,258,153,12,12
+  CONTROL "Supprimer tous les certificats avant de procéder",IDC_03DELETE,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_AUTOCHECKBOX,9,192,261,9
+END
+
+IDD_04CHECKS DIALOGEX 0,0,273,209
+FONT 9,"Segoe UI",0,0,0
+LANGUAGE 12,1
+STYLE WS_POPUP|WS_VISIBLE|WS_CAPTION|WS_SYSMENU|DS_MODALFRAME|DS_SETFONT
+BEGIN
+  CONTROL "",IDC_04LIST,"SysListView32",WS_CHILD|WS_VISIBLE|WS_TABSTOP|LVS_SHOWSELALWAYS|LVS_SINGLESEL,0,24,273,51,WS_EX_CLIENTEDGE
+  CONTROL "",IDC_04CHECKS,"SysListView32",WS_CHILD|WS_VISIBLE|WS_TABSTOP|LVS_NOCOLUMNHEADER|LVS_AUTOARRANGE|LVS_SINGLESEL|LVS_REPORT,0,108,273,99,WS_EX_CLIENTEDGE
+  CONTROL "Selectionner un certificat",IDC_STC1,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,0,0,272,20
+  CONTROL "<a id=""idrefresh"">Rafraîchir</a>",IDC_04REFRESH,"SysLink",WS_CHILD|WS_VISIBLE|LWS_TRANSPARENT,240,78,30,9
+END
+
+STRINGTABLE DISCARDABLE
+LANGUAGE 12,1
+BEGIN
+  IDS_AREYOUSURE "Etes-vous sûr ? ?"
+  IDS_EIDNOTAVAILABLE "Authentication package non disponible"
+  IDS_TITLE0 "Gestion des information d'authentification"
+  IDS_TITLE1 "Configurer l'ouverture de session par carte à puce"
+  IDS_TITLE2 "Configurer une carte à puce"
+  IDS_TITLE3 "Vérifier le status d'une carte à puce"
+  IDS_TITLE4 "Entrer votre mot de passe"
+  IDS_CAPTION "Configuration de l'ouverture de session par carte à puce"
+  IDS_03OBJECT "Objet : %s"
+  IDS_03DELIVERED "Deliveré : %s %s"
+  IDS_03EXPIRES "Expire : %s %s"
+  IDS_03CONTAINERFILES "Container Files"
+  IDS_03ALLFILES "All Files"
+  IDS_03CERTVIEWTITLE "Info"
+  IDS_05CREDINFOMESSAGE ""
+  IDS_05CREDINFOCAPTION "Test"
+  IDS_05CREDINFOCONFIRMTITLE "Résultat"
+  IDS_05CREDINFOCONFIRMMESSAGE "Information d'authentification valide"
+  IDS_04USERNAMEOK "Le nom d'utilisateur du certificat correspond au nom d'utilisateur courant"
+  IDS_04USERNAMENOK "Le nom d'utilisateur du certificat ne correspond pas au nom d'utilisateur courant"
+  IDS_04TRUSTOK "Le certificat est valide"
+  IDS_04TRUSTNOK "Erreur"
+  IDS_04ENCRYPTIONOK "La carte supporte d'encryption"
+  IDS_04ENCRYPTIONNOK "La carte ne supporte pas l'encryption"
+  IDS_05ACTIVATEREMOVE "<a id=""idActRemove"">Activer la stratégie de retrait</a>"
+  IDS_05DESACTIVATEREMOVE "<a id=""idDesActRemove"">Desactiver la stratégie de retrait</a>"
+  IDS_05ACTIVATEFORCE "<a id=""idActForce"">Forcer l'authentification par carte à puce</a>"
+  IDS_05DESACTIVATEFORCE "<a id=""idDesActForce"">Ne plus forcer l'authentification par carte à puce</a>"
+  IDS_04TESTUSERNAME "Nom d'utilisateur"
+  IDS_04TESTTRUST "Confiance"
+  IDS_04TESTCRYPTO "Crypto"
+  IDS_CERT_TRUST_NO_ERROR "Aucune erreur trouvée pour le certificat"
+  IDS_CERT_TRUST_IS_NOT_TIME_VALID "Un certificat requis n'est pas dans sa période de validité selon la vérification par rapport à l'horloge système en cours"
+  IDS_CERT_TRUST_IS_NOT_TIME_NESTED "Les périodes de validité de la chaîne de certification ne se suivent pas correctement."
+  IDS_CERT_TRUST_IS_REVOKED "Le certificat ou la signature a été révoqué."
+  IDS_CERT_TRUST_IS_NOT_SIGNATURE_VALID "The certificate or one of the certificates in the certificate chain does not have a valid signature."
+  IDS_CERT_TRUST_IS_NOT_VALID_FOR_USAGE "Le certificat n'est pas valide pour l'usage requis."
+  IDS_CERT_TRUST_IS_UNTRUSTED_ROOT "Une chaîne de certificat traitée se termine par un certificat racine qui n'est pas approuvé par le fournisseur d'approbation."
+  IDS_CERT_TRUST_REVOCATION_STATUS_UNKNOWN "The revocation status of the certificate or one of the certificates in the certificate chain is unknown."
+  IDS_CERT_TRUST_IS_CYCLIC "One of the certificates in the chain was issued by a certification authority that the original certificate had certified."
+  IDS_CERT_TRUST_IS_PARTIAL_CHAIN "The certificate chain is not complete."
+  IDS_CERT_TRUST_CTL_IS_NOT_TIME_VALID "A CTL used to create this chain was not time-valid."
+  IDS_CERT_TRUST_CTL_IS_NOT_SIGNATURE_VALID "A CTL used to create this chain did not have a valid signature."
+  IDS_CERT_TRUST_CTL_IS_NOT_VALID_FOR_USAGE "A CTL used to create this chain is not valid for this usage."
+  IDS_CERT_TRUST_UNKOWN_ERROR "Unknown error"
+  IDS_NO_CERTIFICATE "Il n'y a pas de certificat"
+  IDS_04USERNAMERENAME "Renommer votre compte"
+  IDS_04TRUSTMAKETRUSTED "Faire confiance au certificat"
+  IDS_04TRUSTENABLENOEKU "Ne pas vérifier l'EKU"
+  IDS_RENAME "Votre session doit être fermée pour poursuivre. Voulez-vous continuer ?"
+  IDS_RENAMECONF "Votre compte a été renommé sous le nom ""%s""."
+END
+

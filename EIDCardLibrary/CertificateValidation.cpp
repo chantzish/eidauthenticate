@@ -236,13 +236,69 @@ LPCTSTR GetTrustErrorText(DWORD Status)
 } 
 #undef ERRORTOTEXT
 
+
+BOOL HasCertificateRightEKU(__in PCCERT_CONTEXT pCertContext)
+{
+	BOOL fValidation = FALSE;
+	DWORD dwError = 0, dwSize = 0, dwI;
+	PCERT_ENHKEY_USAGE		 pCertUsage        = NULL;
+	__try
+	{
+		if (!GetPolicyValue(AllowCertificatesWithNoEKU))
+		{
+			// check EKU SmartCardLogon
+			if (!CertGetEnhancedKeyUsage(pCertContext, 0, NULL, &dwSize))
+			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CertGetEnhancedKeyUsage", GetLastError());
+				__leave;
+			}
+			pCertUsage = (PCERT_ENHKEY_USAGE)malloc(dwSize);
+			if (!pCertUsage)
+			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by malloc", GetLastError());
+				__leave;
+			}
+			if (!CertGetEnhancedKeyUsage(pCertContext, 0, pCertUsage, &dwSize))
+			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CertGetEnhancedKeyUsage", GetLastError());
+				__leave;
+			}
+			for (dwI = 0; dwI < pCertUsage->cUsageIdentifier; dwI++)
+			{
+				if (strcmp(pCertUsage->rgpszUsageIdentifier[dwI],szOID_KP_SMARTCARD_LOGON) == 0)
+				{
+					break;
+				}
+			}
+			if (dwI >= pCertUsage->cUsageIdentifier)
+			{
+				dwError = CERT_TRUST_IS_NOT_VALID_FOR_USAGE;
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"No EKU found in end certificate");
+				__leave;
+			}
+			fValidation = TRUE;
+		}
+	}
+	__finally
+	{
+		if (pCertUsage)
+			free(pCertUsage);
+	}
+	SetLastError(dwError);
+	return fValidation;
+}
+
+
 BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt DWORD dwFlag)
 {
     //
     // Validate certificate chain.
     //
 	BOOL fValidation = FALSE;
-	PCERT_ENHKEY_USAGE		 pCertUsage        = NULL;
+
 	PCCERT_CHAIN_CONTEXT     pChainContext     = NULL;
 	CERT_ENHKEY_USAGE        EnhkeyUsage       = {0};
 	CERT_USAGE_MATCH         CertUsage         = {0};  
@@ -251,7 +307,7 @@ BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt DWORD dwFla
 	CERT_CHAIN_POLICY_STATUS PolicyStatus      = {0};
 	LPSTR					szOid;
 	HCERTCHAINENGINE		hChainEngine		= HCCE_LOCAL_MACHINE;
-	DWORD dwError = 0, dwSize = 0, dwI;
+	DWORD dwError = 0;
 
 	//---------------------------------------------------------
     // Initialize data structures for chain building.
@@ -286,37 +342,12 @@ BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt DWORD dwFla
 			szOid = szOID_KP_SMARTCARD_LOGON;
 			EnhkeyUsage.rgpszUsageIdentifier=& szOid;
 			CertUsage.dwType = USAGE_MATCH_TYPE_OR;
-
-			if (!CertGetEnhancedKeyUsage(pCertContext, 0, NULL, &dwSize))
+			if (!HasCertificateRightEKU(pCertContext))
 			{
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CertGetEnhancedKeyUsage", GetLastError());
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by HasCertificateRightEKU", GetLastError());
 				__leave;
 			}
-			pCertUsage = (PCERT_ENHKEY_USAGE)malloc(dwSize);
-			if (!pCertUsage)
-			{
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by malloc", GetLastError());
-				__leave;
-			}
-			if (!CertGetEnhancedKeyUsage(pCertContext, 0, pCertUsage, &dwSize))
-			{
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CertGetEnhancedKeyUsage", GetLastError());
-				__leave;
-			}
-			for (dwI = 0; dwI < pCertUsage->cUsageIdentifier; dwI++)
-			{
-				if (strcmp(pCertUsage->rgpszUsageIdentifier[dwI],szOID_KP_SMARTCARD_LOGON) == 0)
-				{
-					break;
-				}
-			}
-			if (dwI >= pCertUsage->cUsageIdentifier)
-			{
-				dwError = CERT_TRUST_IS_NOT_VALID_FOR_USAGE;
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"No EKU found in end certificate");
-				__leave;
-			}
-
 		}
 	    if(!CertGetCertificateChain(
 			hChainEngine,pCertContext,NULL,NULL,&ChainPara,CERT_CHAIN_ENABLE_PEER_TRUST,NULL,&pChainContext))
@@ -363,8 +394,7 @@ BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt DWORD dwFla
 	}
 	__finally
 	{
-		if (pCertUsage)
-			free(pCertUsage);
+
 		if (pChainContext)
 			CertFreeCertificateChain(pChainContext);
 	}

@@ -239,9 +239,17 @@ BOOL CContainerHolderFactory<T>::CreateItemFromCertificateBlob(__in LPCTSTR szRe
 		CContainer* pContainer = NULL;
 		CertSetCertificateContextProperty(pCertContext, CERT_KEY_PROV_INFO_PROP_ID, 0, &KeyProvInfo);
 
-		if (_cpus != CPUS_CREDUI)
+		if (_cpus != CPUS_CREDUI && _cpus != CPUS_INVALID)
 		{
 			fAdd = IsTrustedCertificate(pCertContext);
+			if (!fAdd)
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Untrusted certificate 0x%x",GetLastError());
+			}
+		}
+		else if (_cpus == CPUS_CREDUI)
+		{
+			fAdd = HasCertificateRightEKU(pCertContext);
 			if (!fAdd)
 			{
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Untrusted certificate 0x%x",GetLastError());

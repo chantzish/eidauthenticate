@@ -66,7 +66,8 @@ NTSTATUS WINAPI PasswordChangeNotify(
 )
 {
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
-	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Username %wZ RelativeId %d Password %wZ",UserName,RelativeId,NewPassword);
+	//EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Username %wZ RelativeId %d Password %wZ",UserName,RelativeId,NewPassword);
+	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Username %wZ RelativeId %d",UserName,RelativeId);
 	UpdateStoredCredential(RelativeId, NewPassword->Buffer, NewPassword->Length);
 	return TRUE;
 }

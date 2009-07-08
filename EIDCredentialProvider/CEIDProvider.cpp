@@ -213,11 +213,14 @@ STDMETHODIMP CEIDProvider::SetSerialization(
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"");
 	if (_dwFlags | CREDUIWIN_AUTHPACKAGE_ONLY)
 	{
-		ULONG ulAuthenticationPackage;
-		RetrieveNegotiateAuthPackage(&ulAuthenticationPackage);
-		if (pcpcs->ulAuthenticationPackage != ulAuthenticationPackage)
+		if (pcpcs->ulAuthenticationPackage > 0)
 		{
-			_fDontShowAnything = TRUE;
+			ULONG ulAuthenticationPackage;
+			RetrieveNegotiateAuthPackage(&ulAuthenticationPackage);
+			if (pcpcs->ulAuthenticationPackage != ulAuthenticationPackage)
+			{
+				_fDontShowAnything = TRUE;
+			}
 		}
 	}
     return S_OK;

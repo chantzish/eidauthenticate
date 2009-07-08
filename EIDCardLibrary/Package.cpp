@@ -480,7 +480,7 @@ VOID EIDDebugPrintEIDUnlockLogonStruct(UCHAR dwLevel, PEID_INTERACTIVE_UNLOCK_LO
 	{
 		wcsncpy_s(Buffer,1000,pUnlockLogon->Logon.Pin.Buffer,pUnlockLogon->Logon.Pin.Length/2);
 		Buffer[pUnlockLogon->Logon.Pin.Length/2]=0;
-		EIDCardLibraryTrace(dwLevel,L"Pin '%s'",Buffer);
+		//EIDCardLibraryTrace(dwLevel,L"Pin '%s'",Buffer);
 	}
 	else
 	{
