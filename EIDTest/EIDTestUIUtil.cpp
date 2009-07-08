@@ -68,7 +68,7 @@ BOOL AskUsername(WCHAR* Username, WCHAR* ComputerName)
 	UserNameBuffer = Username;
 	ComputerNameBuffer = ComputerName;
 
-	BOOL fStatus = DialogBox(hInst, MAKEINTRESOURCE(IDD_NAMETOTTOKEN), hMainWnd, (DLGPROC)GoToProc);
+	BOOL fStatus = (DialogBox(hInst, MAKEINTRESOURCE(IDD_NAMETOTTOKEN), hMainWnd, (DLGPROC)GoToProc) > 0);
 	return fStatus;
 }
 
@@ -103,7 +103,7 @@ BOOL AskPin(WCHAR* Pin)
 {
 	PinBuffer = Pin;
 
-	BOOL fStatus = DialogBox(hInst, MAKEINTRESOURCE(IDD_PIN), hMainWnd, (DLGPROC)GoToProcPin);
+	BOOL fStatus = (DialogBox(hInst, MAKEINTRESOURCE(IDD_PIN), hMainWnd, (DLGPROC)GoToProcPin)>0);
 	return fStatus;
 }
 
@@ -432,7 +432,7 @@ static BOOL CALLBACK SelectCertificateInfoCallBack(HWND hwndDlg, UINT message, W
 					dwSize = 256;
 					_pCertificateInfo->szSubject = (LPTSTR) LocalAlloc(0,dwSize*sizeof(TCHAR));
 					GetDlgItemText(hwndDlg,IDC_SUBJECT,_pCertificateInfo->szSubject,dwSize);
-					_pCertificateInfo->dwSaveon = SendDlgItemMessage(hwndDlg,IDC_SAVEON,CB_GETCURSEL, 0, 0);
+					_pCertificateInfo->dwSaveon = (DWORD) SendDlgItemMessage(hwndDlg,IDC_SAVEON,CB_GETCURSEL, 0, 0);
 					_pCertificateInfo->bIsSelfSigned = (BOOL) IsDlgButtonChecked(hwndDlg,IDC_SELFSIGNED);
 					_pCertificateInfo->bHasSmartCardAuthentication = (BOOL) IsDlgButtonChecked(hwndDlg,IDC_SCAUTH);
 					_pCertificateInfo->bHasServerAuthentication = (BOOL) IsDlgButtonChecked(hwndDlg,IDC_SERVERAUTH);
@@ -509,7 +509,7 @@ DWORD SelectCertificateInfo(PUI_CERTIFICATE_INFO pCertificateInfo)
 	DWORD dwStatus = -1;
 	_pCertificateInfo = pCertificateInfo;
 	_pCertificateInfo->pRootCertificate = NULL;
-	dwStatus = DialogBox(hInst, MAKEINTRESOURCE(IDD_CERTIFICATE), hMainWnd, (DLGPROC)SelectCertificateInfoCallBack);
+	dwStatus = (DWORD) DialogBox(hInst, MAKEINTRESOURCE(IDD_CERTIFICATE), hMainWnd, (DLGPROC)SelectCertificateInfoCallBack);
 	// cancel or error => return
 	if (!dwStatus) return 0;
 

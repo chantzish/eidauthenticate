@@ -28,12 +28,12 @@ void populateAlgList()
 	TCHAR szBuffer[1024];
 
 	// prov type
-	DWORD dwIndex = SendDlgItemMessage(hwndProviderDlg,IDC_PROVTYPE, CB_GETCURSEL, 0 ,0);
-	DWORD dwProviderType = SendDlgItemMessage(hwndProviderDlg,IDC_PROVTYPE,CB_GETITEMDATA, dwIndex ,0);
+	DWORD dwIndex = (DWORD) SendDlgItemMessage(hwndProviderDlg,IDC_PROVTYPE, CB_GETCURSEL, 0 ,0);
+	DWORD dwProviderType = (DWORD) SendDlgItemMessage(hwndProviderDlg,IDC_PROVTYPE,CB_GETITEMDATA, dwIndex ,0);
 
 	// prov name
-	dwIndex = SendDlgItemMessage(hwndProviderDlg,IDC_PROVNAME, CB_GETCURSEL, 0 ,0);
-	DWORD dwLen = SendDlgItemMessage(hwndProviderDlg, IDC_PROVNAME , CB_GETLBTEXTLEN, 0 ,0) + 1;
+	dwIndex = (DWORD) SendDlgItemMessage(hwndProviderDlg,IDC_PROVNAME, CB_GETCURSEL, 0 ,0);
+	DWORD dwLen = (DWORD) SendDlgItemMessage(hwndProviderDlg, IDC_PROVNAME , CB_GETLBTEXTLEN, 0 ,0) + 1;
 	szProvider = (LPTSTR) malloc(dwLen*sizeof(TCHAR));
 	SendDlgItemMessage(hwndProviderDlg, IDC_PROVNAME , CB_GETLBTEXT,  0 , (LPARAM)szProvider);
 
@@ -130,8 +130,8 @@ void populateProviderName()
 	DWORD dwProviderType;
 	// get the Provider type
 	
-	dwIndex = SendDlgItemMessage(hwndProviderDlg,IDC_PROVTYPE, CB_GETCURSEL, 0 ,0);
-	dwProviderType = SendDlgItemMessage(hwndProviderDlg,IDC_PROVTYPE,CB_GETITEMDATA, dwIndex ,0);
+	dwIndex = (DWORD) SendDlgItemMessage(hwndProviderDlg,IDC_PROVTYPE, CB_GETCURSEL, 0 ,0);
+	dwProviderType = (DWORD) SendDlgItemMessage(hwndProviderDlg,IDC_PROVTYPE,CB_GETITEMDATA, dwIndex ,0);
 
 	dwIndex = 0;
 	SendDlgItemMessage(hwndProviderDlg,IDC_PROVNAME,CB_RESETCONTENT, 0, 0);
@@ -268,7 +268,7 @@ static BOOL CALLBACK SelectProviderInfoCallBack(HWND hwndDlg, UINT message, WPAR
 DWORD SelectProviderInfo() 
 {
 	DWORD dwStatus;
-	dwStatus = DialogBox(hInst, MAKEINTRESOURCE(IDD_CSPINFO), hMainWnd, (DLGPROC)SelectProviderInfoCallBack);
+	dwStatus = (DWORD) DialogBox(hInst, MAKEINTRESOURCE(IDD_CSPINFO), hMainWnd, (DLGPROC)SelectProviderInfoCallBack);
 	// cancel or error => return
 	return dwStatus;
 }
@@ -315,7 +315,7 @@ void menu_INFO_ComputeHashSha1()
 				dwError = GetLastError();
 				__leave;
 			}
-			fStatus = CryptHashData(hHash,(PBYTE) szPassword, wcslen(szPassword) * sizeof(WCHAR),0);
+			fStatus = CryptHashData(hHash,(PBYTE) szPassword, (DWORD) wcslen(szPassword) * sizeof(WCHAR),0);
 			if (!fStatus) 
 			{	
 				dwError = GetLastError();

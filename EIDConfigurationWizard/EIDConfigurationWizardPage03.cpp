@@ -161,8 +161,6 @@ INT_PTR CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 	LPNMHDR pnmh;
 	CRYPTUI_VIEWCERTIFICATE_STRUCT certViewInfo;
 	BOOL fPropertiesChanged = FALSE;
-	WCHAR szReader[256];
-	WCHAR szCard[256];
 	switch(message)
 	{
 		case WM_NOTIFY :

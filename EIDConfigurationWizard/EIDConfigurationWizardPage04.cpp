@@ -437,7 +437,7 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 					if (!pCredentialList)
 					{
 						pCredentialList = new CContainerHolderFactory<CContainerHolderTest>;
-						pCredentialList->SetUsageScenario(CPUS_CREDUI,0);
+						pCredentialList->SetUsageScenario(CPUS_INVALID,0);
 						pCredentialList->ConnectNotification(szReader,szCard,0);
 					}
 					
