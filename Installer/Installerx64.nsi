@@ -39,7 +39,7 @@
 ;Languages
  
   !insertmacro MUI_LANGUAGE "English"
-
+  !insertmacro MUI_LANGUAGE "French"
 
 
 ;--------------------------------
@@ -81,6 +81,7 @@ SectionEnd
 
   ;Language strings
   LangString DESC_SecCore ${LANG_ENGLISH} "Core"
+  LangString DESC_SecCore ${LANG_FRENCH} "Core"
 
   ;Assign language strings to sections
   !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN

@@ -250,7 +250,7 @@ void EIDConfigurationWizardDllUnRegister()
 
 void EnableLogging()
 {
-	DWORD qdwValue[2] = {0,0};
+	DWORD64 qdwValue = 0;
 	DWORD dwValue;
 	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider"), 
@@ -323,10 +323,10 @@ void EnableLogging()
 	
 	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"), 
-		TEXT("MatchAllKeyword"), REG_QWORD,&qdwValue,sizeof(REG_QWORD));
+		TEXT("MatchAllKeyword"), REG_QWORD,&qdwValue,sizeof(DWORD64));
 	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"), 
-		TEXT("MatchAnyKeyword"), REG_QWORD,&qdwValue,sizeof(REG_QWORD));
+		TEXT("MatchAnyKeyword"), REG_QWORD,&qdwValue,sizeof(DWORD64));
 	
 }
 
