@@ -450,7 +450,10 @@ extern "C"
 					//EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"PIN = %s",pwzPinUncrypted);
 				}
 			}
-			
+			// impersonate the client to beneficiate from the smart card redirection
+			// if enable on terminal session
+			MyLsaDispatchTable->ImpersonateClient();
+
 			// do security check
 			pCertContext = GetCertificateFromCspInfo(pSmartCardCspInfo);
 			if (!pCertContext) {
@@ -513,6 +516,7 @@ extern "C"
 			*TokenInformation = MyTokenInformation;
 			*TokenInformationType = LsaTokenInformationV2;
 			
+			RevertToSelf();
 
 			// create session
 			if (!AllocateLocallyUniqueId (LogonId))
