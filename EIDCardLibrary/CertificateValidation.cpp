@@ -279,8 +279,8 @@ BOOL HasCertificateRightEKU(__in PCCERT_CONTEXT pCertContext)
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"No EKU found in end certificate");
 				__leave;
 			}
-			fValidation = TRUE;
 		}
+		fValidation = TRUE;
 	}
 	__finally
 	{

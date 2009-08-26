@@ -513,7 +513,7 @@ VOID EIDDebugPrintEIDUnlockLogonStruct(UCHAR dwLevel, PEID_INTERACTIVE_UNLOCK_LO
 	}	
 }
 
-BOOL HasAccountOnCurrentComputer(PWSTR szUserName)
+BOOL HasAccountOnCurrentComputer(PTSTR szUserName)
 {
 	BOOL fReturn =  FALSE;
 	PUSER_INFO_0 pUserInfo = NULL;
@@ -525,14 +525,14 @@ BOOL HasAccountOnCurrentComputer(PWSTR szUserName)
 	return fReturn;
 }
 
-BOOL IsCurrentUser(PWSTR szUserName)
+BOOL IsCurrentUser(PTSTR szUserName)
 {
 	BOOL fReturn;
 	PWSTR szCurrentUserName;
 	DWORD dwSize;
 	// GetUserName return SYSTEM
-	DWORD dwSessionId = WTSGetActiveConsoleSessionId();
-	fReturn = WTSQuerySessionInformationW(WTS_CURRENT_SERVER_HANDLE, dwSessionId, WTSUserName, &szCurrentUserName, &dwSize);
+	//DWORD dwSessionId = WTSGetActiveConsoleSessionId();
+	fReturn = WTSQuerySessionInformation(WTS_CURRENT_SERVER_HANDLE, WTS_CURRENT_SESSION, WTSUserName, &szCurrentUserName, &dwSize);
 	if (!fReturn)
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"WTSQuerySessionInformationW 0x%08X",GetLastError());
@@ -545,7 +545,7 @@ BOOL IsCurrentUser(PWSTR szUserName)
 	return fReturn;
 }
 
-BOOL IsAdmin(PWSTR szUserName)
+BOOL IsAdmin(PTSTR szUserName)
 {
 	BOOL fReturn = FALSE;
 	WCHAR szAdministratorGroupName[256];
