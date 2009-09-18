@@ -126,4 +126,10 @@ CheckOk:
  
 CheckEnd:
 
+IfFileExists "$SYSDIR\EIDAuthenticationPackage.dll" CheckInstallNotOk CheckInstallEnd
+CheckInstallNotOk:
+  MessageBox MB_OK "Please uninstall first !"
+  Abort
+ 
+CheckInstallEnd:
 FunctionEnd
