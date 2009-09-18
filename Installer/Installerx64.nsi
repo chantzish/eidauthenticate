@@ -112,3 +112,14 @@ Section "Uninstall"
 
 SectionEnd
 
+
+Function .onInit
+  ${DisableX64FSRedirection}
+  IfFileExists "$SYSDIR\EIDAuthenticationPackage.dll" CheckInstallNotOk CheckInstallEnd
+  CheckInstallNotOk:
+    MessageBox MB_OK "Please uninstall first !"
+    Abort
+ 
+  CheckInstallEnd:
+  ${EnableX64FSRedirection}
+FunctionEnd
