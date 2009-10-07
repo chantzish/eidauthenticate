@@ -35,6 +35,7 @@
   !insertmacro MUI_UNPAGE_CONFIRM
   !insertmacro MUI_UNPAGE_INSTFILES
   !insertmacro MUI_PAGE_FINISH
+  !insertmacro MUI_UNPAGE_FINISH
 ;--------------------------------
 ;Languages
  
