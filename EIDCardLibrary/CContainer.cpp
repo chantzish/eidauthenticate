@@ -24,6 +24,8 @@
 #include "CContainer.h"
 #include "CertificateValidation.h"
 #include "GPO.h"
+#include "package.h"
+#include "beid.h"
 
 #pragma comment(lib, "Cryptui.lib")
 
@@ -31,22 +33,23 @@
 
 CContainer::CContainer(LPCTSTR szReaderName, LPCTSTR szCardName, LPCTSTR szProviderName, LPCTSTR szContainerName, DWORD KeySpec,__in USHORT ActivityCount,PCCERT_CONTEXT pCertContext)
 {
-	_szReaderName = (LPTSTR) malloc (sizeof(TCHAR)*(_tcslen(szReaderName)+1));
+	_dwRid = 0xFFFFFFFF;
+	_szReaderName = (LPTSTR) EIDAlloc (sizeof(TCHAR)*(_tcslen(szReaderName)+1));
 	if (_szReaderName)
 	{
 		_tcscpy_s(_szReaderName,_tcslen(szReaderName)+1,szReaderName);
 	}
-	_szProviderName = (LPTSTR) malloc (sizeof(TCHAR)*(_tcslen(szProviderName)+1));
+	_szProviderName = (LPTSTR) EIDAlloc (sizeof(TCHAR)*(_tcslen(szProviderName)+1));
 	if (_szProviderName)
 	{
 		_tcscpy_s(_szProviderName,_tcslen(szProviderName)+1,szProviderName);
 	}
-	_szContainerName = (LPTSTR) malloc (sizeof(TCHAR)*(_tcslen(szContainerName)+1));
+	_szContainerName = (LPTSTR) EIDAlloc (sizeof(TCHAR)*(_tcslen(szContainerName)+1));
 	if (_szContainerName)
 	{
 		_tcscpy_s(_szContainerName,_tcslen(szContainerName)+1,szContainerName);
 	}
-	_szCardName = (LPTSTR) malloc (sizeof(TCHAR)*(_tcslen(szCardName)+1));
+	_szCardName = (LPTSTR) EIDAlloc (sizeof(TCHAR)*(_tcslen(szCardName)+1));
 	if (_szCardName)
 	{
 		_tcscpy_s(_szCardName,_tcslen(szCardName)+1,szCardName);
@@ -60,15 +63,15 @@ CContainer::CContainer(LPCTSTR szReaderName, LPCTSTR szCardName, LPCTSTR szProvi
 CContainer::~CContainer()
 {
 	if (_szReaderName)
-		free(_szReaderName);
+		EIDFree(_szReaderName);
 	if (_szCardName)
-		free(_szCardName);
+		EIDFree(_szCardName);
 	if (_szProviderName)
-		free(_szProviderName);
+		EIDFree(_szProviderName);
 	if (_szContainerName)
-		free(_szContainerName);
+		EIDFree(_szContainerName);
 	if (_szUserName) 
-		free(_szUserName);
+		EIDFree(_szUserName);
 	if (_pCertContext) {
 		CertFreeCertificateContext(_pCertContext);
 	}
@@ -76,8 +79,122 @@ CContainer::~CContainer()
 
 PTSTR CContainer::GetUserName()
 {
-	_szUserName = GetUserNameFromCertificate(_pCertContext);
+	if (_szUserName)
+	{
+		return _szUserName;
+	}
+	DWORD dwSize;
+	BOOL fReturn = FALSE;
+	PCRYPT_KEY_PROV_INFO pKeyProvInfo = NULL;
+	__try
+	{
+		// get the subject details for the cert
+		dwSize = CertGetNameString(_pCertContext,CERT_NAME_SIMPLE_DISPLAY_TYPE,0,NULL,NULL,0);
+		if (!dwSize)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CertGetNameString error = %d",GetLastError());
+			__leave;
+		}
+		_szUserName = (LPTSTR) EIDAlloc(dwSize*sizeof(TCHAR));
+		if (!_szUserName) 
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EIDAlloc error = %d",GetLastError());
+			__leave;
+		}
+		dwSize = CertGetNameString(_pCertContext,CERT_NAME_SIMPLE_DISPLAY_TYPE,0,NULL,_szUserName,dwSize);
+		if (!dwSize)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CertGetNameString error = %d",GetLastError());
+			__leave;
+		}
+		// remove any weird characters
+		// (else we can not match an existing username because it is not accepted as valid username by windows)
+		for (DWORD i = 0; i<dwSize; i++)
+		{
+			TCHAR cChar = _szUserName[i];
+			if (cChar < 13 && cChar >0)
+			{
+				_szUserName[i] = '_';
+			}
+			if (cChar == '\\' || cChar == ':' || cChar == '+' ||
+				cChar == '/' || cChar == ';' || cChar == '=' ||
+				cChar == '[' || cChar == '|' || cChar == ',' ||
+				cChar == ']' || cChar == '<' || cChar == '?' ||
+				cChar == '"' || cChar == '>' || cChar == '*')
+			{
+				_szUserName[i] = '_';
+			}
+
+		}
+			// check if it is a Belgian Eid card to drop the '(Authentication)'
+		dwSize = 0;
+		
+		if (!CertGetCertificateContextProperty(_pCertContext, CERT_KEY_PROV_INFO_PROP_ID, NULL, &dwSize))
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CertGetCertificateContextProperty", GetLastError());
+			__leave;
+		}
+		pKeyProvInfo = (PCRYPT_KEY_PROV_INFO) EIDAlloc(dwSize);
+		if (!pKeyProvInfo)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by EIDAlloc", GetLastError());
+			__leave;
+		}
+		if (!CertGetCertificateContextProperty(_pCertContext, CERT_KEY_PROV_INFO_PROP_ID, (PBYTE) pKeyProvInfo, &dwSize))
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CertGetCertificateContextProperty", GetLastError());
+			__leave;
+		}
+		if (_tcscmp(pKeyProvInfo->pwszProvName, TBEIDCSP) == 0)
+		{
+			_szUserName[_tcslen(_szUserName) - 17] = '\0';
+		}
+		// truncate it to max 20 char
+		if (_tcsclen(_szUserName) >= 21) 
+			_szUserName[20]=0;
+		// remove terminating dot
+		for(int i = _tcsclen(_szUserName)-1; i>= 0; i--)
+		{
+			if (_szUserName[i] == '.')
+			{
+				_szUserName[i] = '\0';
+			}
+			else
+			{
+				break;
+			}
+			if (i == 0)
+			{
+				_szUserName[0] = 'a';
+			}
+		}
+		fReturn = TRUE;
+
+	}
+	__finally
+	{
+		if (pKeyProvInfo)
+			EIDFree(pKeyProvInfo);
+		if (!fReturn)
+		{
+			if (_szUserName)
+			{
+				EIDFree(_szUserName);
+				_szUserName = NULL;
+			}
+		}
+	}
+	EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"GetUserNameFromCertificate = %s",_szUserName);
 	return _szUserName;
+}
+
+DWORD CContainer::GetRid()
+{
+	if (_dwRid == 0xFFFFFFFF)
+	{
+		_dwRid = LsaEIDGetRIDFromStoredCredential(_pCertContext);
+	}
+	return _dwRid;
 }
 
 PTSTR CContainer::GetProviderName()
@@ -122,7 +239,7 @@ PEID_SMARTCARD_CSP_INFO CContainer::GetCSPInfo()
 	DWORD dwContainerLen = (DWORD) _tcslen(_szContainerName)+1;
 	DWORD dwBufferSize = dwReaderLen + dwCardLen + dwProviderLen + dwContainerLen;
 	
-	PEID_SMARTCARD_CSP_INFO pCspInfo = (PEID_SMARTCARD_CSP_INFO) malloc(sizeof(EID_SMARTCARD_CSP_INFO)+dwBufferSize*sizeof(TCHAR));
+	PEID_SMARTCARD_CSP_INFO pCspInfo = (PEID_SMARTCARD_CSP_INFO) EIDAlloc(sizeof(EID_SMARTCARD_CSP_INFO)+dwBufferSize*sizeof(TCHAR));
 	if (!pCspInfo) return NULL;
 	//ZeroMemory(pCspInfo);
 	memset(pCspInfo,0,sizeof(EID_SMARTCARD_CSP_INFO));
@@ -143,7 +260,7 @@ PEID_SMARTCARD_CSP_INFO CContainer::GetCSPInfo()
 
 void CContainer::FreeCSPInfo(PEID_SMARTCARD_CSP_INFO pCspInfo)
 {
-	free(pCspInfo);
+	EIDFree(pCspInfo);
 }
 
 BOOL CContainer::ViewCertificate(HWND hWnd)
@@ -215,10 +332,10 @@ BOOL CContainer::TriggerRemovePolicy()
 			__leave;
 		}
 		dwSize = (DWORD) (sizeof(USHORT) + sizeof(USHORT) + (_tcslen(_szReaderName) + 1) *sizeof(WCHAR));
-		pbBuffer = (PBYTE) malloc(dwSize);
+		pbBuffer = (PBYTE) EIDAlloc(dwSize);
 		if (!pbBuffer)
 		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"malloc 0x%08x",GetLastError());
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EIDAlloc 0x%08x",GetLastError());
 			__leave;
 		}
 #ifdef UNICODE
@@ -279,7 +396,7 @@ BOOL CContainer::TriggerRemovePolicy()
 		if (hServiceManager)
 			CloseServiceHandle(hServiceManager);
 		if (pbBuffer)
-			free(pbBuffer);
+			EIDFree(pbBuffer);
 		if (hRemovePolicyKey)
 			RegCloseKey(hRemovePolicyKey);
 	}

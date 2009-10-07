@@ -32,6 +32,7 @@ class CContainer
 	PTSTR GetUserName();
 	PTSTR GetProviderName();
 	PTSTR GetContainerName();
+	DWORD GetRid();
 	DWORD GetKeySpec();
 
 	PCCERT_CONTEXT GetCertificate();
@@ -55,4 +56,5 @@ class CContainer
 	DWORD					_KeySpec;
 	USHORT					_ActivityCount;
 	PCCERT_CONTEXT			_pCertContext;
+	DWORD					_dwRid;
 };

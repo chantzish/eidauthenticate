@@ -28,6 +28,7 @@
 #include <lm.h>
 #include <Sddl.h>
 
+#include "EIDCardLibrary.h"
 #include "Tracing.h"
 
 BOOL NameToSid(WCHAR* UserName, PLSA_DISPATCH_TABLE FunctionTable, PSID* pUserSid);
@@ -41,7 +42,7 @@ NTSTATUS CheckAuthorization(PWSTR UserName, NTSTATUS *SubStatus, LARGE_INTEGER *
 NTSTATUS UserNameToToken(__in PLSA_UNICODE_STRING AccountName,
 						__in PLSA_DISPATCH_TABLE FunctionTable,
 						__out PLSA_TOKEN_INFORMATION_V2 *Token,
-						__out LPDWORD TokenLength,
+						__out PDWORD TokenLength,
 						__out PNTSTATUS SubStatus
 						) {
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");

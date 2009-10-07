@@ -98,7 +98,7 @@ BOOL CContainerHolderFactory<T>::ConnectNotificationGeneric(__in LPCTSTR szReade
 	}
 
 	size_t ulNameLen = _tcslen(szReaderName);
-	LPTSTR szMainContainerName = (LPTSTR) malloc(sizeof(TCHAR)*(ulNameLen + 6));
+	LPTSTR szMainContainerName = (LPTSTR) EIDAlloc(sizeof(TCHAR)*(ulNameLen + 6));
 	if (!szMainContainerName)
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"szMainContainerName %d",GetLastError());
@@ -135,12 +135,12 @@ BOOL CContainerHolderFactory<T>::ConnectNotificationGeneric(__in LPCTSTR szReade
 		// convert the container name to unicode
 #ifdef UNICODE
 		int wLen = MultiByteToWideChar(CP_ACP, 0, szContainerName, -1, NULL, 0);
-		LPTSTR szWideContainerName = (LPTSTR) malloc(sizeof(TCHAR)*wLen);
+		LPTSTR szWideContainerName = (LPTSTR) EIDAlloc(sizeof(TCHAR)*wLen);
 		if (szWideContainerName)
 		{
 			MultiByteToWideChar(CP_ACP, 0, szContainerName, -1, szWideContainerName, wLen);
 #else
-		LPTSTR szWideContainerName = (LPTSTR) malloc(sizeof(TCHAR)*(_tcslen(szContainerName)+1));
+		LPTSTR szWideContainerName = (LPTSTR) EIDAlloc(sizeof(TCHAR)*(_tcslen(szContainerName)+1));
 		if (szWideContainerName)
 			{
 			_tcscpy_s(szWideContainerName,_tcslen(szContainerName)+1,szContainerName);
@@ -180,10 +180,10 @@ BOOL CContainerHolderFactory<T>::ConnectNotificationGeneric(__in LPCTSTR szReade
 		}
 		dwFlags = CRYPT_NEXT;
 		dwContainerNameLen = 1024;
-		free(szWideContainerName);
+		EIDFree(szWideContainerName);
 	}
 	CryptReleaseContext(HCryptProv,0);
-	free(szMainContainerName);
+	EIDFree(szMainContainerName);
 	return TRUE;
 }
 
@@ -208,9 +208,9 @@ BOOL CContainerHolderFactory<T>::ConnectNotificationBeid(__in LPCTSTR szReaderNa
 		CreateItemFromCertificateBlob(szReaderName,szCardName,szProviderName,
 									szContainerName, dwKeySpec,ActivityCount, pbData, dwSize);
 		if (szContainerName) 
-			free(szContainerName);
+			EIDFree(szContainerName);
 		if (pbData)
-			free(pbData);
+			EIDFree(pbData);
 	}
 
 	return TRUE;
@@ -244,7 +244,7 @@ BOOL CContainerHolderFactory<T>::CreateItemFromCertificateBlob(__in LPCTSTR szRe
 			fAdd = IsTrustedCertificate(pCertContext);
 			if (!fAdd)
 			{
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Untrusted certificate 0x%x",GetLastError());
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Untrusted certificate 0x%08x",GetLastError());
 			}
 		}
 		else if (_cpus == CPUS_CREDUI)
@@ -252,44 +252,50 @@ BOOL CContainerHolderFactory<T>::CreateItemFromCertificateBlob(__in LPCTSTR szRe
 			fAdd = HasCertificateRightEKU(pCertContext);
 			if (!fAdd)
 			{
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Untrusted certificate 0x%x",GetLastError());
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Untrusted certificate 0x%08x",GetLastError());
 			}
 		}
 		if (fAdd)
 		{
 			pContainer = new CContainer(szReaderName,szCardName,szProviderName,szWideContainerName, KeySpec, ActivityCount, pCertContext);
 			// check if the Container meet the requirement
-			PTSTR UserName = pContainer->GetUserName();
-			if (UserName)
+			if ((_cpus == CPUS_LOGON) || (_cpus == CPUS_UNLOCK_WORKSTATION)  && fAdd)
 			{
-				if ((_cpus == CPUS_LOGON || _cpus == CPUS_UNLOCK_WORKSTATION) && fAdd)
+				// check if the user has an account to this workstation
+				DWORD dwRid = pContainer->GetRid();
+				fAdd = dwRid > 0;
+				
+				if (!dwRid)
 				{
-					fAdd = HasAccountOnCurrentComputer(UserName);
-					if (!fAdd)
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"HasAccountOnCurrentComputer 0x%08x",GetLastError());
+				}
+				else
+				{
+					PTSTR szUsername = GetUsernameFromRid(dwRid);
+					if (szUsername)
 					{
-						EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"HasAccountOnCurrentComputer 0x%x",GetLastError());
+						if (((_dwFlags & CREDUIWIN_ENUMERATE_CURRENT_USER) || (_cpus == CPUS_UNLOCK_WORKSTATION)) && fAdd)
+						{
+							fAdd = IsCurrentUser(szUsername);
+							if (!fAdd)
+							{
+								EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"IsCurrentUser 0x%08x",GetLastError());
+							}
+						}
+						if ((_dwFlags & CREDUIWIN_ENUMERATE_ADMINS) && fAdd)
+						{
+							fAdd = IsAdmin(szUsername);
+							if (!fAdd)
+							{
+								EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"IsAdmin 0x%08x",GetLastError());
+							}
+						}
+					}
+					else
+					{
+						fAdd = FALSE;
 					}
 				}
-				if (((_dwFlags & CREDUIWIN_ENUMERATE_CURRENT_USER) || (_cpus == CPUS_UNLOCK_WORKSTATION)) && fAdd)
-				{
-					fAdd = IsCurrentUser(UserName);
-					if (!fAdd)
-					{
-						EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"IsCurrentUser 0x%x",GetLastError());
-					}
-				}
-				if ((_dwFlags & CREDUIWIN_ENUMERATE_ADMINS) && fAdd)
-				{
-					fAdd = IsAdmin(UserName);
-					if (!fAdd)
-					{
-						EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"IsAdmin 0x%x",GetLastError());
-					}
-				}
-			}
-			else
-			{
-				fAdd = FALSE;
 			}
 		}
 		if (fAdd)
@@ -325,12 +331,12 @@ BOOL CContainerHolderFactory<T>::DisconnectNotification(LPCTSTR szReaderName)
 
 #ifndef UNICODE
 		int wLen = MultiByteToWideChar(CP_ACP, 0, szReaderName, -1, NULL, 0);
-		LPWSTR szWideReaderName = (LPWSTR) malloc(sizeof(WCHAR)*wLen);
+		LPWSTR szWideReaderName = (LPWSTR) EIDAlloc(sizeof(WCHAR)*wLen);
 		if (szWideReaderName)
 		{
 			MultiByteToWideChar(CP_ACP, 0, szReaderName, -1, szWideReaderName, wLen);
 #else
-		LPWSTR szWideReaderName = (LPWSTR) malloc(sizeof(WCHAR)*(_tcslen(szReaderName)+1));
+		LPWSTR szWideReaderName = (LPWSTR) EIDAlloc(sizeof(WCHAR)*(_tcslen(szReaderName)+1));
 		if (szWideReaderName)
 			{
 			_tcscpy_s(szWideReaderName,_tcslen(szReaderName)+1,szReaderName);
@@ -346,7 +352,7 @@ BOOL CContainerHolderFactory<T>::DisconnectNotification(LPCTSTR szReaderName)
 			{
 				++l_iter;
 			}
-			free(szWideReaderName);
+			EIDFree(szWideReaderName);
 		}
 	}
 	return TRUE;

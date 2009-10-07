@@ -4,7 +4,7 @@
 #include <Sddl.h>
 #include "EIDTestUIUtil.h"
 
-
+#include "../EIDCardLibrary/EIDCardLibrary.h"
 #include "../EIDCardLibrary/Tracing.h"
 #include "../EIDCardLibrary/CertificateUtilities.h"
 
@@ -137,7 +137,7 @@ void menu_UTIL_ShowSecurityDescriptor()
 			dwError = GetLastError();
 			__leave;
 		}
-		pSD = (PSECURITY_DESCRIPTOR) malloc(dwSize);
+		pSD = (PSECURITY_DESCRIPTOR) EIDAlloc(dwSize);
 		if (!pSD)
 		{
 			dwError = GetLastError();
@@ -160,9 +160,9 @@ void menu_UTIL_ShowSecurityDescriptor()
 	__finally
 	{
 		if (szSD)
-			LocalFree(szSD);
+			EIDFree(szSD);
 		if (pSD)
-			free(pSD);
+			EIDFree(pSD);
 		if (hProv)
 			CryptReleaseContext(hProv, 0);
 		if (pCertContext)

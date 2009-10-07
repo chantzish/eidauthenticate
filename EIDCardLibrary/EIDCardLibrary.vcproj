@@ -478,6 +478,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\CredentialManagement.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\CSmartCardNotifier.cpp"
 				>
 			</File>
@@ -541,6 +545,10 @@
 			</File>
 			<File
 				RelativePath=".\CompleteToken.h"
+				>
+			</File>
+			<File
+				RelativePath=".\CredentialManagement.h"
 				>
 			</File>
 			<File

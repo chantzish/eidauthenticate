@@ -294,7 +294,7 @@ LONG CSmartCardConnectionNotifier::WaitForSmartCardInsertion()
 					Callback(EIDCPRSDisconnected,rgscState[dwI].szReader, NULL, 0);
 				}
 			}
-			free((PVOID)rgscState[dwI].szReader);
+			EIDFree((PVOID)rgscState[dwI].szReader);
 		}
 		// Resource Manager Context: Release
 		Status = SCardReleaseContext(_hSCardContext);
@@ -343,7 +343,7 @@ LONG CSmartCardConnectionNotifier::GetReaderStates(SCARD_READERSTATE rgscState[M
 	{
 		// init fake PNP reader
 		memset(&rgscState[0],0,sizeof(SCARD_READERSTATE));
-		rgscState[0].szReader = (LPWSTR) malloc(sizeof(WCHAR)*(wcslen(L"\\\\?PNP?\\NOTIFICATION")+1));
+		rgscState[0].szReader = (LPWSTR) EIDAlloc(sizeof(WCHAR)*(wcslen(L"\\\\?PNP?\\NOTIFICATION")+1));
 		wcscpy_s((WCHAR*) rgscState[0].szReader,wcslen(L"\\\\?PNP?\\NOTIFICATION")+1,L"\\\\?PNP?\\NOTIFICATION");
 		rgscState[0].dwCurrentState = SCARD_STATE_UNAWARE;
 		rgscState[0].dwEventState = SCARD_STATE_UNAWARE;
@@ -409,7 +409,7 @@ LONG CSmartCardConnectionNotifier::GetReaderStates(SCARD_READERSTATE rgscState[M
 			{
 				// not the last
 				// free memory
-				free((PVOID)rgscState[dwI].szReader);
+				EIDFree((PVOID)rgscState[dwI].szReader);
 				// so move the last to this place
 				rgscState[dwI].szReader = rgscState[dwPreviousRdrCount -1].szReader;
 				rgscState[dwI].cbAtr = rgscState[dwPreviousRdrCount -1].cbAtr;
@@ -449,7 +449,7 @@ LONG CSmartCardConnectionNotifier::GetReaderStates(SCARD_READERSTATE rgscState[M
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Add new entries %s",szReader[dwI]);
 			memset(&rgscState[dwPreviousRdrCount],0,sizeof(SCARD_READERSTATE));
 
-			rgscState[dwPreviousRdrCount].szReader = (LPWSTR) malloc(sizeof(WCHAR)*(wcslen(szReader[dwI])+1));
+			rgscState[dwPreviousRdrCount].szReader = (LPWSTR) EIDAlloc(sizeof(WCHAR)*(wcslen(szReader[dwI])+1));
 			wcscpy_s((WCHAR*) rgscState[dwPreviousRdrCount].szReader,wcslen(szReader[dwI])+1,szReader[dwI]);
 			//rgscState[dwPreviousRdrCount].szReader =  szReader[dwI];
 			rgscState[dwPreviousRdrCount].dwCurrentState = SCARD_STATE_UNAWARE;

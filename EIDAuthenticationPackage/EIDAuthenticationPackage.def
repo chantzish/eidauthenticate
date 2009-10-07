@@ -13,4 +13,5 @@ LsaApCallPackageUntrusted
 LsaApInitializePackage
 LsaApLogonTerminated
 LsaApLogonUserEx2
-
+SpLsaModeInitialize
+SpUserModeInitialize

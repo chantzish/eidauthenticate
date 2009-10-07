@@ -71,13 +71,13 @@ BOOL PopulateListViewCheckData(HWND hWndListViewList, HWND hWndListViewCheck)
 		grp.iGroupId = index;
 		switch(index)
 		{
-		case 0:
+		/*case 0:
 			LoadString(g_hinst,IDS_04TESTUSERNAME, szMessage, ARRAYSIZE(szMessage));
-			break;
-		case 1:
+			break;*/
+		case 0:
 			LoadString(g_hinst,IDS_04TESTTRUST, szMessage, ARRAYSIZE(szMessage));
 			break;
-		case 2:
+		case 1:
 			LoadString(g_hinst,IDS_04TESTCRYPTO, szMessage, ARRAYSIZE(szMessage));
 			break;
 		}
@@ -87,7 +87,7 @@ BOOL PopulateListViewCheckData(HWND hWndListViewList, HWND hWndListViewCheck)
 		grp.mask = LVGF_HEADER | LVGF_GROUPID | LVGF_TASK;
 		ListView_InsertGroup(hWndListViewCheck, 0, &grp);
 		if (grp.pszTask)
-			free(grp.pszTask);
+			EIDFree(grp.pszTask);
 	}
 
 	// Initialize LVITEM members that are different for each item. 

@@ -22,7 +22,7 @@
 #include <crtdbg.h>
 
 #define _CRTDBG_MAPALLOC
-
+#include "EIDCardLibrary.h"
 #include "guid.h"
 
 #define WINEVENT_LEVEL_CRITICAL 1
@@ -102,11 +102,13 @@ void EIDCardLibraryTraceEx(LPCSTR szFile, DWORD dwLine, LPCSTR szFunction, UCHAR
 }
 
 
-void EIDCardLibraryDumpMemoryEx(LPCSTR szFile, DWORD dwLine, LPCSTR szFunction, PUCHAR memory, DWORD memorysize)
+void EIDCardLibraryDumpMemoryEx(LPCSTR szFile, DWORD dwLine, LPCSTR szFunction, PVOID memoryParam, DWORD memorysize)
 {
 	DWORD i,j;
 	UCHAR buffer[10];
-	PWSTR szFormat = L"%3d %3d %3d %3d %3d %3d %3d %3d %3d %3d";
+	WCHAR szFormat[] = L"%3d %3d %3d %3d %3d %3d %3d %3d %3d %3d";
+	WCHAR szFormat2[] = L"%c%c%c%c%c%c%c%c%c%c";
+	PUCHAR memory = (PUCHAR) memoryParam;
 	for (i = 0; i < memorysize; i++)
 	{
 		buffer[i%10] = memory[i];
@@ -127,11 +129,40 @@ void EIDCardLibraryDumpMemoryEx(LPCSTR szFile, DWORD dwLine, LPCSTR szFunction, 
 			{
 				buffer[j%10] = memory[j];
 			}
-			szFormat[(memorysize%10) * 4] = 0;
+			szFormat[(memorysize%10) * 4] = '\0';
 			EIDCardLibraryTraceEx(szFile,dwLine,szFunction, WINEVENT_LEVEL_VERBOSE, szFormat,
 				buffer[0],buffer[1],buffer[2],buffer[3],buffer[4],
 				buffer[5],buffer[6],buffer[7],buffer[8],buffer[9]);
 		}
 	}
+	for (i = 0; i < memorysize; i++)
+	{
+		buffer[i%10] = memory[i];
+		if (buffer[i%10] < 30) buffer[i%10] = ' ';
+		if (i%10 == 9) 
+		{
+			EIDCardLibraryTraceEx(szFile,dwLine,szFunction, WINEVENT_LEVEL_VERBOSE, szFormat2,
+				buffer[0],buffer[1],buffer[2],buffer[3],buffer[4],
+				buffer[5],buffer[6],buffer[7],buffer[8],buffer[9]);
+		}
+		if ((i == memorysize-1) && (i%10 != 9))
+		{
+			// last bytes
+			for (j = 0; j <10; j++)
+			{
+				buffer[j]=' ';
+			}
+			for (j = memorysize - memorysize%10; j <memorysize; j++) 
+			{
+				buffer[j%10] = memory[j];
+				if (buffer[j%10] < 30) buffer[j%10] = ' ';
+			}
+			szFormat2[(memorysize%10)] = '\0';
+			EIDCardLibraryTraceEx(szFile,dwLine,szFunction, WINEVENT_LEVEL_VERBOSE, szFormat2,
+				buffer[0],buffer[1],buffer[2],buffer[3],buffer[4],
+				buffer[5],buffer[6],buffer[7],buffer[8],buffer[9]);
+		}
+	}
+
 
 }

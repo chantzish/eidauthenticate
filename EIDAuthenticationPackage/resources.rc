@@ -1,7 +1,8 @@
 #include "resources.h"
+
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION 0,2,1,0
-PRODUCTVERSION 0,2,1,0
+FILEVERSION 0,2,3,0
+PRODUCTVERSION 0,2,3,0
 FILEOS 0x00000004
 FILETYPE 0x00000002
 BEGIN
@@ -11,11 +12,11 @@ BEGIN
     BEGIN
       VALUE "CompanyName", "eidauthenticate.sourceforge.net\0"
       VALUE "FileDescription", "Authentication Package\0"
-      VALUE "FileVersion", "0.2.1.0\0"
+      VALUE "FileVersion", "0.3.0.0\0"
       VALUE "InternalName", "EIDAuthenticationPackage.dll\0"
       VALUE "OriginalFilename", "EIDAuthenticationPackage.dll\0"
       VALUE "ProductName", "EID Authentication\0"
-      VALUE "ProductVersion", "0.2.1.0\0"
+      VALUE "ProductVersion", "0.3.0.0\0"
     END
   END
   BLOCK "VarFileInfo"

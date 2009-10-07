@@ -14,6 +14,7 @@
 #include "resource.h"
 
 
+#include "../EIDCardLibrary/EIDCardLibrary.h"
 #include "../EIDCardLibrary/CompleteToken.h"
 #include "EIDTestUIUtil.h"
 
@@ -21,10 +22,10 @@ extern HINSTANCE hInst;
 extern HWND hMainWnd;
 
 static PVOID NTAPI EIDCardLibraryTestMyLsaAlloc(ULONG Length) {
-	return malloc(Length);
+	return EIDAlloc(Length);
 }
 static VOID NTAPI EIDCardLibraryMyLsaFree(PVOID MyPointer) {
-	free(MyPointer);
+	EIDFree(MyPointer);
 }
 
 void Menu_AP_Token()

@@ -501,6 +501,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\EIDSecuritySupportProviderTest.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\EIDTest.cpp"
 				>
 			</File>
@@ -518,6 +522,10 @@
 			</File>
 			<File
 				RelativePath=".\GPOTest.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\LSAFunctionSubstitute.cpp"
 				>
 			</File>
 			<File
@@ -619,6 +627,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\EIDSecuritySupportProviderTest.h"
+				>
+			</File>
+			<File
 				RelativePath=".\EIDTest.h"
 				>
 			</File>
@@ -636,6 +648,10 @@
 			</File>
 			<File
 				RelativePath=".\GPOTest.h"
+				>
+			</File>
+			<File
+				RelativePath=".\LSAFunctionSubstitute.h"
 				>
 			</File>
 			<File

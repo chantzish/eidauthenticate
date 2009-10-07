@@ -15,8 +15,45 @@
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-PCCERT_CONTEXT GetCertificateFromCspInfo(__in PEID_SMARTCARD_CSP_INFO pCspInfo);
-BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt DWORD dwFlag = 0);
-BOOL HasCertificateRightEKU(__in PCCERT_CONTEXT pCertContext);
-LPCTSTR GetTrustErrorText(DWORD Status);
-BOOL MakeTrustedCertifcate(PCCERT_CONTEXT pCertContext);
+#include <windows.h>
+
+#include "../EIDCardLibrary/Registration.h"
+
+extern "C"
+{
+	void NTAPI DllRegister()
+	{
+		EIDAuthenticationPackageDllRegister();
+		EIDCredentialProviderDllRegister();
+		EIDPasswordChangeNotificationDllRegister();
+		EIDConfigurationWizardDllRegister();
+	}
+
+	void NTAPI DllUnRegister()
+	{
+		EIDAuthenticationPackageDllUnRegister();
+		EIDCredentialProviderDllUnRegister();
+		EIDPasswordChangeNotificationDllUnRegister();
+		EIDConfigurationWizardDllUnRegister();
+	}
+
+	void NTAPI DllEnableLogging()
+	{
+		EnableLogging();
+	}
+
+	void NTAPI DllDisableLogging()
+	{
+		DisableLogging();
+	}
+
+	void NTAPI EIDPatch()
+	{
+		BEID_Patch();
+	}
+
+	void NTAPI EIDUnPatch()
+	{
+		BEID_UnPatch();
+	}
+}

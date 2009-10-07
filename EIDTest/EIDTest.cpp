@@ -31,6 +31,7 @@
 #include "CertificateValidationTest.h"
 #include "StoredCredentialManagementTest.h"
 #include "SmartCardModuleTest.h"
+#include "EIDSecuritySupportProviderTest.h"
 #include "../EIDCardLibrary/Registration.h"
 
 #ifdef UNICODE
@@ -221,6 +222,9 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case IDM_CRED_ONLYEID:
 			Menu_CREDENTIALUID_ONLY_EID();
 			break;
+		case IDM_CRED_OLD:
+			menu_CREDENTIALUID_OldBehavior();
+			break;
 		case IDM_CRED_LIST:
 			menu_CREDENTIAL_List();
 			break;
@@ -239,6 +243,12 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case IDM_CRED_RESETPASS:
 			menu_ResetPasswordWizard();
 			break;
+		case IDM_SSP_ACQUIRE:
+			menu_SSP_AcquireCredentialHandle();
+			break;
+		case IDM_SSP_LOGIN:
+			menu_SSP_login();
+			break;
 		case IDM_PASS_CREATE:
 			menu_CREDMGMT_CreateStoredCredential();
 			break;
@@ -250,9 +260,6 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		case IDM_PASS_RETRIEVE:
 			menu_CREDMGMT_RetrieveStoredCredential();
-			break;
-		case IDM_PASS_CHECK:
-			menu_CREDMGT_TestPassword();
 			break;
 		case IDM_REG_AP:
 			EIDAuthenticationPackageDllRegister();

@@ -157,7 +157,7 @@ PCCERT_CONTEXT SelectCerts(__in LPCWSTR szReaderName,__in LPCWSTR szCardName,
 				if (pCertContext)
 				{
 					pContextArray[dwContextArrayLen] = pCertContext;
-					pContainerName[dwContextArrayLen] = (LPWSTR) LocalAlloc(0, (wcslen(szContainerName)+1) * sizeof(WCHAR));
+					pContainerName[dwContextArrayLen] = (LPWSTR) EIDAlloc((wcslen(szContainerName)+1) * sizeof(WCHAR));
 					dwKeySpecs[i] = dwKeySpec;
 					memcpy((PVOID)pContainerName[dwContextArrayLen],szContainerName, (wcslen(szContainerName)+1) * sizeof(WCHAR));
 					dwContextArrayLen++;
@@ -173,15 +173,15 @@ PCCERT_CONTEXT SelectCerts(__in LPCWSTR szReaderName,__in LPCWSTR szCardName,
 					
 				}
 				
-				free(szContainerName);
-				free(pbCert);
+				EIDFree(szContainerName);
+				EIDFree(pbCert);
 			}
 		}
 	}
 	else
 	{
 		size_t ulNameLen = _tcslen(szReaderName);
-		szMainContainerName = (LPWSTR) LocalAlloc(0, (ulNameLen + 6) * sizeof(WCHAR));
+		szMainContainerName = (LPWSTR) EIDAlloc((ulNameLen + 6) * sizeof(WCHAR));
 		if (!szMainContainerName)
 		{
 			return NULL;
@@ -236,7 +236,7 @@ PCCERT_CONTEXT SelectCerts(__in LPCWSTR szReaderName,__in LPCWSTR szCardName,
 
 			// convert the container name to unicode
 			int wLen = MultiByteToWideChar(CP_ACP, 0, szContainerName, -1, NULL, 0);
-			LPWSTR szWideContainerName = (LPWSTR) LocalAlloc(0, wLen * sizeof(WCHAR));
+			LPWSTR szWideContainerName = (LPWSTR) EIDAlloc(wLen * sizeof(WCHAR));
 			MultiByteToWideChar(CP_ACP, 0, szContainerName, -1, szWideContainerName, wLen);
 
 			// Acquire a context on the current container
@@ -259,7 +259,7 @@ PCCERT_CONTEXT SelectCerts(__in LPCWSTR szReaderName,__in LPCWSTR szCardName,
 								&dwCertLen,
 								0))
 						{
-							pbCert = (LPBYTE) LocalAlloc(0, dwCertLen);
+							pbCert = (LPBYTE) EIDAlloc(dwCertLen);
 							if (!pbCert)
 							{
 								dwErr = GetLastError();
@@ -278,7 +278,7 @@ PCCERT_CONTEXT SelectCerts(__in LPCWSTR szReaderName,__in LPCWSTR szCardName,
 								if (pCertContext)
 								{
 									pContextArray[dwContextArrayLen] = pCertContext;
-									pContainerName[dwContextArrayLen] = (LPWSTR) LocalAlloc(0, wLen * sizeof(WCHAR));
+									pContainerName[dwContextArrayLen] = (LPWSTR) EIDAlloc(wLen * sizeof(WCHAR));
 									dwKeySpecs[dwContextArrayLen] = pKeySpecs[i];
 									memcpy((PVOID)pContainerName[dwContextArrayLen],szWideContainerName, wLen * sizeof(WCHAR));
 									dwContextArrayLen++;
@@ -293,7 +293,7 @@ PCCERT_CONTEXT SelectCerts(__in LPCWSTR szReaderName,__in LPCWSTR szCardName,
 									CertSetCertificateContextProperty(pCertContext, CERT_KEY_PROV_INFO_PROP_ID, 0, &keyProvInfo);
 								}
 							}
-							LocalFree(pbCert);
+							EIDFree(pbCert);
 						}
 						CryptDestroyKey(hKey);
 						hKey = NULL;
@@ -302,7 +302,7 @@ PCCERT_CONTEXT SelectCerts(__in LPCWSTR szReaderName,__in LPCWSTR szCardName,
 				CryptReleaseContext(hProv, 0);
 				hProv = NULL;
 			}
-			LocalFree(szWideContainerName);
+			EIDFree(szWideContainerName);
 			
 			// prepare parameters for the next loop
 			dwContainerNameLen = sizeof(szContainerName);
@@ -370,14 +370,14 @@ end:
 	for (DWORD i=0; i < dwContextArrayLen; i++)
 	{
 		CertFreeCertificateContext(pContextArray[i]);
-		LocalFree(pContainerName[i]);
+		EIDFree(pContainerName[i]);
 	}
 	if (hKey)
 		CryptDestroyKey(hKey);
 	if (hProv)
 		CryptReleaseContext(hProv, 0);
 	if (szMainContainerName)
-		LocalFree(szMainContainerName);
+		EIDFree(szMainContainerName);
 	if (HMainCryptProv)
 		CryptReleaseContext(HMainCryptProv, 0);
 	if (szOutContainerName[0]==0 && dwErr == 0) dwErr = 1;
@@ -430,7 +430,7 @@ static BOOL CALLBACK SelectCertificateInfoCallBack(HWND hwndDlg, UINT message, W
 						_pCertificateInfo->dwKeyType = AT_SIGNATURE;
 					}
 					dwSize = 256;
-					_pCertificateInfo->szSubject = (LPTSTR) LocalAlloc(0,dwSize*sizeof(TCHAR));
+					_pCertificateInfo->szSubject = (LPTSTR) EIDAlloc(dwSize*sizeof(TCHAR));
 					GetDlgItemText(hwndDlg,IDC_SUBJECT,_pCertificateInfo->szSubject,dwSize);
 					_pCertificateInfo->dwSaveon = (DWORD) SendDlgItemMessage(hwndDlg,IDC_SAVEON,CB_GETCURSEL, 0, 0);
 					_pCertificateInfo->bIsSelfSigned = (BOOL) IsDlgButtonChecked(hwndDlg,IDC_SELFSIGNED);
@@ -522,7 +522,7 @@ void FreeCertificateInfo(PUI_CERTIFICATE_INFO pCertificateInfo)
 {
 	if (pCertificateInfo->szSubject)
 	{
-		LocalFree(pCertificateInfo->szSubject);
+		EIDFree(pCertificateInfo->szSubject);
 	}
 	if (pCertificateInfo->pRootCertificate)
 	{

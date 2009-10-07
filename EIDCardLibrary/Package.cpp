@@ -1,7 +1,7 @@
 /*	EID Authentication
     Copyright (C) 2009 Vincent Le Toux
 
-    This library is free software; you can redistribute it and/or
+    This library is EIDFree software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
     License version 2.1 as published by the Free Software Foundation.
 
@@ -49,6 +49,16 @@
 #pragma comment(lib, "Secur32.lib")
 #pragma comment(lib, "Netapi32.lib")
 #pragma comment(lib, "Wtsapi32.lib")
+
+PVOID EIDAlloc(DWORD dwSize)
+{
+	return malloc(dwSize);
+}
+VOID EIDFree(PVOID buffer)
+{
+	free(buffer);
+}
+
 //
 // This function copies the length of pwz and the pointer pwz into the UNICODE_STRING structure
 // This function is intended for serializing a credential in GetSerialization only.
@@ -119,98 +129,6 @@ static void _UnicodeStringPackedUnicodeStringCopy(
     pus->Buffer = pwzBuffer;
 
     CopyMemory(pus->Buffer, rus.Buffer, pus->Length);
-}
-
-//
-// Initialize the members of a EID_INTERACTIVE_UNLOCK_LOGON with weak references to the
-// passed-in strings.  This is useful if you will later use KerbInteractiveUnlockLogonPack
-// to serialize the structure.  
-//
-// The password is stored in encrypted form for CPUS_LOGON and CPUS_UNLOCK_WORKSTATION
-// because the system can accept encrypted credentials.  It is not encrypted in CPUS_CREDUI
-// because we cannot know whether our caller can accept encrypted credentials.
-//
-HRESULT EIDUnlockLogonInit(
-                                       PWSTR pwzDomain,
-                                       PWSTR pwzUsername,
-                                       PWSTR pwzPin,
-                                       CREDENTIAL_PROVIDER_USAGE_SCENARIO cpus,
-                                       EID_INTERACTIVE_UNLOCK_LOGON* pkiul
-                                       )
-{
-    UNREFERENCED_PARAMETER(cpus);
-	EID_INTERACTIVE_UNLOCK_LOGON kiul;
-    ZeroMemory(&kiul, sizeof(kiul));
-
-    EID_INTERACTIVE_LOGON* pkil = &kiul.Logon;
-
-    // Note: this method uses custom logic to pack a EID_INTERACTIVE_UNLOCK_LOGON with a
-    // serialized credential.  We could replace the calls to UnicodeStringInitWithString
-    // and KerbInteractiveUnlockLogonPack with a single cal to CredPackAuthenticationBuffer,
-    // but that API has a drawback: it returns a EID_INTERACTIVE_UNLOCK_LOGON whose
-    // MessageType is always KerbInteractiveLogon.  
-    //
-    // If we only handled CPUS_LOGON, this drawback would not be a problem.  For 
-    // CPUS_UNLOCK_WORKSTATION, we could cast the output buffer of CredPackAuthenticationBuffer
-    // to EID_INTERACTIVE_UNLOCK_LOGON and modify the MessageType to KerbWorkstationUnlockLogon,
-    // but such a cast would be unsupported -- the output format of CredPackAuthenticationBuffer
-    // is not officially documented.
-
-    // Initialize the UNICODE_STRINGS to share our username and password strings.
-    HRESULT hr = UnicodeStringInitWithString(pwzDomain, &pkil->LogonDomainName);
-
-    if (SUCCEEDED(hr))
-    {
-        hr = UnicodeStringInitWithString(pwzUsername, &pkil->UserName);
-
-        if (SUCCEEDED(hr))
-        {
-            if (SUCCEEDED(hr))
-            {
-                hr = UnicodeStringInitWithString(pwzPin, &pkil->Pin);
-            }
-
-            if (SUCCEEDED(hr))
-            {
-                // Set a MessageType based on the usage scenario.
-                pkil->MessageType = EID_INTERACTIVE_LOGON_SUBMIT_TYPE_VANILLIA;
-				pkil->CspDataLength = 0;
-				pkil->CspData = NULL;
-				pkil->Flags = 0;
-				/*switch (cpus)
-                {
-                case CPUS_UNLOCK_WORKSTATION:
-                    pkil->MessageType = KerbWorkstationUnlockLogon;
-                    hr = S_OK;
-                    break;
-
-                case CPUS_LOGON:
-                    pkil->MessageType = KerbInteractiveLogon;
-                    hr = S_OK;
-                    break;
-
-                case CPUS_CREDUI:
-                    pkil->MessageType = (KERB_LOGON_SUBMIT_TYPE)0; // MessageType does not apply to CredUI
-                    hr = S_OK;
-                    break;
-
-                default:
-                    hr = E_FAIL;
-                    break;
-                }*/
-
-                if (SUCCEEDED(hr))
-                {
-                    // EID_INTERACTIVE_UNLOCK_LOGON is just a series of structures.  A
-                    // flat copy will properly initialize the output parameter.
-                    CopyMemory(pkiul, &kiul, sizeof(*pkiul));
-					//EIDDebugPrintEIDUnlockLogonStruct(WINEVENT_LEVEL_VERBOSE,pkiul);
-                }
-            }
-        }
-    }
-
-    return hr;
 }
 
 //
@@ -513,16 +431,56 @@ VOID EIDDebugPrintEIDUnlockLogonStruct(UCHAR dwLevel, PEID_INTERACTIVE_UNLOCK_LO
 	}	
 }
 
-BOOL HasAccountOnCurrentComputer(PTSTR szUserName)
+PTSTR GetUsernameFromRid(__in DWORD dwRid)
 {
-	BOOL fReturn =  FALSE;
-	PUSER_INFO_0 pUserInfo = NULL;
-	if (NERR_Success == NetUserGetInfo(NULL, szUserName, 0,(PBYTE*) &pUserInfo))
+	NET_API_STATUS Status;
+	PUSER_INFO_3 pUserInfo = NULL;
+	DWORD dwEntriesRead = 0, dwTotalEntries = 0;
+	BOOL fReturn = FALSE;
+	DWORD dwError = 0;
+	BOOL fFound = FALSE;
+	DWORD dwI, dwSize;
+	PTSTR szUsername = NULL;
+	__try
 	{
+		Status = NetUserEnum(NULL, 3,0, (PBYTE*) &pUserInfo, MAX_PREFERRED_LENGTH, &dwEntriesRead, &dwTotalEntries, NULL);
+		if (Status != NERR_Success)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"NetUserEnum 0x%08x",Status);
+			dwError = Status;
+			__leave;
+		}
+		for (dwI = 0; dwI < dwEntriesRead; dwI++)
+		{
+			if (dwRid == pUserInfo[dwI].usri3_user_id)
+			{
+				fFound = TRUE;
+				break;
+			}
+		}
+		if (!fFound)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"not found");
+			__leave;
+		}
+		dwSize = (_tcslen(pUserInfo[dwI].usri3_name) +1);
+		szUsername = (PTSTR) EIDAlloc(dwSize *sizeof(TCHAR));
+		if (!szUsername)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"EIDAlloc 0x%08x",GetLastError());
+			__leave;
+		}
+		_tcscpy_s(szUsername, dwSize, pUserInfo[dwI].usri3_name);
 		fReturn = TRUE;
-		NetApiBufferFree(pUserInfo);
 	}
-	return fReturn;
+	__finally
+	{
+		if (pUserInfo)
+			NetApiBufferFree(pUserInfo);
+	}
+	SetLastError(dwError);
+	return szUsername;
 }
 
 BOOL IsCurrentUser(PTSTR szUserName)
@@ -602,7 +560,7 @@ DWORD GetCurrentRid()
 	{
 	
 		GetTokenInformation(hToken, TokenUser, NULL, 0, &dwSize);
-		pInfo = (PTOKEN_USER) malloc(dwSize);
+		pInfo = (PTOKEN_USER) EIDAlloc(dwSize);
 		if (pInfo)
 		{
 			if (GetTokenInformation(hToken, TokenUser, pInfo, dwSize, &dwSize))
@@ -612,18 +570,18 @@ DWORD GetCurrentRid()
 			}
 			else
 			{
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by GetTokenInformation", GetLastError());
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by GetTokenInformation", GetLastError());
 			}
-			free(pInfo);
+			EIDFree(pInfo);
 		}
 		else
 		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by malloc", GetLastError());
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by EIDAlloc", GetLastError());
 		}
 	}
 	else
 	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by OpenProcessToken", GetLastError());
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by OpenProcessToken", GetLastError());
 	}
 	return dwRid;
 }
@@ -639,22 +597,21 @@ DWORD GetRidFromUsername(LPTSTR szUsername)
 	DWORD dLengthSid = 0;
 	bResult = LookupAccountName(NULL,  szUsername, NULL,&dLengthSid,NULL, &cchReferencedDomainName, &Use);
 	
-	pSid = malloc(dLengthSid);
+	pSid = EIDAlloc(dLengthSid);
 	cchReferencedDomainName=UNCLEN;
 	bResult = LookupAccountName(NULL,  szUsername, pSid,&dLengthSid,checkDomainName, &cchReferencedDomainName, &Use);
 	if (!bResult) 
 	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by LookupAccountName", GetLastError());
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by LookupAccountName", GetLastError());
 		return 0;
 	}
 	dwRid = *GetSidSubAuthority(pSid, *GetSidSubAuthorityCount(pSid) -1);
-	free(pSid);
+	EIDFree(pSid);
 	return dwRid;
 }
 
 
-BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPassword, __in PBYTE pbPublicKey, 
-								  __in USHORT dwPublicKeySize, __in BOOL fEncryptPassword)
+BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPassword, __in PCCERT_CONTEXT pContext, __in BOOL fEncryptPassword)
 {
 	BOOL fReturn = FALSE;
 	PEID_CALLPACKAGE_BUFFER pBuffer;
@@ -669,12 +626,11 @@ BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPasswo
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"szPassword null");
 		return FALSE;
 	}
-
-
+	
 	dwPasswordSize = (DWORD) (wcslen(szPassword) + 1) * sizeof(WCHAR);
-	dwSize = (DWORD) (sizeof(EID_CALLPACKAGE_BUFFER) + dwPasswordSize + dwPublicKeySize); //+ dwProviderSize + dwContainerSize;
+	dwSize = (DWORD) (sizeof(EID_CALLPACKAGE_BUFFER) + dwPasswordSize + pContext->cbCertEncoded); //+ dwProviderSize + dwContainerSize;
 
-	pBuffer = (PEID_CALLPACKAGE_BUFFER) malloc(dwSize);
+	pBuffer = (PEID_CALLPACKAGE_BUFFER) EIDAlloc(dwSize);
 	if( !pBuffer) 
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pBuffer null");
@@ -696,18 +652,17 @@ BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPasswo
 	memcpy(pPointer, szPassword, dwPasswordSize);
 	pPointer += dwPasswordSize;
 	
-	pBuffer->dwPublicKeySize = dwPublicKeySize;
+	pBuffer->dwCertificateSize = (USHORT) pContext->cbCertEncoded;
 	pBuffer->fEncryptPassword = fEncryptPassword;
 
-	pBuffer->pbPublicKey = (PBYTE) pPointer;
-	memcpy(pPointer, pbPublicKey, dwPublicKeySize);
-	pPointer += dwPublicKeySize;
-
-
+	pBuffer->pbCertificate = (PBYTE) pPointer;
+	memcpy(pPointer, pContext->pbCertEncoded, pContext->cbCertEncoded);
+	pPointer += pContext->cbCertEncoded;
+	
 	if (!pBuffer->dwRid)
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"dwRid = 0");
-		free(pBuffer);
+		EIDFree(pBuffer);
 		return FALSE;
 	}
 
@@ -744,9 +699,77 @@ BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPasswo
 	}
 	LsaClose(hLsa);
 	dwError = pBuffer->dwError;
-	free(pBuffer);
+	EIDFree(pBuffer);
 	SetLastError(dwError);
 	return fReturn;
+}
+
+DWORD LsaEIDGetRIDFromStoredCredential(__in PCCERT_CONTEXT pContext)
+{
+	BOOL fReturn = FALSE;
+	PEID_CALLPACKAGE_BUFFER pBuffer;
+    HANDLE hLsa;
+	DWORD dwSize;
+	NTSTATUS status;
+	PBYTE pPointer;
+	DWORD dwError;
+
+	dwSize = (DWORD) (sizeof(EID_CALLPACKAGE_BUFFER) + pContext->cbCertEncoded); 
+
+	pBuffer = (PEID_CALLPACKAGE_BUFFER) EIDAlloc(dwSize);
+	if( !pBuffer) 
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pBuffer null");
+		return FALSE;
+	}
+
+	pBuffer->dwRid = 0;
+
+	pBuffer->MessageType = EIDCMGetStoredCredentialRid;
+	pBuffer->usPasswordLen = 0;
+	pBuffer->szPassword = NULL;	
+	pBuffer->dwCertificateSize = (USHORT) pContext->cbCertEncoded;
+	pPointer = (PBYTE) &(pBuffer[1]);
+	pBuffer->pbCertificate = (PBYTE) pPointer;
+	memcpy(pPointer, pContext->pbCertEncoded, pContext->cbCertEncoded);
+	pPointer += pContext->cbCertEncoded;
+	
+    status = LsaConnectUntrusted(&hLsa);
+    if (SUCCEEDED(HRESULT_FROM_NT(status)))
+    {
+
+        ULONG ulAuthPackage;
+        LSA_STRING lsaszPackageName;
+        LsaInitString(&lsaszPackageName, AUTHENTICATIONPACKAGENAME);
+
+        status = LsaLookupAuthenticationPackage(hLsa, &lsaszPackageName, &ulAuthPackage);
+        
+		if (status == STATUS_SUCCESS)
+        {
+            status = LsaCallAuthenticationPackage(hLsa, ulAuthPackage, pBuffer, dwSize, NULL, NULL, NULL);
+			if (status == STATUS_SUCCESS)
+			{
+				fReturn = TRUE;
+			}
+			else
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaCallAuthenticationPackage 0x%08x",status);
+			}
+        }
+		else
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaLookupAuthenticationPackage 0x%08x",status);
+		}
+    }
+	else
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaConnectUntrusted 0x%08x",status);
+	}
+	LsaClose(hLsa);
+	dwError = pBuffer->dwError;
+	EIDFree(pBuffer);
+	SetLastError(dwError);
+	return pBuffer->dwRid;
 }
 
 BOOL IsEIDPackageAvailable()
@@ -780,7 +803,7 @@ BOOL LsaEIDRemoveStoredCredential(__in_opt PWSTR szUsername)
 	DWORD dwError = 0;
 
 	dwSize = sizeof(EID_CALLPACKAGE_BUFFER);
-	pBuffer = (PEID_CALLPACKAGE_BUFFER) malloc(dwSize);
+	pBuffer = (PEID_CALLPACKAGE_BUFFER) EIDAlloc(dwSize);
 	if( !pBuffer) 
 	{
 		dwError = GetLastError();
@@ -801,7 +824,7 @@ BOOL LsaEIDRemoveStoredCredential(__in_opt PWSTR szUsername)
 	{
 		dwError = GetLastError();
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"dwRid = 0");
-		free(pBuffer);
+		EIDFree(pBuffer);
 		SetLastError(dwError);
 		return FALSE;
 	}
@@ -841,7 +864,77 @@ BOOL LsaEIDRemoveStoredCredential(__in_opt PWSTR szUsername)
 		dwError = status;
 	}
 	LsaClose(hLsa);
-	free(pBuffer);
+	EIDFree(pBuffer);
+	SetLastError(dwError);
+	return fReturn;
+}
+
+BOOL LsaEIDRemoveAllStoredCredential()
+{
+	BOOL fReturn = FALSE;
+	PEID_CALLPACKAGE_BUFFER pBuffer;
+    HANDLE hLsa;
+	DWORD dwSize;
+	NTSTATUS status;
+	DWORD dwError = 0;
+
+	dwSize = sizeof(EID_CALLPACKAGE_BUFFER);
+	pBuffer = (PEID_CALLPACKAGE_BUFFER) EIDAlloc(dwSize);
+	if( !pBuffer) 
+	{
+		dwError = GetLastError();
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pBuffer null 0x%08X",dwError);
+		SetLastError(dwError);
+		return FALSE;
+	}
+	pBuffer->dwRid = GetCurrentRid();
+	
+	pBuffer->MessageType = EIDCMRemoveAllStoredCredential;
+	if (!pBuffer->dwRid)
+	{
+		dwError = GetLastError();
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"dwRid = 0");
+		EIDFree(pBuffer);
+		SetLastError(dwError);
+		return FALSE;
+	}
+
+    status = LsaConnectUntrusted(&hLsa);
+    if (status == STATUS_SUCCESS)
+    {
+
+        ULONG ulAuthPackage;
+        LSA_STRING lsaszPackageName;
+        LsaInitString(&lsaszPackageName, AUTHENTICATIONPACKAGENAME);
+
+        status = LsaLookupAuthenticationPackage(hLsa, &lsaszPackageName, &ulAuthPackage);
+        
+		if (status == STATUS_SUCCESS)
+        {
+            status = LsaCallAuthenticationPackage(hLsa, ulAuthPackage, pBuffer, dwSize, NULL, NULL, NULL);
+			if (status == STATUS_SUCCESS)
+			{
+				fReturn = TRUE;
+			}
+			else
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaCallAuthenticationPackage 0x%08x",status);
+				dwError = pBuffer->dwError;
+			}
+        }
+		else
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaLookupAuthenticationPackage 0x%08x",status);
+			dwError = status;
+		}
+    }
+	else
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaConnectUntrusted 0x%08x",status);
+		dwError = status;
+	}
+	LsaClose(hLsa);
+	EIDFree(pBuffer);
 	SetLastError(dwError);
 	return fReturn;
 }
@@ -855,7 +948,7 @@ BOOL LsaEIDHasStoredCredential(__in_opt PWSTR szUsername)
 	NTSTATUS status;
 
 	dwSize = sizeof(EID_CALLPACKAGE_BUFFER);
-	pBuffer = (PEID_CALLPACKAGE_BUFFER) malloc(dwSize);
+	pBuffer = (PEID_CALLPACKAGE_BUFFER) EIDAlloc(dwSize);
 	if( !pBuffer) 
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pBuffer null");
@@ -873,7 +966,7 @@ BOOL LsaEIDHasStoredCredential(__in_opt PWSTR szUsername)
 	if (!pBuffer->dwRid)
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"dwRid = 0");
-		free(pBuffer);
+		EIDFree(pBuffer);
 		return FALSE;
 	}
 
@@ -909,7 +1002,7 @@ BOOL LsaEIDHasStoredCredential(__in_opt PWSTR szUsername)
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaConnectUntrusted 0x%08x",status);
 	}
 	LsaClose(hLsa);
-	free(pBuffer);
+	EIDFree(pBuffer);
 	return fReturn;
 }
 
@@ -919,11 +1012,13 @@ BOOL LsaEIDCreateStoredCredential(__in PWSTR szUsername, __in PWSTR szPassword, 
 	BOOL fEncryptPassword;
 	PBYTE pbPublicKey = NULL;
 	DWORD dwKeySpec;
-	DWORD dwPublicKeySize;
+//	DWORD dwPublicKeySize;
 	HCRYPTPROV hProv = NULL;
 	HCRYPTKEY hKey = NULL;
 	DWORD dwError = 0;
 	BOOL fReturn = FALSE;
+	PBYTE pbHash = NULL;
+//	DWORD dwHashSize = 0;
 	__try
 	{
 		fStatus = CryptAcquireCertificatePrivateKey(pCertContext, 0, NULL, &hProv, &dwKeySpec, &fFreeProv);
@@ -933,7 +1028,7 @@ BOOL LsaEIDCreateStoredCredential(__in PWSTR szUsername, __in PWSTR szPassword, 
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireCertificatePrivateKey 0x%08x",GetLastError());
 			__leave;
 		}
-		fStatus = CryptGetUserKey(hProv, dwKeySpec, &hKey);
+		/*fStatus = CryptGetUserKey(hProv, dwKeySpec, &hKey);
 		if (!fStatus)
 		{
 			dwError = GetLastError();
@@ -947,11 +1042,11 @@ BOOL LsaEIDCreateStoredCredential(__in PWSTR szUsername, __in PWSTR szPassword, 
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptExportKey 0x%08x",GetLastError());
 			__leave;
 		}
-		pbPublicKey = (PBYTE) malloc(dwPublicKeySize);
+		pbPublicKey = (PBYTE) EIDAlloc(dwPublicKeySize);
 		if (!pbPublicKey)
 		{
 			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"malloc 0x%08x",GetLastError());
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EIDAlloc 0x%08x",GetLastError());
 			__leave;
 		}
 		fStatus = CryptExportKey( hKey, NULL, PUBLICKEYBLOB, 0, pbPublicKey, &dwPublicKeySize);
@@ -961,8 +1056,29 @@ BOOL LsaEIDCreateStoredCredential(__in PWSTR szUsername, __in PWSTR szPassword, 
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptExportKey 0x%08x",GetLastError());
 			__leave;
 		}
+		fStatus = CryptHashCertificate(NULL, CALG_SHA1, 0, pCertContext->pbCertEncoded, pCertContext->cbCertEncoded, NULL, &dwHashSize);
+		if (!fStatus)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptHashCertificate 0x%08x",GetLastError());
+			__leave;
+		}
+		pbHash = (PBYTE) EIDAlloc(dwHashSize);
+		if (!pbHash)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EIDAlloc 0x%08x",GetLastError());
+			__leave;
+		}
+		fStatus = CryptHashCertificate(NULL, CALG_SHA1, 0, pCertContext->pbCertEncoded, pCertContext->cbCertEncoded, pbHash, &dwHashSize);
+		if (!fStatus)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptHashCertificate 0x%08x",GetLastError());
+			__leave;
+		}*/
 		fEncryptPassword = CanEncryptPassword(hProv, dwKeySpec, NULL);
-		fReturn = LsaEIDCreateStoredCredential(szUsername, szPassword, pbPublicKey, (USHORT) dwPublicKeySize, fEncryptPassword);
+		fReturn = LsaEIDCreateStoredCredential(szUsername, szPassword, pCertContext, fEncryptPassword);
 		if (!fReturn)
 		{
 			dwError = GetLastError();
@@ -971,10 +1087,12 @@ BOOL LsaEIDCreateStoredCredential(__in PWSTR szUsername, __in PWSTR szPassword, 
 	}
 	__finally
 	{
+		if (pbHash)
+			EIDFree(pbHash);
 		if (hKey)
 			CryptDestroyKey(hKey);
 		if (pbPublicKey)
-			free(pbPublicKey);
+			EIDFree(pbPublicKey);
 		if (hProv)
 			CryptReleaseContext(hProv, 0);
 	}
@@ -1006,14 +1124,14 @@ BOOL MatchUserOrIsAdmin(__in DWORD dwRid, __in PVOID pClientInfo)
 			////////////////////
 			DWORD dwEntries, dwTotalEntries;
 			PLOCALGROUP_USERS_INFO_0 GroupInfo;
-			PWSTR szUserName = (PWSTR) malloc(pLogonSessionData->UserName.Length + sizeof(WCHAR));
+			PWSTR szUserName = (PWSTR) EIDAlloc(pLogonSessionData->UserName.Length + sizeof(WCHAR));
 			memcpy(szUserName, pLogonSessionData->UserName.Buffer, pLogonSessionData->UserName.Length);
 			szUserName[pLogonSessionData->UserName.Length/sizeof(WCHAR)] = '\0';
 			// get admin sid group
 			DWORD cbSid = 0;
 			PSID pAdminGroupSid = NULL;
 			CreateWellKnownSid(WinBuiltinAdministratorsSid, NULL, NULL, &cbSid);
-			pAdminGroupSid = malloc(cbSid);
+			pAdminGroupSid = EIDAlloc(cbSid);
 			CreateWellKnownSid(WinBuiltinAdministratorsSid, NULL, pAdminGroupSid, &cbSid);
 			// get user name - done via lsagetlogonsessiondata
 			// get local groups
@@ -1031,7 +1149,7 @@ BOOL MatchUserOrIsAdmin(__in DWORD dwRid, __in PVOID pClientInfo)
 					DWORD dLengthSid = 0;
 					BOOL bResult = LookupAccountNameW(NULL,  szUserName, NULL,&dLengthSid,NULL, &cchReferencedDomainName, &Use);
 					
-					pGroupSid = malloc(dLengthSid);
+					pGroupSid = EIDAlloc(dLengthSid);
 					cchReferencedDomainName=UNCLEN;
 					bResult = LookupAccountNameW(NULL,  szUserName, pGroupSid,&dLengthSid,checkDomainName, &cchReferencedDomainName, &Use);
 					if (!bResult) 
@@ -1046,7 +1164,7 @@ BOOL MatchUserOrIsAdmin(__in DWORD dwRid, __in PVOID pClientInfo)
 				}
 				NetApiBufferFree(GroupInfo);
 			}
-			free(szUserName);
+			EIDFree(szUserName);
 			*/
 			SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
 			PSID AdministratorsGroup; 
@@ -1124,7 +1242,7 @@ BOOL MatchUserOrIsAdmin(__in DWORD dwRid, __in PVOID pClientInfo)
 			RegCloseKey(phkResult);
 			return STATUS_CANCELLED;
 		}
-		pbBuffer = (LPBYTE) malloc(dwRegSize);
+		pbBuffer = (LPBYTE) EIDAlloc(dwRegSize);
 		if (!pbBuffer)
 		{
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pbBuffer null %d",GetLastError());
@@ -1170,13 +1288,13 @@ BOOL MatchUserOrIsAdmin(__in DWORD dwRid, __in PVOID pClientInfo)
 						{
 							EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CopyToClientBuffer");
 							MyLsaDispatchTable->FreeClientBuffer(ClientRequest, *ProtocolReturnBuffer);
-							free(pbBuffer);
+							EIDFree(pbBuffer);
 							return STATUS_CANCELLED;
 						}
 						else
 						{
 							EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"UserTilePath = %s",szPointer);
-							free(pbBuffer);
+							EIDFree(pbBuffer);
 							return STATUS_SUCCESS;
 						}
 					}
@@ -1186,7 +1304,7 @@ BOOL MatchUserOrIsAdmin(__in DWORD dwRid, __in PVOID pClientInfo)
 			}
 		}
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Pattern not found");
-		free(pbBuffer);
+		EIDFree(pbBuffer);
 		return STATUS_CANCELLED;
 	}
 */

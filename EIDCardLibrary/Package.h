@@ -24,13 +24,6 @@ HRESULT RetrieveNegotiateAuthPackage(
     ULONG * pulAuthPackage
     );
 
-HRESULT EIDUnlockLogonInit(
-    PWSTR pwzDomain,
-    PWSTR pwzUsername,
-    PWSTR pwzPin,
-    CREDENTIAL_PROVIDER_USAGE_SCENARIO cpus,
-    EID_INTERACTIVE_UNLOCK_LOGON* pkiul
-    );
 
 
 //packages the credentials into the buffer that the system expects
@@ -48,6 +41,7 @@ VOID EIDDebugPrintEIDUnlockLogonStruct(UCHAR dwLevel, PEID_INTERACTIVE_UNLOCK_LO
 
 VOID RemapPointer(PEID_INTERACTIVE_UNLOCK_LOGON pUnlockLogon, PVOID ClientAuthenticationBase);
 
+PTSTR GetUsernameFromRid(__in DWORD dwRid);
 DWORD GetRidFromUsername(LPTSTR szUsername);
 BOOL HasAccountOnCurrentComputer(PWSTR szUserName);
 BOOL IsCurrentUser(PWSTR szUserName);
@@ -60,6 +54,8 @@ BOOL LsaEIDCreateStoredCredential(__in PWSTR szUsername, __in PWSTR szPassword, 
 BOOL LsaEIDRemoveStoredCredential(__in_opt PWSTR szUsername);
 
 BOOL LsaEIDHasStoredCredential(__in_opt PWSTR szUsername);
+
+DWORD LsaEIDGetRIDFromStoredCredential(__in PCCERT_CONTEXT pContext);
 
 BOOL MatchUserOrIsAdmin(__in DWORD dwRid, __in PVOID pClientInfo);
 BOOL CanEncryptPassword(__in_opt HCRYPTPROV hProv, __in_opt DWORD dwKeySpec,  __in_opt PCCERT_CONTEXT pCertContext);

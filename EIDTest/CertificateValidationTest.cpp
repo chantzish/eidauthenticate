@@ -20,7 +20,7 @@ void menu_CREDENTIAL_Certificate()
 		if (pCertContext = SelectCerts(szReader,szCard,szProviderName,256,szContainer,256, &dwKeySpec))
 		{
 		
-			LPTSTR szUserName = GetUserNameFromCertificate(pCertContext);
+			/*LPTSTR szUserName = GetUserNameFromCertificate(pCertContext);
 			DWORD dwError = 0;
 			if (szUserName)
 			{
@@ -30,7 +30,7 @@ void menu_CREDENTIAL_Certificate()
 			{
 				MessageBox(NULL,_T("UserName not found"),_T("UserName not found"),0);
 			}
-			free(szUserName);
+			EIDFree(szUserName);*/
 			if (IsTrustedCertificate(pCertContext))
 			{
 				MessageBox(NULL,_T("The Certificate is valid"),_T("The Certificate is valid"),0);
