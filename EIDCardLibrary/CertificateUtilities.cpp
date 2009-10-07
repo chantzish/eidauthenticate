@@ -20,6 +20,7 @@
 #include <Cryptuiapi.h>
 #include <AccCtrl.h>
 #include <Aclapi.h>
+#include "EIDCardLibrary.h"
 #include "CertificateUtilities.h"
 #include "Tracing.h"
 
@@ -189,7 +190,7 @@ LPBYTE AllocateAndEncodeObject(LPVOID pvStruct, LPCSTR lpszStructType, LPDWORD p
 	   }   
 
 	   // Allocate Memory for Key Usage Blob   
-	   pbEncodedObject = (LPBYTE)malloc(*pdwSize);   
+	   pbEncodedObject = (LPBYTE)EIDAlloc(*pdwSize);   
 	   if (!pbEncodedObject)   
 	   {   
 		  bResult = FALSE;
@@ -212,7 +213,7 @@ LPBYTE AllocateAndEncodeObject(LPVOID pvStruct, LPCSTR lpszStructType, LPDWORD p
    {
 		if (pbEncodedObject && !bResult)
 		{
-			free(pbEncodedObject);
+			EIDFree(pbEncodedObject);
 		}
    }
    return pbEncodedObject;
@@ -330,7 +331,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			}
 			// container name from card name
 			size_t ulNameLen = _tcslen(pCertificateInfo->szReader);
-			szContainerName = (LPTSTR) LocalAlloc(0, (ulNameLen + 6) * sizeof(TCHAR));
+			szContainerName = (LPTSTR) EIDAlloc( (ulNameLen + 6) * sizeof(TCHAR));
 			if (!szContainerName)
 			{
 				dwError = GetLastError();
@@ -392,7 +393,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			dwError = GetLastError();
 			__leave;
 		}
-		SubjectIssuerBlob.pbData = (PBYTE) malloc(SubjectIssuerBlob.cbData);
+		SubjectIssuerBlob.pbData = (PBYTE) EIDAlloc(SubjectIssuerBlob.cbData);
 		if (!SubjectIssuerBlob.pbData)
 		{
 			dwError = GetLastError();
@@ -408,7 +409,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 		// Key Usage & ...
 		
 		// max 10 extensions => we don't count them
-		CertInfo.rgExtension = (PCERT_EXTENSION) malloc(sizeof(CERT_EXTENSION) * 10);
+		CertInfo.rgExtension = (PCERT_EXTENSION) EIDAlloc(sizeof(CERT_EXTENSION) * 10);
 		CertInfo.cExtension = 0;
 		if (!CertInfo.rgExtension) __leave;
 
@@ -483,7 +484,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 
 		if (CertEnhKeyUsage.cUsageIdentifier != 0)   
 		{
-			CertEnhKeyUsage.rgpszUsageIdentifier = (LPSTR*) malloc(sizeof(LPSTR)*CertEnhKeyUsage.cUsageIdentifier);
+			CertEnhKeyUsage.rgpszUsageIdentifier = (LPSTR*) EIDAlloc(sizeof(LPSTR)*CertEnhKeyUsage.cUsageIdentifier);
 			if (!CertEnhKeyUsage.rgpszUsageIdentifier) __leave;
 			CertEnhKeyUsage.cUsageIdentifier = 0;
 			if (pCertificateInfo->bHasClientAuthentication)
@@ -559,7 +560,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 				dwError = GetLastError();
 				__leave;	
 			}
-			pbPublicKeyInfo = (PCERT_PUBLIC_KEY_INFO) malloc(cbPublicKeyInfo);
+			pbPublicKeyInfo = (PCERT_PUBLIC_KEY_INFO) EIDAlloc(cbPublicKeyInfo);
 			if (!pbPublicKeyInfo) {
 				dwError = GetLastError();
 				__leave;
@@ -597,7 +598,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			}   
 
 			// Allocate Memory for Key Identifier (hash of Public Key info)   
-			pbKeyIdentifier = (LPBYTE)malloc(dwSize);   
+			pbKeyIdentifier = (LPBYTE)EIDAlloc(dwSize);   
 			if (!pbKeyIdentifier)   
 			{   
 			  dwError = GetLastError();
@@ -626,7 +627,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			}   
 
 			// Allocate Memory for Subject Key Identifier Blob   
-			SubjectKeyIdentifier = (LPBYTE)malloc(dwSize);   
+			SubjectKeyIdentifier = (LPBYTE)EIDAlloc(dwSize);   
 			if (!SubjectKeyIdentifier)   
 			{   
 			  dwError = GetLastError();
@@ -683,7 +684,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 				dwError = GetLastError();
 				__leave;
 			}
-			pbSignedEncodedCertReq = (PBYTE) malloc(cbEncodedCertReqSize);
+			pbSignedEncodedCertReq = (PBYTE) EIDAlloc(cbEncodedCertReqSize);
 			if (!pbSignedEncodedCertReq) 
 			{
 				dwError = GetLastError();
@@ -793,7 +794,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			dwError = SetEntriesInAcl(2, ea, NULL, &pDacl);
 			if (dwError != ERROR_SUCCESS)
 				__leave;
-			pSD = (PSECURITY_DESCRIPTOR) malloc(SECURITY_DESCRIPTOR_MIN_LENGTH);
+			pSD = (PSECURITY_DESCRIPTOR) EIDAlloc(SECURITY_DESCRIPTOR_MIN_LENGTH);
 			if (!pSD)
 			{
 				__leave;
@@ -870,16 +871,16 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 	__finally
 	{
 		if (pNewCertificateContext) CertFreeCertificateContext(pNewCertificateContext);
-		if (CertInfo.rgExtension) free(CertInfo.rgExtension);
-		if (pbKeyUsage) free(pbKeyUsage);
-		if (pbBasicConstraints) free(pbBasicConstraints);
-		if (pbEnhKeyUsage) free(pbEnhKeyUsage);
-		if (CertEnhKeyUsage.rgpszUsageIdentifier) free(CertEnhKeyUsage.rgpszUsageIdentifier);
+		if (CertInfo.rgExtension) EIDFree(CertInfo.rgExtension);
+		if (pbKeyUsage) EIDFree(pbKeyUsage);
+		if (pbBasicConstraints) EIDFree(pbBasicConstraints);
+		if (pbEnhKeyUsage) EIDFree(pbEnhKeyUsage);
+		if (CertEnhKeyUsage.rgpszUsageIdentifier) EIDFree(CertEnhKeyUsage.rgpszUsageIdentifier);
 		if (hKey) CryptDestroyKey(hKey);
-		if (SubjectIssuerBlob.pbData) free(SubjectIssuerBlob.pbData);
+		if (SubjectIssuerBlob.pbData) EIDFree(SubjectIssuerBlob.pbData);
 		if (hCertStore) CertCloseStore(hCertStore,0);
-		if (pbSignedEncodedCertReq) free(pbSignedEncodedCertReq);
-		if (pbPublicKeyInfo) free(pbPublicKeyInfo);
+		if (pbSignedEncodedCertReq) EIDFree(pbSignedEncodedCertReq);
+		if (pbPublicKeyInfo) EIDFree(pbPublicKeyInfo);
 		if (hCryptProvNewCertificate) CryptReleaseContext(hCryptProvNewCertificate,0);
 		if (hCryptProvRootCertificate) CryptReleaseContext(hCryptProvRootCertificate,0);
 		if (bDestroyContainer)
@@ -896,7 +897,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 		if (szContainerName) 
 		{
 			if (pCertificateInfo->dwSaveon == 3)
-				LocalFree(szContainerName);
+				EIDFree(szContainerName);
 			else
 				RpcStringFree((RPC_WSTR*)&szContainerName);
 		}
@@ -905,9 +906,9 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 		if (pSidAdmins)
 			FreeSid(pSidAdmins);
 		if (pDacl)
-			LocalFree((HLOCAL)pDacl);
+			EIDFree((HLOCAL)pDacl);
 		if (pSD)
-			free(pSD);
+			EIDFree(pSD);
 	}
 	SetLastError(dwError);
 	return fReturn;
@@ -930,7 +931,7 @@ BOOL ClearCard(PTSTR szReaderName, PTSTR szCardName)
 	}
 
 	size_t ulNameLen = _tcslen(szReaderName);
-	LPTSTR szMainContainerName = (LPTSTR) malloc((ulNameLen + 6) * sizeof(TCHAR));
+	LPTSTR szMainContainerName = (LPTSTR) EIDAlloc((ulNameLen + 6) * sizeof(TCHAR));
 	if (!szMainContainerName)
 	{
 		return FALSE;
@@ -944,7 +945,7 @@ BOOL ClearCard(PTSTR szReaderName, PTSTR szCardName)
 				0);
 	if (!bStatus)
 	{
-		free(szMainContainerName);
+		EIDFree(szMainContainerName);
 		return FALSE;
 	}
 	dwFlags = CRYPT_FIRST;
@@ -958,7 +959,7 @@ BOOL ClearCard(PTSTR szReaderName, PTSTR szCardName)
 	{
 		// convert the container name to unicode
 		int wLen = MultiByteToWideChar(CP_ACP, 0, szContainerName, -1, NULL, 0);
-		LPWSTR szWideContainerName = (LPWSTR) LocalAlloc(0, wLen * sizeof(WCHAR));
+		LPWSTR szWideContainerName = (LPWSTR) EIDAlloc(wLen * sizeof(WCHAR));
 		MultiByteToWideChar(CP_ACP, 0, szContainerName, -1, szWideContainerName, wLen);
 
 		// Acquire a context on the current container
@@ -975,7 +976,7 @@ BOOL ClearCard(PTSTR szReaderName, PTSTR szCardName)
 		dwContainerNameLen = 1024;
 	}
 	CryptReleaseContext(HMainCryptProv,0);
-	free(szMainContainerName);
+	EIDFree(szMainContainerName);
 	SetLastError(dwError);
 	return TRUE;
 }
@@ -1015,11 +1016,11 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetFileSize 0x%08x",dwError);
 			__leave;
 		}
-		DataBlob.pbData = (PBYTE) malloc(DataBlob.cbData);
+		DataBlob.pbData = (PBYTE) EIDAlloc(DataBlob.cbData);
 		if (!DataBlob.pbData)
 		{
 			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"malloc 0x%08x",dwError);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EIDAlloc 0x%08x",dwError);
 			__leave;
 		}
 		if (!ReadFile(hFile, DataBlob.pbData, DataBlob.cbData, &dwRead, NULL))
@@ -1043,12 +1044,12 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 			__leave;
 		}
 		// container name from card name
-		szContainerName = (LPTSTR) malloc((_tcslen(szReaderName) + 6) * sizeof(TCHAR));
+		szContainerName = (LPTSTR) EIDAlloc((_tcslen(szReaderName) + 6) * sizeof(TCHAR));
 		if (!szContainerName)
 		{
 			//dwError = GetLastError();
 			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"malloc 0x%08x",dwError);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EIDAlloc 0x%08x",dwError);
 			__leave;
 		}
 		_stprintf_s(szContainerName,(_tcslen(szReaderName) + 6), _T("\\\\.\\%s\\"), szReaderName);
@@ -1109,11 +1110,11 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptExportKey 0x%08x",dwError);
 					__leave;
 				}
-				pbData = (PBYTE) malloc(dwSize);
+				pbData = (PBYTE) EIDAlloc(dwSize);
 				if (!pbData)
 				{
 					dwError = GetLastError();
-					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"malloc 0x%08x",dwError);
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EIDAlloc 0x%08x",dwError);
 					__leave;
 				}
 				if (!CryptExportKey(hKey, NULL, PRIVATEKEYBLOB, 0, pbData, &dwSize))
@@ -1153,7 +1154,7 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 		if (hCardKey)
 			CryptDestroyKey(hCardKey);
 		if (pbData)
-			free(pbData);
+			EIDFree(pbData);
 		if (hKey)
 			CryptDestroyKey(hKey);
 		if (hProv)
@@ -1163,11 +1164,11 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 		if (hCardProv)
 			CryptReleaseContext(hCardProv, 0);
 		if (szContainerName) 
-			free(szContainerName);			
+			EIDFree(szContainerName);			
 		if (hCS)
 			CertCloseStore(hCS, 0);
 		if (DataBlob.pbData)
-			free(DataBlob.pbData);
+			EIDFree(DataBlob.pbData);
 		if (hFile != INVALID_HANDLE_VALUE)
 			CloseHandle(hFile);
 		if (fSetBackMSBaseSCCryptoFlagImport)
@@ -1191,4 +1192,39 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 	}
 	SetLastError(dwError);
 	return fReturn;
+}
+
+// find certificate using its hash
+
+PCCERT_CONTEXT FindCertificateFromHash(PCRYPT_DATA_BLOB pCertInfo)
+{
+	PCCERT_CONTEXT pCertContext = NULL;
+	HCERTSTORE hCertStore = NULL;
+	DWORD dwError = 0;
+	__try
+	{
+		// first, try to look into user certificate store
+		hCertStore = CertOpenSystemStore(NULL, TEXT("MY"));
+		if (!hCertStore)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptGetUserKey 0x%08x",dwError);
+			__leave;
+		}
+		pCertContext = CertFindCertificateInStore(hCertStore, X509_ASN_ENCODING, 0, CERT_FIND_HASH, (PVOID) pCertInfo, NULL);
+		if (pCertContext)
+		{
+			// OK, found
+			__leave;
+		}
+		// else, look in every smart card
+		DebugBreak();
+	}
+	__finally
+	{
+		if (hCertStore)
+			CertCloseStore(hCertStore, 0);
+	}
+	SetLastError(dwError);
+	return pCertContext;
 }

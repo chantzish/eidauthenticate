@@ -462,6 +462,97 @@ HRESULT CEIDCredential::CommandLinkClicked(DWORD dwFieldID)
 }
 //------ end of methods for controls we don't have in our tile ----//
 
+
+//
+// Initialize the members of a EID_INTERACTIVE_UNLOCK_LOGON with weak references to the
+// passed-in strings.  This is useful if you will later use KerbInteractiveUnlockLogonPack
+// to serialize the structure.  
+//
+// The password is stored in encrypted form for CPUS_LOGON and CPUS_UNLOCK_WORKSTATION
+// because the system can accept encrypted credentials.  It is not encrypted in CPUS_CREDUI
+// because we cannot know whether our caller can accept encrypted credentials.
+//
+HRESULT EIDUnlockLogonInit(
+                                       PWSTR pwzDomain,
+                                       PWSTR pwzUsername,
+                                       PWSTR pwzPin,
+                                       CREDENTIAL_PROVIDER_USAGE_SCENARIO cpus,
+                                       EID_INTERACTIVE_UNLOCK_LOGON* pkiul
+                                       )
+{
+    UNREFERENCED_PARAMETER(cpus);
+	EID_INTERACTIVE_UNLOCK_LOGON kiul;
+    ZeroMemory(&kiul, sizeof(kiul));
+
+    EID_INTERACTIVE_LOGON* pkil = &kiul.Logon;
+
+    // Note: this method uses custom logic to pack a EID_INTERACTIVE_UNLOCK_LOGON with a
+    // serialized credential.  We could replace the calls to UnicodeStringInitWithString
+    // and KerbInteractiveUnlockLogonPack with a single cal to CredPackAuthenticationBuffer,
+    // but that API has a drawback: it returns a EID_INTERACTIVE_UNLOCK_LOGON whose
+    // MessageType is always KerbInteractiveLogon.  
+    //
+    // If we only handled CPUS_LOGON, this drawback would not be a problem.  For 
+    // CPUS_UNLOCK_WORKSTATION, we could cast the output buffer of CredPackAuthenticationBuffer
+    // to EID_INTERACTIVE_UNLOCK_LOGON and modify the MessageType to KerbWorkstationUnlockLogon,
+    // but such a cast would be unsupported -- the output format of CredPackAuthenticationBuffer
+    // is not officially documented.
+
+    // Initialize the UNICODE_STRINGS to share our username and password strings.
+    HRESULT hr = UnicodeStringInitWithString(pwzDomain, &pkil->LogonDomainName);
+
+    if (SUCCEEDED(hr))
+    {
+        hr = UnicodeStringInitWithString(pwzUsername, &pkil->UserName);
+
+        if (SUCCEEDED(hr))
+        {
+            hr = UnicodeStringInitWithString(pwzPin, &pkil->Pin);
+            
+            if (SUCCEEDED(hr))
+            {
+                // Set a MessageType based on the usage scenario.
+                pkil->MessageType = EID_INTERACTIVE_LOGON_SUBMIT_TYPE_VANILLIA;
+				pkil->CspDataLength = 0;
+				pkil->CspData = NULL;
+				pkil->Flags = 0;
+				/*switch (cpus)
+                {
+                case CPUS_UNLOCK_WORKSTATION:
+                    pkil->MessageType = KerbWorkstationUnlockLogon;
+                    hr = S_OK;
+                    break;
+
+                case CPUS_LOGON:
+                    pkil->MessageType = KerbInteractiveLogon;
+                    hr = S_OK;
+                    break;
+
+                case CPUS_CREDUI:
+                    pkil->MessageType = (KERB_LOGON_SUBMIT_TYPE)0; // MessageType does not apply to CredUI
+                    hr = S_OK;
+                    break;
+
+                default:
+                    hr = E_FAIL;
+                    break;
+                }*/
+
+                if (SUCCEEDED(hr))
+                {
+                    // EID_INTERACTIVE_UNLOCK_LOGON is just a series of structures.  A
+                    // flat copy will properly initialize the output parameter.
+                    CopyMemory(pkiul, &kiul, sizeof(*pkiul));
+					//EIDDebugPrintEIDUnlockLogonStruct(WINEVENT_LEVEL_VERBOSE,pkiul);
+                }
+            }
+        }
+    }
+
+    return hr;
+}
+
+
 // Collect the username and password into a serialized credential for the correct usage scenario 
 // (logon/unlock is what's demonstrated in this sample).  LogonUI then passes these credentials 
 // back to the system to log on.

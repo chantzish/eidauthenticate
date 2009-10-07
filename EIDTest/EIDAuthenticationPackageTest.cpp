@@ -164,8 +164,8 @@ void menu_AP_Protect()
 	//-------------------------------------------------------------------
 	//  Clean up.
 
-	LocalFree(DataOut.pbData);
-	LocalFree(DataVerify.pbData);
+	EIDFree(DataOut.pbData);
+	EIDFree(DataVerify.pbData);
 
 }
 

@@ -44,13 +44,18 @@
 #include "../EIDCardLibrary/Package.h"
 #include "../EIDCardLibrary/CertificateValidation.h"
 #include "../EIDCardLibrary/StoredCredentialManagement.h"
-#include "../EIDCardLibrary/Registration.h"
+
 
 	
 extern "C"
 {
 	// Save LsaDispatchTable
-	PLSA_SECPKG_FUNCTION_TABLE MyLsaDispatchTable;
+	extern PLSA_SECPKG_FUNCTION_TABLE MyLsaDispatchTable;
+	// ref to function
+
+	
+
+	void initializeExportedFunctionsTable();
 
 	// allocate an LSA_STRING from a char*
 	PLSA_STRING LsaInitializeString(PCHAR Source)
@@ -125,41 +130,31 @@ extern "C"
 		return Destination;
 	}
 
-	void NTAPI DllRegister()
-	{
-		EIDAuthenticationPackageDllRegister();
-		EIDCredentialProviderDllRegister();
-		EIDPasswordChangeNotificationDllRegister();
-		EIDConfigurationWizardDllRegister();
+
+
+
+	NTSTATUS NTAPI LsaApInitializePackage(
+	  __in      ULONG AuthenticationPackageId,
+	  __in      PLSA_DISPATCH_TABLE LsaDispatchTable,
+	  __in_opt  PLSA_STRING Database,
+	  __in_opt  PLSA_STRING Confidentiality,
+	  __out     PLSA_STRING *AuthenticationPackageName
+	) {
+		UNREFERENCED_PARAMETER(AuthenticationPackageId);
+		UNREFERENCED_PARAMETER(Database);
+		UNREFERENCED_PARAMETER(Confidentiality);
+
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"AuthenticationPackageName = %S",AUTHENTICATIONPACKAGENAME);
+		NTSTATUS Status = STATUS_SUCCESS;
+
+		MyLsaDispatchTable = (PLSA_SECPKG_FUNCTION_TABLE)LsaDispatchTable;
+
+		*AuthenticationPackageName = LsaInitializeString(AUTHENTICATIONPACKAGENAME);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave");
+		return Status;
 	}
 
-	void NTAPI DllUnRegister()
-	{
-		EIDAuthenticationPackageDllUnRegister();
-		EIDCredentialProviderDllUnRegister();
-		EIDPasswordChangeNotificationDllUnRegister();
-		EIDConfigurationWizardDllUnRegister();
-	}
 
-	void NTAPI DllEnableLogging()
-	{
-		EnableLogging();
-	}
-
-	void NTAPI DllDisableLogging()
-	{
-		DisableLogging();
-	}
-
-	void NTAPI EIDPatch()
-	{
-		BEID_Patch();
-	}
-
-	void NTAPI EIDUnPatch()
-	{
-		BEID_UnPatch();
-	}
 
 	/** Called when the authentication package's identifier has been specified in a call
 	to LsaCallAuthenticationPackage by an application using an untrusted connection. 
@@ -180,6 +175,8 @@ extern "C"
 		SECPKG_CLIENT_INFO ClientInfo;
 		NTSTATUS status = STATUS_INVALID_MESSAGE;
 		NTSTATUS statusError;
+		PCCERT_CONTEXT pCertContext = NULL;
+		PWSTR szUsername = NULL;
 		UNREFERENCED_PARAMETER(ClientRequest);
 		UNREFERENCED_PARAMETER(ReturnBufferLength);
 		UNREFERENCED_PARAMETER(ProtocolReturnBuffer);
@@ -190,6 +187,7 @@ extern "C"
 			*ProtocolStatus = STATUS_SUCCESS;
 			PEID_CALLPACKAGE_BUFFER pBuffer = (PEID_CALLPACKAGE_BUFFER) ProtocolSubmitBuffer;
 			pBuffer->dwError = 0;
+			
 			switch (pBuffer->MessageType)
 			{
 			case EIDCMCreateStoredCredential:
@@ -206,10 +204,16 @@ extern "C"
 				}
 				pPointer = (PBYTE) pBuffer->szPassword - (ULONG) ClientBufferBase + (ULONG) pBuffer;
 				pBuffer->szPassword = (PWSTR) pPointer;
-				pPointer = (PBYTE) pBuffer->pbPublicKey - (ULONG) ClientBufferBase + (ULONG) pBuffer;
-				pBuffer->pbPublicKey = (PBYTE) pPointer;
-				fStatus = UpdateStoredCredentialEx(pBuffer->dwRid, pBuffer->szPassword, 0, pBuffer->pbPublicKey, 
-					pBuffer->dwPublicKeySize, pBuffer->fEncryptPassword);
+				pPointer = (PBYTE) pBuffer->pbCertificate - (ULONG) ClientBufferBase + (ULONG) pBuffer;
+				pBuffer->pbCertificate = (PBYTE) pPointer;
+				pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, pBuffer->pbCertificate, pBuffer->dwCertificateSize);
+				if (!pCertContext)
+				{
+					pBuffer->dwError = GetLastError();
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CertCreateCertificateContext 0x%08x", pBuffer->dwError);
+					break;
+				}
+				fStatus = CStoredCredentialManager::Instance()->CreateCredential(pBuffer->dwRid,pCertContext,pBuffer->szPassword, 0, pBuffer->fEncryptPassword);
 				if (!fStatus)
 				{
 					pBuffer->dwError = GetLastError();
@@ -218,6 +222,7 @@ extern "C"
 				{
 					status = STATUS_SUCCESS;
 				}
+				CertFreeCertificateContext(pCertContext);
 				break;
 			case EIDCMRemoveStoredCredential:
 				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"EIDCMRemoveStoredCredential");
@@ -231,7 +236,7 @@ extern "C"
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Not autorized");
 					break;
 				}
-				fStatus = RemoveStoredCredential(pBuffer->dwRid);
+				fStatus = CStoredCredentialManager::Instance()->RemoveStoredCredential(pBuffer->dwRid);
 				if (!fStatus)
 				{
 					pBuffer->dwError = GetLastError();
@@ -253,7 +258,7 @@ extern "C"
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Not autorized");
 					break;
 				}
-				fStatus = HasStoredCredential(pBuffer->dwRid);
+				fStatus = CStoredCredentialManager::Instance()->HasStoredCredential(pBuffer->dwRid);
 				if (!fStatus)
 				{
 					pBuffer->dwError = GetLastError();
@@ -263,6 +268,55 @@ extern "C"
 					status = STATUS_SUCCESS;
 				}
 				break;
+			case EIDCMRemoveAllStoredCredential:
+				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"EIDCMRemoveAllStoredCredential");
+				if (STATUS_SUCCESS != MyLsaDispatchTable->GetClientInfo(&ClientInfo))
+				{
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetClientInfo");
+					break;
+				}
+				if (!MatchUserOrIsAdmin(0, &(ClientInfo)))
+				{
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Not autorized");
+					break;
+				}
+				fStatus = CStoredCredentialManager::Instance()->RemoveAllStoredCredential();
+				if (!fStatus)
+				{
+					pBuffer->dwError = GetLastError();
+				}
+				else
+				{
+					status = STATUS_SUCCESS;
+				}
+				break;
+			case EIDCMGetStoredCredentialRid:
+				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"EIDCMGetStoredCredentialRid");
+				pPointer = (PBYTE) pBuffer->pbCertificate - (ULONG) ClientBufferBase + (ULONG) pBuffer;
+				pBuffer->pbCertificate = (PBYTE) pPointer;
+				pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, pBuffer->pbCertificate, pBuffer->dwCertificateSize);
+				if (!pCertContext)
+				{
+					pBuffer->dwError = GetLastError();
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CertCreateCertificateContext 0x%08x", pBuffer->dwError);
+					break;
+				}
+
+				fStatus = CStoredCredentialManager::Instance()->GetUsernameFromCertContext(pCertContext, &szUsername, &pBuffer->dwRid);
+				if (!fStatus)
+				{
+					pBuffer->dwError = GetLastError();
+				}
+				else
+				{
+					
+					EIDFree(szUsername);
+					status = STATUS_SUCCESS;
+				}
+				// copy error back to original buffer
+				MyLsaDispatchTable->CopyToClientBuffer(ClientRequest, sizeof(DWORD), ((PBYTE)&(pBuffer->dwRid))  + (ULONG) ClientBufferBase - (ULONG) pBuffer, &(pBuffer->dwRid));
+				break;
+			
 			default:
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Invalid message %d",pBuffer->MessageType);
 			}
@@ -272,6 +326,7 @@ extern "C"
 			{
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CopyToClientBuffer failed");
 			}
+			
 			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"return 0x%08X",status);
 			return status;
 		}
@@ -324,30 +379,6 @@ extern "C"
 			SubmitBufferLength,ProtocolReturnBuffer,ReturnBufferLength,ProtocolStatus);
 	}
 
-	/** Called during system initialization to permit the authentication package to perform
-	initialization tasks.*/
-
-	NTSTATUS NTAPI LsaApInitializePackage(
-	  __in      ULONG AuthenticationPackageId,
-	  __in      PLSA_DISPATCH_TABLE LsaDispatchTable,
-	  __in_opt  PLSA_STRING Database,
-	  __in_opt  PLSA_STRING Confidentiality,
-	  __out     PLSA_STRING *AuthenticationPackageName
-	) {
-		UNREFERENCED_PARAMETER(AuthenticationPackageId);
-		UNREFERENCED_PARAMETER(Database);
-		UNREFERENCED_PARAMETER(Confidentiality);
-
-		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"AuthenticationPackageName = %S",AUTHENTICATIONPACKAGENAME);
-		NTSTATUS Status = STATUS_SUCCESS;
-
-		MyLsaDispatchTable = (PLSA_SECPKG_FUNCTION_TABLE)LsaDispatchTable;
-
-		*AuthenticationPackageName = LsaInitializeString(AUTHENTICATIONPACKAGENAME);
-		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave");
-		return Status;
-	}
-
 	/** Called when a logon session ends to permit the authentication package 
 	to free any resources allocated for the logon session.*/
 
@@ -373,8 +404,8 @@ extern "C"
 	  __out  PNTSTATUS SubStatus,
 	  __out  PLSA_TOKEN_INFORMATION_TYPE TokenInformationType,
 	  __out  PVOID *TokenInformation,
-	  __out  PLSA_UNICODE_STRING *AccountName,
-	  __out  PLSA_UNICODE_STRING *AuthenticatingAuthority,
+	  __out  PUNICODE_STRING *AccountName,
+	  __out  PUNICODE_STRING *AuthenticatingAuthority,
 	  __out  PUNICODE_STRING *MachineName,
  	  __out  PSECPKG_PRIMARY_CRED PrimaryCredentials,
 	  __out  PSECPKG_SUPPLEMENTAL_CRED_ARRAY *SupplementalCredentials
@@ -394,6 +425,7 @@ extern "C"
 		PCCERT_CONTEXT pCertContext = NULL;
 		LPTSTR szUserName = NULL;
 		PLSA_TOKEN_INFORMATION_V2 MyTokenInformation = NULL;
+		DWORD dwRid = 0;
 		__try
 		{
 			*SubStatus = STATUS_SUCCESS;
@@ -407,29 +439,23 @@ extern "C"
 			PEID_SMARTCARD_CSP_INFO pSmartCardCspInfo = (PEID_SMARTCARD_CSP_INFO) pUnlockLogon->Logon.CspData;
 			EIDDebugPrintEIDUnlockLogonStruct(WINEVENT_LEVEL_VERBOSE, pUnlockLogon);
 			
-
-			// set AccountName which is mandatory
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"AccountName");
-			*AccountName = LsaInitializeUnicodeStringFromUnicodeString(pUnlockLogon->Logon.UserName);
-
-			// set AuthenticatingAuthority / optional
-			if (pUnlockLogon->Logon.LogonDomainName.Length == 0)
+			CStoredCredentialManager* manager = CStoredCredentialManager::Instance();
+			if (!manager)
 			{
-				*AuthenticatingAuthority = NULL;
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LogonDomainName NULL");
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"manager NULL");
 				return STATUS_BAD_VALIDATION_CLASS;
 			}
 
-			*AuthenticatingAuthority = LsaInitializeUnicodeStringFromUnicodeString(pUnlockLogon->Logon.LogonDomainName);
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"AuthenticatingAuthority OK");
 			
 			if (GetComputerName(ComputerName, &dwLen))
 			{
 				*MachineName = LsaInitializeUnicodeStringFromWideString(ComputerName);
+				*AuthenticatingAuthority = LsaInitializeUnicodeStringFromWideString(ComputerName);
 			}
 			else
 			{
 				*MachineName = NULL;
+				*AuthenticatingAuthority = NULL;
 			}
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"MachineName OK");
 
@@ -451,34 +477,37 @@ extern "C"
 				}
 			}
 			// impersonate the client to beneficiate from the smart card redirection
-			// if enable on terminal session
+			// if enabled on terminal session
 			MyLsaDispatchTable->ImpersonateClient();
 
-			// do security check
 			pCertContext = GetCertificateFromCspInfo(pSmartCardCspInfo);
 			if (!pCertContext) {
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Unable to create certificate from logon info");
 				return STATUS_LOGON_FAILURE;
 			}
-
+			RevertToSelf();
 			// username = username on certificate
-			szUserName = GetUserNameFromCertificate(pCertContext);
+			if (!manager->GetUsernameFromCertContext(pCertContext, &szUserName, &dwRid))
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetUsernameFromCertContext 0x%08x",GetLastError());
+				return STATUS_LOGON_FAILURE;
+			}
 			if (!szUserName) {
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Username from cert null");
 				return STATUS_LOGON_FAILURE;
 			}
-			if ((wcslen(szUserName) != (size_t) (pUnlockLogon->Logon.UserName.Length/2))
-				|| (wcsncmp(szUserName,pUnlockLogon->Logon.UserName.Buffer,pUnlockLogon->Logon.UserName.Length/2) != 0))
-			{
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Username <>");
-				return STATUS_LOGON_FAILURE;
-			}
-			free(szUserName);
+			*AccountName = LsaInitializeUnicodeStringFromWideString(szUserName);
+			// trusted ?
+			// check done after username to do accounting in case of failure
+			// AccountName is known !
 			if (!IsTrustedCertificate(pCertContext))
 			{
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Untrusted certificate 0x%x",GetLastError());
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Untrusted certificate 0x%08x",GetLastError());
 				return STATUS_LOGON_FAILURE;
 			}
+			
+			EIDFree(szUserName);
+
 
 
 			// create token
@@ -494,11 +523,11 @@ extern "C"
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"TokenInformation OK substatus = 0x%08X",*SubStatus);
 			*SubStatus = STATUS_SUCCESS;
 
-			PSID pSid = MyTokenInformation->User.User.Sid;
-			DWORD dwRid = *GetSidSubAuthority(pSid,*GetSidSubAuthorityCount(pSid) -1);
+
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"RID = %d", dwRid);
 			PWSTR szPassword = NULL;
-			if (!RetrieveStoredCredential(dwRid,pCertContext, pPin, &szPassword))
+			
+			if (!manager->GetPassword(dwRid,pCertContext, pPin, &szPassword))
 			{
 				DWORD dwError = GetLastError();
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"RetrieveStoredCredential failed %d", dwError);
@@ -515,8 +544,6 @@ extern "C"
 
 			*TokenInformation = MyTokenInformation;
 			*TokenInformationType = LsaTokenInformationV2;
-			
-			RevertToSelf();
 
 			// create session
 			if (!AllocateLocallyUniqueId (LogonId))
@@ -546,7 +573,7 @@ extern "C"
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"ProfileBuffer OK Status = %d",Status);
 
 			// create primary credentials
-
+			PSID pSid = MyTokenInformation->User.User.Sid;
 			Status = CompletePrimaryCredential(*AuthenticatingAuthority,*AccountName,pSid,LogonId,szPassword,(PLSA_DISPATCH_TABLE)MyLsaDispatchTable,PrimaryCredentials);
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"CompletePrimaryCredential OK Status = %d",Status);
 			*SupplementalCredentials = (PSECPKG_SUPPLEMENTAL_CRED_ARRAY) MyLsaDispatchTable->AllocateLsaHeap(sizeof(SECPKG_SUPPLEMENTAL_CRED_ARRAY));
@@ -557,7 +584,7 @@ extern "C"
 			if (szPassword)
 			{
 				SecureZeroMemory(szPassword, wcslen(szPassword) * sizeof(WCHAR));
-				free(szPassword);
+				EIDFree(szPassword);
 			}
 			Status = STATUS_SUCCESS;
 
@@ -574,6 +601,18 @@ extern "C"
 			return STATUS_LOGON_FAILURE;
 		}
 
+	}
+
+	void initializeLSAExportedFunctionsTable(PSECPKG_FUNCTION_TABLE exportedFunctions)
+	{
+
+		exportedFunctions->InitializePackage = LsaApInitializePackage;
+		// missing the word NTAPI in NTSecPkg.h
+		exportedFunctions->LogonUserEx2 = (PLSA_AP_LOGON_USER_EX2) LsaApLogonUserEx2;
+		exportedFunctions->LogonTerminated = LsaApLogonTerminated;
+		exportedFunctions->CallPackage = LsaApCallPackage;
+		exportedFunctions->CallPackagePassthrough = LsaApCallPackagePassthrough;
+		exportedFunctions->CallPackageUntrusted = LsaApCallPackageUntrusted;
 	}
 
 }

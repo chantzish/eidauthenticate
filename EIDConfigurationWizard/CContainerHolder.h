@@ -11,7 +11,7 @@ public:
 	BOOL IsTrusted();
 	BOOL SupportEncryption();
 
-	BOOL HasCurrentUserName();
+	//BOOL HasCurrentUserName();
 
 	HRESULT SetUsageScenario(__in CREDENTIAL_PROVIDER_USAGE_SCENARIO cpus,__in DWORD dwFlags){return S_OK;}
 	CContainer* GetContainer();
@@ -25,6 +25,6 @@ private:
 	CContainer* _pContainer;
 	BOOL _IsTrusted;
 	BOOL _SupportEncryption;
-	BOOL _HasCurrentUserName;
+//	BOOL _HasCurrentUserName;
 	DWORD _dwTrustError;
 };

@@ -24,98 +24,6 @@
 
 #pragma comment(lib,"Crypt32")
 
-LPTSTR GetUserNameFromCertificate(__in PCCERT_CONTEXT pCertContext)
-{
-	LPTSTR szReturnedName = NULL;
-	DWORD dwSize;
-	BOOL fReturn = FALSE;
-	PCRYPT_KEY_PROV_INFO pKeyProvInfo = NULL;
-	__try
-	{
-		// get the subject details for the cert
-		dwSize = CertGetNameString(pCertContext,CERT_NAME_SIMPLE_DISPLAY_TYPE,0,NULL,NULL,0);
-		if (!dwSize)
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CertGetNameString error = %d",GetLastError());
-			__leave;
-		}
-		szReturnedName = (LPTSTR) malloc(dwSize*sizeof(TCHAR));
-		if (!szReturnedName) 
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"malloc error = %d",GetLastError());
-			__leave;
-		}
-		dwSize = CertGetNameString(pCertContext,CERT_NAME_SIMPLE_DISPLAY_TYPE,0,NULL,szReturnedName,dwSize);
-		if (!dwSize)
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CertGetNameString error = %d",GetLastError());
-			__leave;
-		}
-		// remove any weird characters
-		// (else we can not match an existing username because it is not accepted as valid username by windows)
-		for (DWORD i = 0; i<dwSize; i++)
-		{
-			TCHAR cChar = szReturnedName[i];
-			if (cChar < 13 && cChar >0)
-			{
-				szReturnedName[i] = '_';
-			}
-			if (cChar == '\\' || cChar == ':' || cChar == '+' ||
-				cChar == '/' || cChar == ';' || cChar == '=' ||
-				cChar == '[' || cChar == '|' || cChar == ',' ||
-				cChar == ']' || cChar == '<' || cChar == '?' ||
-				cChar == '"' || cChar == '>' || cChar == '*')
-			{
-				szReturnedName[i] = '_';
-			}
-
-		}
-			// check if it is a Belgian Eid card to drop the '(Authentication)'
-		dwSize = 0;
-		
-		if (!CertGetCertificateContextProperty(pCertContext, CERT_KEY_PROV_INFO_PROP_ID, NULL, &dwSize))
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CertGetCertificateContextProperty", GetLastError());
-			__leave;
-		}
-		pKeyProvInfo = (PCRYPT_KEY_PROV_INFO) malloc(dwSize);
-		if (!pKeyProvInfo)
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by malloc", GetLastError());
-			__leave;
-		}
-		if (!CertGetCertificateContextProperty(pCertContext, CERT_KEY_PROV_INFO_PROP_ID, (PBYTE) pKeyProvInfo, &dwSize))
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CertGetCertificateContextProperty", GetLastError());
-			__leave;
-		}
-		if (_tcscmp(pKeyProvInfo->pwszProvName, TBEIDCSP) == 0)
-		{
-			szReturnedName[_tcslen(szReturnedName) - 17] = '\0';
-		}
-		// truncate it to max 20 char
-		if (_tcsclen(szReturnedName) >= 21) 
-			szReturnedName[20]=0;
-		fReturn = TRUE;
-
-	}
-	__finally
-	{
-		if (pKeyProvInfo)
-			free(pKeyProvInfo);
-		if (!fReturn)
-		{
-			if (szReturnedName)
-			{
-				free(szReturnedName);
-				szReturnedName = NULL;
-			}
-		}
-	}
-	EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"GetUserNameFromCertificate = %s",szReturnedName);
-	return szReturnedName;
-}
-
 PCCERT_CONTEXT GetCertificateFromCspInfo(__in PEID_SMARTCARD_CSP_INFO pCspInfo)
 {
 	
@@ -250,20 +158,20 @@ BOOL HasCertificateRightEKU(__in PCCERT_CONTEXT pCertContext)
 			if (!CertGetEnhancedKeyUsage(pCertContext, 0, NULL, &dwSize))
 			{
 				dwError = GetLastError();
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CertGetEnhancedKeyUsage", GetLastError());
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CertGetEnhancedKeyUsage", GetLastError());
 				__leave;
 			}
-			pCertUsage = (PCERT_ENHKEY_USAGE)malloc(dwSize);
+			pCertUsage = (PCERT_ENHKEY_USAGE)EIDAlloc(dwSize);
 			if (!pCertUsage)
 			{
 				dwError = GetLastError();
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by malloc", GetLastError());
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by EIDAlloc", GetLastError());
 				__leave;
 			}
 			if (!CertGetEnhancedKeyUsage(pCertContext, 0, pCertUsage, &dwSize))
 			{
 				dwError = GetLastError();
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CertGetEnhancedKeyUsage", GetLastError());
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CertGetEnhancedKeyUsage", GetLastError());
 				__leave;
 			}
 			for (dwI = 0; dwI < pCertUsage->cUsageIdentifier; dwI++)
@@ -285,7 +193,7 @@ BOOL HasCertificateRightEKU(__in PCCERT_CONTEXT pCertContext)
 	__finally
 	{
 		if (pCertUsage)
-			free(pCertUsage);
+			EIDFree(pCertUsage);
 	}
 	SetLastError(dwError);
 	return fValidation;
@@ -345,7 +253,7 @@ BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt DWORD dwFla
 			if (!HasCertificateRightEKU(pCertContext))
 			{
 				dwError = GetLastError();
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by HasCertificateRightEKU", GetLastError());
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by HasCertificateRightEKU", GetLastError());
 				__leave;
 			}
 		}
@@ -353,20 +261,20 @@ BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt DWORD dwFla
 			hChainEngine,pCertContext,NULL,NULL,&ChainPara,CERT_CHAIN_ENABLE_PEER_TRUST,NULL,&pChainContext))
 		{
 			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CertGetCertificateChain", GetLastError());
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CertGetCertificateChain", GetLastError());
 			__leave;
 		}
 
 		if (pChainContext->TrustStatus.dwErrorStatus)
 		{
 			dwError = pChainContext->TrustStatus.dwErrorStatus;
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error %s (0x%x) returned by CertVerifyCertificateChainPolicy",GetTrustErrorText(pChainContext->TrustStatus.dwErrorStatus),pChainContext->TrustStatus.dwErrorStatus);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error %s (0x%08x) returned by CertVerifyCertificateChainPolicy",GetTrustErrorText(pChainContext->TrustStatus.dwErrorStatus),pChainContext->TrustStatus.dwErrorStatus);
 			__leave;
 		}
 		if(! CertVerifyCertificateChainPolicy(CERT_CHAIN_POLICY_BASE, pChainContext, &ChainPolicy, &PolicyStatus))
 		{
 			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CertGetCertificateChain", GetLastError());
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CertGetCertificateChain", GetLastError());
 			__leave;
 		}
 		if(PolicyStatus.dwError)

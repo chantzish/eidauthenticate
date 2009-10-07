@@ -48,7 +48,7 @@ void EIDCardLibraryTraceEx(LPCSTR szFile, DWORD dwLine, LPCSTR szFunction, UCHAR
 #define EIDCardLibraryDumpMemory(memory, memorysize) \
 	EIDCardLibraryDumpMemoryEx(__FILE__,__LINE__,__FUNCTION__, memory, memorysize);
 
-void EIDCardLibraryDumpMemoryEx(LPCSTR szFile, DWORD dwLine, LPCSTR szFunction, PUCHAR memory, DWORD memorysize);
+void EIDCardLibraryDumpMemoryEx(LPCSTR szFile, DWORD dwLine, LPCSTR szFunction, PVOID memory, DWORD memorysize);
 
 /**
  *  Display a messagebox giving an error code

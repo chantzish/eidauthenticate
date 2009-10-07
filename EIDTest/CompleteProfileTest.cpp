@@ -16,33 +16,11 @@
 #include "../EIDCardLibrary/EIDCardLibrary.h"
 #include "../EIDCardLibrary/CompleteProfile.h"
 #include "EIDTestUIUtil.h"
+#include "LSAFunctionSubstitute.h"
 
 extern HINSTANCE hInst;
 extern HWND hMainWnd;
 
-static NTSTATUS NTAPI EIDCardLibraryTestMyAllocateClientBuffer(PLSA_CLIENT_REQUEST ClientRequest,
-								IN ULONG LengthRequired,
-								OUT PVOID *ClientBaseAddress
-								) {
-	*ClientBaseAddress = malloc(LengthRequired);
-	return STATUS_SUCCESS;
-}
-static NTSTATUS NTAPI EIDCardLibraryMyFreeClientBuffer(PLSA_CLIENT_REQUEST ClientRequest,
-													PVOID ClientBaseAddress) {
-	free(ClientBaseAddress);
-	return STATUS_SUCCESS;
-}
-
-static NTSTATUS NTAPI EIDCardLibraryMyCopyToClientBuffer(
-								IN PLSA_CLIENT_REQUEST ClientRequest,
-								IN ULONG Length,
-								IN PVOID ClientBaseAddress,
-								IN PVOID BufferToCopy
-								) 
-{
-	memcpy(ClientBaseAddress,BufferToCopy,Length);
-	return STATUS_SUCCESS;
-}
 
 
 

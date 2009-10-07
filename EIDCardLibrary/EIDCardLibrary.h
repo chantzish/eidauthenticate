@@ -23,18 +23,24 @@
 #define AUTHENTICATIONPACKAGENAMEW L"EIDAuthenticationPackage"
 #define AUTHENTICATIONPACKAGENAMET TEXT("EIDAuthenticationPackage")
 
+
+#define CERT_HASH_LENGTH        20  // SHA1 hashes are used for cert hashes
+
+PVOID EIDAlloc(DWORD);
+VOID EIDFree(PVOID);
+
 typedef enum _EID_INTERACTIVE_LOGON_SUBMIT_TYPE
 {
-	EID_INTERACTIVE_LOGON_SUBMIT_TYPE_VANILLIA,
+	EID_INTERACTIVE_LOGON_SUBMIT_TYPE_VANILLIA = 13, //KerbCertificateLogon = 13
 } EID_INTERACTIVE_LOGON_SUBMIT_TYPE;
 
 typedef struct _EID_INTERACTIVE_LOGON 
 {
     EID_INTERACTIVE_LOGON_SUBMIT_TYPE MessageType; // KerbCertificateLogon
-    UNICODE_STRING LogonDomainName; // OPTIONAL, if supplied, used to locate the account forest
-    UNICODE_STRING UserName;   // OPTIONAL, if supplied, used to locate the account
+    UNICODE_STRING LogonDomainName;
+    UNICODE_STRING UserName;
     UNICODE_STRING Pin;
-    ULONG Flags;               // additional flags
+	ULONG Flags;               // additional flags
     ULONG CspDataLength;
     PUCHAR CspData;            // contains the smartcard CSP data
 } EID_INTERACTIVE_LOGON, *PEID_INTERACTIVE_LOGON;
@@ -50,6 +56,7 @@ typedef enum _EID_PROFILE_BUFFER_TYPE
 	EIDInteractiveProfile = 2,
 } EID_PROFILE_BUFFER_TYPE;
 
+#pragma pack(push, EID_SMARTCARD_CSP_INFO, 1)
 // based on _KERB_SMARTCARD_CSP_INFO 
 typedef struct _EID_SMARTCARD_CSP_INFO 
 {
@@ -68,6 +75,7 @@ typedef struct _EID_SMARTCARD_CSP_INFO
   TCHAR bBuffer[sizeof(DWORD)];
 } EID_SMARTCARD_CSP_INFO, 
  *PEID_SMARTCARD_CSP_INFO;
+#pragma pack(pop, EID_SMARTCARD_CSP_INFO)
 
 typedef struct _EID_INTERACTIVE_PROFILE
 {
@@ -104,6 +112,8 @@ typedef enum _EID_CALLPACKAGE_MESSAGE
 	EIDCMUpdateStoredCredential,
 	EIDCMRemoveStoredCredential,
 	EIDCMHasStoredCredential,
+	EIDCMRemoveAllStoredCredential,
+	EIDCMGetStoredCredentialRid,
 	EIDCMTest,
 } EID_CALLPACKAGE_MESSAGE;
 
@@ -114,10 +124,79 @@ typedef struct _EID_CALLPACKAGE_BUFFER
 	DWORD dwRid;
 	PWSTR szPassword;		// used if EIDCMCreateStoredCredential
 	USHORT usPasswordLen;	// can be 0 if null terminated
-	PBYTE pbPublicKey;
-	USHORT dwPublicKeySize;
+	PBYTE pbCertificate;
+	USHORT dwCertificateSize;
+	UCHAR Hash[CERT_HASH_LENGTH]; // to get challenge
 	BOOL fEncryptPassword;
 
 } EID_CALLPACKAGE_BUFFER, *PEID_CALLPACKAGE_BUFFER;
 
 #define EID_CERTIFICATE_FLAG_USERSTORE 0x00000001
+
+typedef struct _EID_NEGOCIATE_MESSAGE
+{
+	BYTE Signature[8];
+	DWORD MessageType;
+	DWORD Flags;
+	USHORT TargetLen;
+	USHORT TargetMaxLen;
+	DWORD TargetOffset;
+	USHORT WorkstationLen;
+	USHORT WorkstationMaxLen;
+	USHORT WorkstationOffset;
+	UCHAR Hash[CERT_HASH_LENGTH];
+	DWORD Version;
+} EID_NEGOCIATE_MESSAGE, *PEID_NEGOCIATE_MESSAGE;
+
+typedef struct _EID_CHALLENGE_MESSAGE
+{
+	BYTE Signature[8];
+	DWORD MessageType;
+	DWORD Flags;
+	USHORT UsernameLen;
+	USHORT UsernameMaxLen;
+	USHORT UsernameOffset;
+	DWORD ChallengeLen;
+	DWORD ChallengeOffset;
+	DWORD Version;
+} EID_CHALLENGE_MESSAGE, *PEID_CHALLENGE_MESSAGE;
+
+typedef struct _EID_RESPONSE_MESSAGE
+{
+	BYTE Signature[8];
+	DWORD MessageType;
+	DWORD ResponseLen;
+	DWORD ResponseOffset;
+	DWORD Version;
+} EID_RESPONSE_MESSAGE, *PEID_RESPONSE_MESSAGE;
+
+typedef enum _EID_MESSAGE_STATE
+{
+	EIDMSNone,
+	EIDMSNegociate,
+	EIDMSChallenge,
+	EIDMSResponse,
+	EIDMSComplete,
+} EID_MESSAGE_STATE;
+
+typedef enum _EID_MESSAGE_TYPE
+{
+	EIDMTNegociate = 1,
+	EIDMTChallenge = 2,
+	EIDMTResponse = 3,
+} EID_MESSAGE_TYPE;
+
+#define EID_MESSAGE_VERSION 1
+#define EID_MESSAGE_SIGNATURE "EIDAuth"
+
+typedef enum _EID_SSP_CALLER
+{
+	EIDSSPInitialize,
+	EIDSSPAccept,
+} EID_SSP_CALLER;
+
+typedef struct _EID_SSP_CALLBACK_MESSAGE
+{
+	EID_SSP_CALLER Caller;
+	HANDLE hToken;
+} EID_SSP_CALLBACK_MESSAGE, *PEID_SSP_CALLBACK_MESSAGE;

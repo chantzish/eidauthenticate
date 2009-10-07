@@ -12,6 +12,7 @@
 
 extern HWND hMainWnd;
 
+
 void menu_CREDMGMT_CreateStoredCredential()
 {
 	WCHAR szUserName[256];
@@ -27,12 +28,13 @@ void menu_CREDMGMT_CreateStoredCredential()
 	if (AskForCard(szReader,256,szCard,256)) {
 		if (Context = SelectCerts(szReader,szCard,szProvider, 256, szContainer,256, &dwKeySpec)) 
 		{
-			CertFreeCertificateContext(Context);
+			
 			if (AskUsername(szUserName, szComputerName))
 			{
 				if (AskPin(szPin))
 				{
-					if (CreateStoredCredential(GetRidFromUsername(szUserName), szPin,0, szProvider, szContainer, dwKeySpec))
+					CStoredCredentialManager* manager = CStoredCredentialManager::Instance();
+					if (manager->CreateCredential(GetRidFromUsername(szUserName), Context,szPin,0, TRUE))
 					{
 						MessageBox(hMainWnd,_T("Success"),_T("Success"),0);
 					}
@@ -42,6 +44,7 @@ void menu_CREDMGMT_CreateStoredCredential()
 					}
 				}
 			}
+			CertFreeCertificateContext(Context);
 		}
 	}
 }
@@ -55,7 +58,8 @@ void menu_CREDMGMT_UpdateStoredCredential()
 	{
 		if (AskPin(szPassword))
 		{
-			if (UpdateStoredCredential(GetRidFromUsername(szUserName), szPassword, 0))
+			CStoredCredentialManager* manager = CStoredCredentialManager::Instance();
+			if (manager->UpdateCredential(GetRidFromUsername(szUserName), szPassword, 0))
 			{
 				MessageBox(hMainWnd,_T("Success"),_T("Success"),0);
 			}
@@ -73,7 +77,8 @@ void menu_CREDMGMT_DeleteStoredCredential()
 	WCHAR szComputerName[256];
 	if (AskUsername(szUserName, szComputerName))
 	{
-		if (RemoveStoredCredential(GetRidFromUsername(szUserName)))
+		CStoredCredentialManager* manager = CStoredCredentialManager::Instance();
+		if (manager->RemoveStoredCredential(GetRidFromUsername(szUserName)))
 		{
 			MessageBox(hMainWnd,_T("Success"),_T("Success"),0);
 		}
@@ -104,10 +109,11 @@ void menu_CREDMGMT_RetrieveStoredCredential()
 			{
 				if (AskPin(szPin))
 				{
-					if (RetrieveStoredCredential(GetRidFromUsername(szUserName), pCertContext, szPin, &szPassword))
+					CStoredCredentialManager* manager = CStoredCredentialManager::Instance();
+					if (manager->GetPassword(GetRidFromUsername(szUserName), pCertContext, szPin, &szPassword))
 					{
 						MessageBoxW(hMainWnd,szPassword,L"Success",0);
-						free(szPassword);
+						EIDFree(szPassword);
 					}
 					else
 					{
@@ -116,22 +122,7 @@ void menu_CREDMGMT_RetrieveStoredCredential()
 				}
 			}
 		}
+		CertFreeCertificateContext(pCertContext);
 	}
 }
 
-void menu_CREDMGT_TestPassword()
-{
-	WCHAR szUserName[256];
-	WCHAR szComputerName[256];
-	WCHAR szPassword[256];
-	DWORD dwRid;
-	if (AskUsername(szUserName, szComputerName))
-	{
-		dwRid = GetRidFromUsername(szUserName);
-		if (AskPin(szPassword))
-		{
-			NTSTATUS status = CheckPassword(NULL,szPassword);
-			MessageBoxWin32(LsaNtStatusToWinError(status));
-		}
-	}
-}

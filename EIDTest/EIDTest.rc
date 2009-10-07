@@ -40,13 +40,17 @@ BEGIN
     MENUITEM "Test COM Object",IDM_CRED_COM
     MENUITEM "Test Password Reset Wizard",IDM_CRED_RESETPASS
   END
+  POPUP "SSP",158
+  BEGIN
+    MENUITEM "AcquireHandle",IDM_SSP_ACQUIRE
+    MENUITEM "Login",IDM_SSP_LOGIN
+  END
   POPUP "EID&PasswordChangeNotification",IDM_
   BEGIN
-    MENUITEM "Create Stored Credential (Direct)",IDM_PASS_CREATE
-    MENUITEM "Update Credential (Direct)",IDM_PASS_UPDATE
-    MENUITEM "Delete Credential (Direct)",IDM_PASS_DELETE
-    MENUITEM "Retrieve Credential (Direct)",IDM_PASS_RETRIEVE
-    MENUITEM "Check Password (Direct)",IDM_PASS_CHECK
+    MENUITEM "Create Stored Credential",IDM_PASS_CREATE
+    MENUITEM "Update Credential",IDM_PASS_UPDATE
+    MENUITEM "Delete Credential",IDM_PASS_DELETE
+    MENUITEM "Retrieve Credential",IDM_PASS_RETRIEVE
   END
   POPUP "Registration",143
   BEGIN
@@ -64,6 +68,7 @@ BEGIN
     MENUITEM "&CredUIPromptForWindowsCredentials",IDM_CRED_UI
     MENUITEM "CredUI Admin",IDM_CRED_UI_ADMIN
     MENUITEM "CredUI Only EID",IDM_CRED_ONLYEID
+    MENUITEM "CredUIPromptForCredentials ",IDM_CRED_OLD
   END
   POPUP "&Utilities"
   BEGIN

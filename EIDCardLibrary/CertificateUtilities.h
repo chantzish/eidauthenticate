@@ -55,3 +55,4 @@ PCCERT_CONTEXT GetCertificateWithPrivateKey();
 BOOL CreateCertificate(PUI_CERTIFICATE_INFO CertificateInfo);
 BOOL ClearCard(PTSTR szReaderName, PTSTR szCardName);
 BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderName, PTSTR szCardname);
+PCCERT_CONTEXT FindCertificateFromHash(PCRYPT_DATA_BLOB pCertInfo);

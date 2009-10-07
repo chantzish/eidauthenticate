@@ -5,6 +5,7 @@
 #include <Ntsecapi.h>
 #include "EIDTest.h"
 #include "EIDTestUIUtil.h"
+#include "../EIDCardLibrary/EIDCardLibrary.h"
 #include "../EIDCardLibrary/Tracing.h"
 
 extern HINSTANCE hInst;
@@ -34,7 +35,7 @@ void populateAlgList()
 	// prov name
 	dwIndex = (DWORD) SendDlgItemMessage(hwndProviderDlg,IDC_PROVNAME, CB_GETCURSEL, 0 ,0);
 	DWORD dwLen = (DWORD) SendDlgItemMessage(hwndProviderDlg, IDC_PROVNAME , CB_GETLBTEXTLEN, 0 ,0) + 1;
-	szProvider = (LPTSTR) malloc(dwLen*sizeof(TCHAR));
+	szProvider = (LPTSTR) EIDAlloc(dwLen*sizeof(TCHAR));
 	SendDlgItemMessage(hwndProviderDlg, IDC_PROVNAME , CB_GETLBTEXT,  0 , (LPARAM)szProvider);
 
 	SendDlgItemMessage(hwndProviderDlg,IDC_LSTALG,LB_RESETCONTENT, 0, 0);
@@ -48,10 +49,10 @@ void populateAlgList()
         dwProviderType, CRYPT_VERIFYCONTEXT
         ))  
     {
-		free(szProvider);
+		EIDFree(szProvider);
 		return;
 	}
-		free(szProvider);
+		EIDFree(szProvider);
 
 	while(fMore)
     {
@@ -149,7 +150,7 @@ void populateProviderName()
 				//-----------------------------------------------------------
 			// cbName is the length of the name of the next provider.
 			// Allocate memory in a buffer to retrieve that name.
-			if (!(pszName = (LPTSTR)LocalAlloc(LMEM_ZEROINIT, cbName)))
+			if (!(pszName = (LPTSTR)EIDAlloc(cbName)))
 			{
 			   break;
 			}
@@ -166,7 +167,7 @@ void populateProviderName()
 			{
 				SendDlgItemMessage(hwndProviderDlg,IDC_PROVNAME,CB_ADDSTRING,0,(LPARAM) pszName);
 			}
-			LocalFree(pszName);
+			EIDFree(pszName);
 		}
 		dwIndex++;
     } // End while loop.
@@ -196,7 +197,7 @@ void populateProviderType()
         // type.
 
         // Allocate memory in a buffer to retrieve that name.
-        if (!(pszName = (LPTSTR)LocalAlloc(LMEM_ZEROINIT, cbName)))
+        if (!(pszName = (LPTSTR)EIDAlloc(cbName)))
         {
            break;
         }
@@ -215,7 +216,7 @@ void populateProviderType()
 			SendDlgItemMessage(hwndProviderDlg,IDC_PROVTYPE,CB_SETITEMDATA,dwIndex,(WPARAM) dwType);
         }
 
-        LocalFree(pszName);
+        EIDFree(pszName);
 		dwIndex++;
     }
 	SendDlgItemMessage(hwndProviderDlg,IDC_PROVTYPE,CB_SETCURSEL, 0, 0);
@@ -491,7 +492,7 @@ void DisplayKeys()
 		if (lReturn != ERROR_SUCCESS) 
 			break;
 		dwValueSize = ARRAYSIZE(szValueName);
-		pbData = (PBYTE) malloc(dwDataSize);
+		pbData = (PBYTE) EIDAlloc(dwDataSize);
 		lReturn = RegEnumValue(hRemovePolicyKey,dwI,szValueName,&dwValueSize,0,&dwType,pbData,&dwDataSize);
 		if (lReturn != ERROR_SUCCESS) 
 			break;
@@ -518,7 +519,7 @@ void DisplayKeys()
 			DisplayTrace(hTracingWindow, TEXT("Unable to display"));
 		}
 		DisplayTrace(hTracingWindow, TEXT("\r\n"));
-		free(pbData);
+		EIDFree(pbData);
         //si pas d'erreur
         dwI++;
     } while (lReturn != ERROR_NO_MORE_ITEMS);

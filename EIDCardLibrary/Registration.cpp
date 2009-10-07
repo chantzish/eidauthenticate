@@ -17,8 +17,13 @@
 
 #include <windows.h>
 #include <tchar.h>
+#include <Wmistr.h>
+#include <Evntrace.h>
+
 #include "../EIDCardLibrary/EIDCardLibrary.h"
+#include "../EIDCardLibrary/guid.h"
 #include "../EIDCardLibrary/Tracing.h"
+
 
 /** Used to append a string to a multi string reg key */
 void AppendValueToMultiSz(HKEY hKey,PTSTR szKey, PTSTR szValue, PTSTR szData)
@@ -42,7 +47,7 @@ void AppendValueToMultiSz(HKEY hKey,PTSTR szKey, PTSTR szValue, PTSTR szData)
 		return;
 	}
 	RegSize += (DWORD) (_tcslen(szData) + 1 ) * sizeof(TCHAR);
-	Buffer = (PTSTR) malloc(RegSize);
+	Buffer = (PTSTR) EIDAlloc(RegSize);
 	if (!Buffer)
 	{
 		MessageBoxWin32(GetLastError());
@@ -53,7 +58,7 @@ void AppendValueToMultiSz(HKEY hKey,PTSTR szKey, PTSTR szValue, PTSTR szData)
 	if (Status != ERROR_SUCCESS) {
 		MessageBoxWin32(Status);
 		RegCloseKey(hkResult);
-		free(Buffer);
+		EIDFree(Buffer);
 		return;
 	}
 
@@ -77,7 +82,7 @@ void AppendValueToMultiSz(HKEY hKey,PTSTR szKey, PTSTR szValue, PTSTR szData)
 			MessageBoxWin32(Status);
 		}
 	}
-	free(Buffer);
+	EIDFree(Buffer);
 	RegCloseKey(hkResult);
 }
 
@@ -104,26 +109,26 @@ void RemoveValueFromMultiSz(HKEY hKey, PTSTR szKey, PTSTR szValue, PTSTR szData)
 		RegCloseKey(hkResult);
 		return;
 	}
-	BufferIn = (PTSTR) malloc(RegSize);
+	BufferIn = (PTSTR) EIDAlloc(RegSize);
 	if (!BufferIn)
 	{
 		MessageBoxWin32(GetLastError());
 		RegCloseKey(hkResult);
 		return;
 	}
-	BufferOut = (PTSTR) malloc(RegSize);
+	BufferOut = (PTSTR) EIDAlloc(RegSize);
 	if (!BufferOut)
 	{
 		MessageBoxWin32(GetLastError());
-		free(BufferIn);
+		EIDFree(BufferIn);
 		RegCloseKey(hkResult);
 		return;
 	}
 	Status = RegQueryValueEx( hkResult,szValue,NULL,&RegType,(LPBYTE)BufferIn,&RegSize);
 	if (Status != ERROR_SUCCESS) {
 		MessageBoxWin32(Status);
-		free(BufferIn);
-		free(BufferOut);
+		EIDFree(BufferIn);
+		EIDFree(BufferOut);
 		RegCloseKey(hkResult);
 		return;
 	}
@@ -153,8 +158,8 @@ void RemoveValueFromMultiSz(HKEY hKey, PTSTR szKey, PTSTR szValue, PTSTR szData)
 		MessageBoxWin32(Status);
 	}
 	
-	free(BufferIn);
-	free(BufferOut);
+	EIDFree(BufferIn);
+	EIDFree(BufferOut);
 	RegCloseKey(hkResult);
 }
 
@@ -163,12 +168,12 @@ void RemoveValueFromMultiSz(HKEY hKey, PTSTR szKey, PTSTR szValue, PTSTR szData)
 
 void EIDAuthenticationPackageDllRegister()
 {
-	AppendValueToMultiSz(HKEY_LOCAL_MACHINE, TEXT("SYSTEM\\CurrentControlSet\\Control\\Lsa"), TEXT("Authentication Packages"), AUTHENTICATIONPACKAGENAMET);
+	AppendValueToMultiSz(HKEY_LOCAL_MACHINE, TEXT("SYSTEM\\CurrentControlSet\\Control\\Lsa"), TEXT("Security Packages"), AUTHENTICATIONPACKAGENAMET);
 }
 
 void EIDAuthenticationPackageDllUnRegister()
 {
-	RemoveValueFromMultiSz(HKEY_LOCAL_MACHINE, TEXT("SYSTEM\\CurrentControlSet\\Control\\Lsa"), TEXT("Authentication Packages"), AUTHENTICATIONPACKAGENAMET);
+	RemoveValueFromMultiSz(HKEY_LOCAL_MACHINE, TEXT("SYSTEM\\CurrentControlSet\\Control\\Lsa"), TEXT("Security Packages"), AUTHENTICATIONPACKAGENAMET);
 }
 
 void EIDPasswordChangeNotificationDllRegister()
@@ -201,6 +206,8 @@ void EIDCredentialProviderDllRegister()
 		TEXT("ThreadingModel"),REG_SZ, TEXT("Apartment"),sizeof(TEXT("Apartment")));
 }
 
+BOOL LsaEIDRemoveAllStoredCredential();
+
 void EIDCredentialProviderDllUnRegister()
 {
 	RegDeleteTree(HKEY_CLASSES_ROOT, TEXT("CLSID\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"));
@@ -208,6 +215,7 @@ void EIDCredentialProviderDllUnRegister()
 		TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Providers\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"));
 	RegDeleteTree(HKEY_LOCAL_MACHINE, 
 		TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Provider Filters\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"));
+	LsaEIDRemoveAllStoredCredential();
 }
 
 void EIDConfigurationWizardDllRegister()
@@ -248,93 +256,184 @@ void EIDConfigurationWizardDllUnRegister()
 	RegDeleteTree(HKEY_CLASSES_ROOT, TEXT("CLSID\\{F5D846B4-14B0-11DE-B23C-27A355D89593}"));
 }
 
+BOOL StartLogging()
+{
+	BOOL fReturn = FALSE;
+	TRACEHANDLE SessionHandle;
+	struct _Prop
+	{
+		EVENT_TRACE_PROPERTIES TraceProperties;
+		TCHAR LogFileName[1024];
+		TCHAR LoggerName[1024];
+	} Properties;
+	ULONG err;
+	__try
+	{
+		memset(&Properties, 0, sizeof(Properties));
+		Properties.TraceProperties.Wnode.BufferSize = sizeof(Properties);
+		Properties.TraceProperties.Wnode.Guid = CLSID_CEIDProvider;
+		Properties.TraceProperties.Wnode.Flags = WNODE_FLAG_TRACED_GUID;
+		Properties.TraceProperties.Wnode.ClientContext = 1;
+		Properties.TraceProperties.LogFileMode = 4864; 
+		Properties.TraceProperties.LogFileNameOffset = sizeof(EVENT_TRACE_PROPERTIES);
+		Properties.TraceProperties.LoggerNameOffset = sizeof(EVENT_TRACE_PROPERTIES) + 1024;
+		Properties.TraceProperties.MaximumFileSize = 8;
+		_tcscpy_s(Properties.LogFileName,1024,TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl"));
+		//_tcscpy_s(Properties.LoggerName,1024,TEXT("EIDCredentialProvider"));
+		DeleteFile(Properties.LogFileName);
+		err = StartTrace(&SessionHandle, TEXT("EIDCredentialProvider"), &(Properties.TraceProperties));
+		if (err != ERROR_SUCCESS)
+		{
+			MessageBoxWin32(err);
+			__leave;
+		}
+		err = EnableTraceEx(&CLSID_CEIDProvider,NULL,SessionHandle,TRUE,WINEVENT_LEVEL_VERBOSE,0,0,0,NULL);
+		if (err != ERROR_SUCCESS)
+		{
+			MessageBoxWin32(err);
+			__leave;
+		}
+		fReturn = TRUE;
+	}
+	__finally
+	{
+	}
+	return fReturn;
+}
+
+void StopLogging()
+{
+	LONG err;
+	struct _Prop
+	{
+		EVENT_TRACE_PROPERTIES TraceProperties;
+		TCHAR LogFileName[1024];
+		TCHAR LoggerName[1024];
+	} Properties;
+	memset(&Properties, 0, sizeof(Properties));
+	Properties.TraceProperties.Wnode.BufferSize = sizeof(Properties);
+	Properties.TraceProperties.Wnode.Guid = CLSID_CEIDProvider;
+	Properties.TraceProperties.Wnode.Flags = WNODE_FLAG_TRACED_GUID;
+	Properties.TraceProperties.LogFileMode = 4864; 
+	Properties.TraceProperties.LogFileNameOffset = sizeof(EVENT_TRACE_PROPERTIES);
+	Properties.TraceProperties.LoggerNameOffset = sizeof(EVENT_TRACE_PROPERTIES) + 1024 * sizeof(TCHAR);
+	Properties.TraceProperties.MaximumFileSize = 8;
+	err = ControlTrace(NULL, TEXT("EIDCredentialProvider"), &(Properties.TraceProperties),EVENT_TRACE_CONTROL_STOP);
+	if (err != ERROR_SUCCESS && err != 0x00001069)
+	{
+		MessageBoxWin32(err);
+	}
+}
+
 void EnableLogging()
 {
 	DWORD64 qdwValue;
 	DWORD dwValue;
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+	LONG err;
+
+	err = RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider"), 
 		TEXT("Guid"), REG_SZ, TEXT("{B4866A0A-DB08-4835-A26F-414B46F3244C}"),sizeof(TEXT("{B4866A0A-DB08-4835-A26F-414B46F3244C}")));
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
+	err = RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider"), 
-		TEXT("FileName"), REG_SZ, TEXT("C:\\Windows\\System32\\LogFiles\\WMI\\EIDCredentialProvider.etl"),sizeof(TEXT("C:\\Windows\\System32\\LogFiles\\WMI\\EIDCredentialProvider.etl")));
+		TEXT("FileName"), REG_SZ, TEXT("c:\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl"),sizeof(TEXT("c:\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl")));
+	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
 	dwValue = 8;
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+	err = RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider"), 
 		TEXT("FileMax"), REG_DWORD,&dwValue,sizeof(DWORD));
+	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
 	dwValue = 1;
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+	err = RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider"), 
 		TEXT("Start"), REG_DWORD,&dwValue,sizeof(DWORD));
+	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
 	dwValue = 8;
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+	err = RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider"), 
 		TEXT("BufferSize"), REG_DWORD,&dwValue,sizeof(DWORD));
+	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
 	dwValue = 0;
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+	err = RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider"), 
 		TEXT("FlushTimer"), REG_DWORD,&dwValue,sizeof(DWORD));
+	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
 	dwValue = 0;
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+	err = RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider"), 
 		TEXT("MaximumBuffers"), REG_DWORD,&dwValue,sizeof(DWORD));
+	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
 	dwValue = 0;
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+	err = RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider"), 
 		TEXT("MinimumBuffers"), REG_DWORD,&dwValue,sizeof(DWORD));
+	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
 	dwValue = 1;
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+	err = RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider"), 
 		TEXT("ClockType"), REG_DWORD,&dwValue,sizeof(DWORD));
+	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
 	dwValue = 64;
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+	err = RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider"), 
 		TEXT("MaxFileSize"), REG_DWORD,&dwValue,sizeof(DWORD));
-	dwValue = 1300;
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
+	dwValue = 4864;
+	err = RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider"), 
 		TEXT("LogFileMode"), REG_DWORD,&dwValue,sizeof(DWORD));
+	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
 	dwValue = 5;
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+	err = RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider"), 
 		TEXT("FileCounter"), REG_DWORD,&dwValue,sizeof(DWORD));
+	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
 	dwValue = 0;
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+	err = RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider"), 
 		TEXT("Status"), REG_DWORD,&dwValue,sizeof(DWORD));
-
+	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
 
 	dwValue = 1;
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+	err = RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"), 
 		TEXT("Enabled"), REG_DWORD,&dwValue,sizeof(DWORD));
+	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
 	dwValue = 5;
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+	err = RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"), 
 		TEXT("EnableLevel"), REG_DWORD,&dwValue,sizeof(DWORD));
+	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
 	dwValue = 0;
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+	err = RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"), 
 		TEXT("EnableProperty"), REG_DWORD,&dwValue,sizeof(DWORD));
+	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
 	dwValue = 0;
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+	err = RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"), 
 		TEXT("Status"), REG_DWORD,&dwValue,sizeof(DWORD));
-	
+	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
 	qdwValue = 0;
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+	err = RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"), 
 		TEXT("MatchAllKeyword"), REG_QWORD,&qdwValue,sizeof(DWORD64));
+	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
 	qdwValue = 0;
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+	err = RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"), 
 		TEXT("MatchAnyKeyword"), REG_QWORD,&qdwValue,sizeof(DWORD64));
-	
+	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
+	StartLogging();
 }
 
 void DisableLogging()
 {
-	RegDeleteTree(HKEY_LOCAL_MACHINE, TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider"));
+	
+	LONG err = RegDeleteTree(HKEY_LOCAL_MACHINE, TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider"));
+	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
+	StopLogging();
 }
 
 void BEID_Patch()

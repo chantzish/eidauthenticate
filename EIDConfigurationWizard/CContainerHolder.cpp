@@ -14,9 +14,9 @@
 #define CHECK_SUCCESS 2
 #define CHECK_INFO 3
 
-#define CHECK_USERNAME 0
-#define CHECK_TRUST 1
-#define CHECK_CRYPTO 2
+//#define CHECK_USERNAME 0
+#define CHECK_TRUST 0
+#define CHECK_CRYPTO 1
 
 
 #define ERRORTOTEXT(ERROR) case ERROR: LoadString( g_hinst,IDS_##ERROR, szName, dwSize);                 break;
@@ -50,7 +50,7 @@ CContainerHolderTest::CContainerHolderTest(CContainer* pContainer)
 	_pContainer = pContainer;
 	_IsTrusted = IsTrusted();
 	_SupportEncryption = SupportEncryption();
-	_HasCurrentUserName = HasCurrentUserName();
+	//_HasCurrentUserName = HasCurrentUserName();
 }
 
 CContainerHolderTest::~CContainerHolderTest()
@@ -67,7 +67,7 @@ void CContainerHolderTest::Release()
 
 DWORD CContainerHolderTest::GetIconIndex()
 {
-	if (_IsTrusted && _HasCurrentUserName)
+	if (_IsTrusted)// && _HasCurrentUserName)
 	{
 		return 1;
 	}
@@ -99,14 +99,14 @@ BOOL CContainerHolderTest::SupportEncryption()
 	}
 	return fReturn;
 }
-
+/*
 BOOL CContainerHolderTest::HasCurrentUserName()
 {
 	TCHAR szUserName[1024] = TEXT("");
 	DWORD dwSize = ARRAYSIZE(szUserName);
 	GetUserName(szUserName, &dwSize);
 	return _tcscmp(_pContainer->GetUserName(),szUserName)==0;
-}
+}*/
 
 CContainer* CContainerHolderTest::GetContainer()
 {
@@ -115,19 +115,19 @@ CContainer* CContainerHolderTest::GetContainer()
 
 int CContainerHolderTest::GetCheckCount()
 {
-	return 3;
+	return 2;//3;
 }
 int CContainerHolderTest::GetImage(DWORD dwCheckNum)
 {
 	
 	switch(dwCheckNum)
 	{
-	case CHECK_USERNAME: 
+	/*case CHECK_USERNAME: 
 		if (_HasCurrentUserName)
 			return CHECK_SUCCESS;
 		else
 			return CHECK_FAILED;
-		break;
+		break;*/
 	case CHECK_TRUST: 
 		if (_IsTrusted)
 			return CHECK_SUCCESS;
@@ -146,17 +146,17 @@ int CContainerHolderTest::GetImage(DWORD dwCheckNum)
 PTSTR CContainerHolderTest::GetDescription(DWORD dwCheckNum)
 {
 	DWORD dwWords = 1024;
-	PTSTR szDescription = (PTSTR) malloc(dwWords * sizeof(TCHAR));
+	PTSTR szDescription = (PTSTR) EIDAlloc(dwWords * sizeof(TCHAR));
 	if (!szDescription) return NULL;
 	szDescription[0] = 0;
 	switch(dwCheckNum)
 	{
-	case CHECK_USERNAME: 
+	/*case CHECK_USERNAME: 
 		if (_HasCurrentUserName)
 			LoadString(g_hinst,IDS_04USERNAMEOK,szDescription, dwWords);
 		else
 			LoadString(g_hinst,IDS_04USERNAMENOK,szDescription, dwWords);
-		break;
+		break;*/
 	case CHECK_TRUST: 
 		if (_IsTrusted)
 			LoadString(g_hinst,IDS_04TRUSTOK,szDescription, dwWords);
@@ -181,17 +181,17 @@ PTSTR CContainerHolderTest::GetDescription(DWORD dwCheckNum)
 PTSTR CContainerHolderTest::GetSolveDescription(DWORD dwCheckNum)
 {
 	DWORD dwWords = 1024;
-	PTSTR szDescription = (PTSTR) malloc(dwWords * sizeof(TCHAR));
+	PTSTR szDescription = (PTSTR) EIDAlloc(dwWords * sizeof(TCHAR));
 	if (!szDescription) return NULL;
 	szDescription[0] = 0;
 	switch(dwCheckNum)
 	{
-	case CHECK_USERNAME: 
+	/*case CHECK_USERNAME: 
 		if (!_HasCurrentUserName)
 		{
 			LoadString(g_hinst,IDS_04USERNAMERENAME,szDescription, dwWords);
 		}
-		break;
+		break;*/
 	case CHECK_TRUST: 
 		if (!_IsTrusted)
 		{
@@ -216,7 +216,7 @@ BOOL CContainerHolderTest::Solve(DWORD dwCheckNum)
 	DWORD dwError = 0;
 	switch(dwCheckNum)
 	{
-	case CHECK_USERNAME:
+	/*case CHECK_USERNAME:
 		//WinExec("control /name Microsoft.UserAccounts /page pageRenameMyAccount", SW_NORMAL);
 		{
 			
@@ -263,7 +263,7 @@ BOOL CContainerHolderTest::Solve(DWORD dwCheckNum)
 			}
 		}
 		fReturn = TRUE;
-		break;
+		break;*/
 	case CHECK_TRUST:
 		switch (_dwTrustError)
 		{

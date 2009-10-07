@@ -13,11 +13,11 @@ BEGIN
     BEGIN
       VALUE "CompanyName", "eidauthenticate.sourceforge.net\0"
       VALUE "FileDescription", "Configuration Wizard\0"
-      VALUE "FileVersion", "0.2.1.0\0"
+      VALUE "FileVersion", "0.3.0.0\0"
       VALUE "InternalName", "EIDConfigurationWizard.exe\0"
       VALUE "OriginalFilename", "EIDConfigurationWizard.exe\0"
       VALUE "ProductName", "EID Configuration Wizard\0"
-      VALUE "ProductVersion", "0.2.1.0\0"
+      VALUE "ProductVersion", "0.3.0.0\0"
     END
   END
   BLOCK "VarFileInfo"

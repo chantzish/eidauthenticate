@@ -101,7 +101,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 			}
 			DWORD dwSize = 0;
 			CryptStringToBinary(pszCommandLine[1],0,CRYPT_STRING_BASE64,NULL,&dwSize,NULL,NULL);
-			PBYTE pbCertificate = (PBYTE) malloc(dwSize);
+			PBYTE pbCertificate = (PBYTE) EIDAlloc(dwSize);
 			CryptStringToBinary(pszCommandLine[1],0,CRYPT_STRING_BASE64,pbCertificate,&dwSize,NULL,NULL);
 			PCCERT_CONTEXT pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING,pbCertificate, dwSize);
 			if (pCertContext)
@@ -109,7 +109,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 				MakeTrustedCertifcate(pCertContext);
 				CertFreeCertificateContext(pCertContext);
 			}
-			free(pbCertificate);
+			EIDFree(pbCertificate);
 			return 0;
 		} 
 		else if (_tcscmp(pszCommandLine[0],TEXT("RENAMEUSER")) == 0)
