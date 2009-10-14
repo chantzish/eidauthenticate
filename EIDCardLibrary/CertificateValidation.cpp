@@ -26,7 +26,8 @@
 
 PCCERT_CONTEXT GetCertificateFromCspInfo(__in PEID_SMARTCARD_CSP_INFO pCspInfo)
 {
-	
+	// for TS Smart Card redirection
+	EIDImpersonate();
 	if (_tcscmp(pCspInfo->bBuffer + pCspInfo->nCSPNameOffset,TBEIDCSP ) == 0)
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"GetBEIDCertificateFromCspInfo");
@@ -98,6 +99,8 @@ PCCERT_CONTEXT GetCertificateFromCspInfo(__in PEID_SMARTCARD_CSP_INFO pCspInfo)
 		if (hProv) 
 			CryptReleaseContext(hProv,0);
 	}
+	// for TS Smart Card redirection
+	EIDRevertToSelf();
 	SetLastError(dwError);
 	return pCertContext;
 }

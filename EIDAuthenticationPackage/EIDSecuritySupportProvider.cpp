@@ -34,6 +34,10 @@
 #include "../EIDCardLibrary/CredentialManagement.h"
 #include "../EIDCardLibrary/CompleteToken.h"
 
+void SetAlloc(PLSA_ALLOCATE_LSA_HEAP AllocateLsaHeap);
+void SetFree(PLSA_FREE_LSA_HEAP FreeHeap);
+void SetImpersonate(PLSA_IMPERSONATE_CLIENT Impersonate);
+
 extern "C"
 {
 	// Save LsaDispatchTable
@@ -44,6 +48,7 @@ extern "C"
 	BOOL DoUnicode = TRUE; 
 	LUID PackageUid;
 	void initializeExportedFunctionsTable(PSECPKG_FUNCTION_TABLE exportedFunctions);
+
 
 	TimeStamp Forever = {0x7fffffff,0xfffffff};
 	TimeStamp Never = {0,0};
@@ -95,6 +100,9 @@ extern "C"
 		UNREFERENCED_PARAMETER(PackageId);
 		MyParameters = Parameters;
 		MyLsaDispatchTable = FunctionTable;
+		SetAlloc(MyLsaDispatchTable->AllocateLsaHeap);
+		SetFree(MyLsaDispatchTable->FreeLsaHeap);
+		SetImpersonate(MyLsaDispatchTable->ImpersonateClient);
 		AllocateLocallyUniqueId(&PackageUid);
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave");
 		return STATUS_SUCCESS;
@@ -205,6 +213,7 @@ extern "C"
 	{
 		UNREFERENCED_PARAMETER(phContext);
 		UNREFERENCED_PARAMETER(pInput);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
 		return(STATUS_SUCCESS);
 
 	}
@@ -236,7 +245,7 @@ extern "C"
 		  __in   PVOID AuthorizationData,
 		  __in   PVOID GetKeyFunction,
 		  __in   PVOID GetKeyArgument,
-		  __out  PLSA_SEC_HANDLE CredentialHandle,
+		  __out  PLSA_SEC_HANDLE pCredentialHandle,
 		  __out  PTimeStamp ExpirationTime
 		)
 	{
@@ -300,6 +309,7 @@ extern "C"
 				if (!ClientInfo.HasTcbPrivilege) 
 				{ 
 					Status = STATUS_PRIVILEGE_NOT_HELD; 
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"STATUS_PRIVILEGE_NOT_HELD"); 
 					__leave;
 				} 
 				LogonIdToUse = LogonId; 
@@ -445,13 +455,18 @@ extern "C"
 					MultiByteToWideChar(CP_ACP, 0, (PSTR) szPassword, -1, szPasswordW, pAuthIdentity->PasswordLength + 1);
 				}
 			}
+			else
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"No Authorization data"); 
+			}
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"CreateCredential"); 
 			pCredential = CCredential::CreateCredential(LogonIdToUse,pCertInfo, szPasswordW, CredentialUseFlags);
 			if (!pCredential)
 			{
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"AllocateLsaHeap"); 
 					__leave;
 			}
-			*CredentialHandle = (LSA_SEC_HANDLE) pCredential;
+			*pCredentialHandle = (LSA_SEC_HANDLE) pCredential;
 			*ExpirationTime = Forever;
 		}
 		__finally
@@ -473,7 +488,7 @@ extern "C"
 			if (pAuthIdentityEx)
 				MyLsaDispatchTable->FreeLsaHeap(pAuthIdentityEx);
 		}
-			
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Credential %p Status = 0x%08x",*pCredentialHandle, Status);
 
 		return Status;
 	}
@@ -483,10 +498,10 @@ extern "C"
 		__in LSA_SEC_HANDLE                 CredentialHandle        // Handle to free
     )
 	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Credential %d",CredentialHandle);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Credential %p",CredentialHandle);
 		if (!CCredential::Delete(CredentialHandle))
 		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Credential %d not found",CredentialHandle);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Credential %p not found",CredentialHandle);
 			return(STATUS_INVALID_HANDLE);
 		}
 		return(STATUS_SUCCESS);
@@ -729,7 +744,7 @@ extern "C"
 				CCredential* pCredential = CCredential::GetCredentialFromHandle(CredentialHandle);
 				if (pCredential == NULL)
 				{
-					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pCredential = %d",pCredential);
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pCredential = %p",pCredential);
 					Status = SEC_E_UNKNOWN_CREDENTIALS;
 					__leave;
 				}
@@ -781,19 +796,18 @@ extern "C"
 
 	NTSTATUS NTAPI SpCreateToken(DWORD dwRid, PHANDLE phToken)
 	{
-		NTSTATUS Status = STATUS_SUCCESS, SubStatus;
-		PLUID LogonId = NULL;
-		TOKEN_GROUPS tokenGroups = { 0};
+		NTSTATUS Status = STATUS_SUCCESS, SubStatus = STATUS_SUCCESS;
+		LUID LogonId;
 		TOKEN_SOURCE tokenSource = { "EIDAuth", PackageUid};
 		UNICODE_STRING AccountName;
 		UNICODE_STRING AuthorityName;
 		UNICODE_STRING Workstation;
 		UNICODE_STRING ProfilePath;
+		UNICODE_STRING Prefix = {0,0,NULL};
 		PLSA_TOKEN_INFORMATION_V2 MyTokenInformation = NULL;
 		DWORD TokenLength;
 		WCHAR szComputer[256];
 		WCHAR szUserName[256];
-		WCHAR szDomaineName[256];
 		DWORD dwSize;
 		USER_INFO_3 *pInfo = NULL;
 		DWORD dwEntriesRead, dwTotalEntries;
@@ -801,6 +815,7 @@ extern "C"
 		DWORD dwI;
 		__try
 		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
 			// create session
 			if (!phToken)
 			{
@@ -832,34 +847,21 @@ extern "C"
 			dwSize = ARRAYSIZE(szComputer);
 			GetComputerNameW(szComputer, &dwSize);
 			Workstation.Buffer = szComputer;
-			AuthorityName.Buffer = szDomaineName;
+			AuthorityName.Buffer = szComputer;
 			Workstation.Length = Workstation.MaximumLength = (USHORT) (wcslen(szComputer) * sizeof(WCHAR));
-			AuthorityName.Length = AuthorityName.MaximumLength = (USHORT) (wcslen(szDomaineName) * sizeof(WCHAR));
-				
+			AuthorityName.Length = AuthorityName.MaximumLength = (USHORT) (wcslen(szComputer) * sizeof(WCHAR));
 			AccountName.Buffer = szUserName;
 			AccountName.Length = AccountName.MaximumLength = (USHORT)(wcslen(szUserName) * sizeof(WCHAR));
-			Status = AllocateLocallyUniqueId (LogonId);
-			if (Status != STATUS_SUCCESS)
-			{
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"No Memory logon_id");
-				__leave;
-			}
-			Status = MyLsaDispatchTable->CreateLogonSession(LogonId);
-			if (Status != STATUS_SUCCESS)
-			{
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CreateLogonSession = 0x%08X",Status);
-				__leave;
-			}
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"TokenInformation ?");
-			Status = UserNameToToken(&AccountName,(PLSA_DISPATCH_TABLE)MyLsaDispatchTable,
-						&MyTokenInformation,&TokenLength, &SubStatus);
+			ProfilePath.Length = ProfilePath.MaximumLength = (USHORT)(wcslen(pInfo[dwI].usri3_profile) * sizeof(WCHAR));
+			ProfilePath.Buffer = pInfo[dwI].usri3_profile;
+			Status = MyLsaDispatchTable->GetAuthDataForUser((PSECURITY_STRING)&AccountName, SecNameSamCompatible, (PSECURITY_STRING)&Prefix, (PUCHAR*) &MyTokenInformation, &TokenLength, NULL);
 			if (Status != STATUS_SUCCESS) 
 			{
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"UserNameToToken failed 0x%08X 0x%08X",Status, SubStatus);
 				__leave;
 			}
-			Status = MyLsaDispatchTable->CreateToken(LogonId, &tokenSource, Network, SecurityImpersonation, 
-				LsaTokenInformationV2, MyTokenInformation, &tokenGroups, &AccountName, &AuthorityName, &Workstation, &ProfilePath, phToken, &SubStatus);
+						Status = MyLsaDispatchTable->ConvertAuthDataToToken(MyTokenInformation, TokenLength, SecurityImpersonation, &tokenSource,
+							Network, &AuthorityName, phToken, &LogonId,&AccountName, &SubStatus);
 			if (Status != STATUS_SUCCESS) 
 			{
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CreateToken failed 0x%08X 0x%08X",Status, SubStatus);
@@ -870,8 +872,6 @@ extern "C"
 		{
 			if (pInfo)
 				NetApiBufferFree(pInfo);
-			if (MyTokenInformation)
-				MyLsaDispatchTable->FreeLsaHeap(MyTokenInformation);
 		}
 		return Status;
 	}
@@ -912,7 +912,7 @@ extern "C"
 				CCredential* pCredential = CCredential::GetCredentialFromHandle(CredentialHandle);
 				if (pCredential == NULL)
 				{
-					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pCredential = %d",pCredential);
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pCredential = %p",pCredential);
 					Status = SEC_E_UNKNOWN_CREDENTIALS;
 					__leave;
 				}
@@ -932,7 +932,7 @@ extern "C"
 				CSecurityContext* currentContext = CSecurityContext::GetContextFromHandle(ContextHandle);
 				if (currentContext == NULL)
 				{
-					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"currentContext = %d",currentContext);
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"currentContext = %p",currentContext);
 					Status = SEC_E_INVALID_HANDLE;
 					__leave;
 				}

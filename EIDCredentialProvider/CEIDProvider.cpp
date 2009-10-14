@@ -211,7 +211,7 @@ STDMETHODIMP CEIDProvider::SetSerialization(
     )
 {
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"");
-	if (_dwFlags | CREDUIWIN_AUTHPACKAGE_ONLY)
+	if (_dwFlags & CREDUIWIN_AUTHPACKAGE_ONLY)
 	{
 		if (pcpcs->ulAuthenticationPackage > 0)
 		{

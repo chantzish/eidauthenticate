@@ -88,7 +88,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
 	hInst = hInstance;
-	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF|_CRTDBG_CHECK_ALWAYS_DF|_CRTDBG_CHECK_CRT_DF|_CRTDBG_DELAY_FREE_MEM_DF);
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF| _CRTDBG_LEAK_CHECK_DF);
 	
 	int iNumArgs;
 	LPWSTR *pszCommandLine =  CommandLineToArgvW(lpCmdLine,&iNumArgs);
@@ -106,7 +106,6 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	}
 
     DialogBox (hInst, MAKEINTRESOURCE (IDD_MAIN), 0, WndProc);
-	//_CrtDumpMemoryLeaks();
     return 0;
 
 }
@@ -128,6 +127,7 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	SHSTOCKICONINFO sii = {0};
 	HICON g_hShieldIcon;
 	MENUITEMINFO mii= {0};
+	HMENU hmenu;
 	switch (message)
 	{
 	case WM_INITDIALOG:
@@ -144,7 +144,9 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		
 		SetMenuItemInfo(GetMenu(hWnd), IDM_CRED_RP_TRIGGER, FALSE, &mii);
 		SetMenuItemInfo(GetMenu(hWnd), IDM_INFO_TRACING, FALSE, &mii);
-
+		// default authentication mean
+		CheckMenuRadioItem(GetMenu(hWnd),IDM_CRED_LSA,IDM_CRED_CredSSP,IDM_CRED_SSPI,MF_BYCOMMAND);
+		SetAuthentication(SSPI);
 		return TRUE;
 		break;
 
@@ -212,6 +214,21 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		case IDM_CRED_RP_TRIGGER:
 			menu_CRED_RP_Trigger();
+			break;
+		case IDM_CRED_LSA:
+			hmenu = GetMenu(hWnd);
+			CheckMenuRadioItem(hmenu,IDM_CRED_LSA,IDM_CRED_CredSSP,IDM_CRED_LSA,MF_BYCOMMAND);
+			SetAuthentication(LSA);
+			break;
+		case IDM_CRED_SSPI:
+			hmenu = GetMenu(hWnd);
+			CheckMenuRadioItem(hmenu,IDM_CRED_LSA,IDM_CRED_CredSSP,IDM_CRED_SSPI,MF_BYCOMMAND);
+			SetAuthentication(SSPI);
+			break;
+		case IDM_CRED_CredSSP:
+			hmenu = GetMenu(hWnd);
+			CheckMenuRadioItem(hmenu,IDM_CRED_LSA,IDM_CRED_CredSSP,IDM_CRED_CredSSP,MF_BYCOMMAND);
+			SetAuthentication(CredSSP);
 			break;
 		case IDM_CRED_UI:
 			Menu_CREDENTIALUID();

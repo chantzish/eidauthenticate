@@ -8,6 +8,7 @@
 #include <credentialprovider.h>
 #define SECURITY_WIN32
 #include <Security.h>
+#include <sspi.h>
 
 #include "../EIDCardLibrary/EIDCardLibrary.h"
 #include "../EIDCardLibrary/Tracing.h"
@@ -18,6 +19,15 @@
 
 #pragma comment(lib,"Credui")
 extern HWND hMainWnd;
+
+#include "EIDCredentialProviderTest.h"
+
+AuthenticationType authenticationType;
+
+void SetAuthentication(AuthenticationType type)
+{
+	authenticationType = type;
+}
 
 BOOL AuthenticateWithLsaLogonUser(LONG authPackage, PVOID authBuffer, DWORD authBufferSize)
 {
@@ -112,20 +122,20 @@ BOOL AuthenticateWithSSPI(PTSTR szPrincipal, PTSTR szPassword, PTSTR szSSP)
 
 	__try
 	{
-		err = AcquireCredentialsHandle(NULL, szSSP, SECPKG_CRED_OUTBOUND,
+		err = AcquireCredentialsHandle(NULL, szSSP, SECPKG_CRED_OUTBOUND | SECPKG_CRED_INBOUND,
 											0, &authIdent, 0, 0,
 											&hcredClient, &expiryClient);
 		if (err != SEC_E_OK)
 		{
 			__leave;
 		}
-		AcquireCredentialsHandle(0, szSSP, SECPKG_CRED_INBOUND,
+		/*AcquireCredentialsHandle(0, szSSP, SECPKG_CRED_INBOUND,
 											  0, 0, 0, 0, &hcredServer,
 											  &expiryServer);
 		if (err != SEC_E_OK)
 		{
 			__leave;
-		}
+		}*/
 
 		// since the caller is acting as the server, we need
 		// a server principal name so that the client will
@@ -165,7 +175,7 @@ BOOL AuthenticateWithSSPI(PTSTR szPrincipal, PTSTR szPassword, PTSTR szSSP)
 			if (bServerContinue) {
 				sbufS2C.cbBuffer = sizeof bufS2C;
 				err = AcceptSecurityContext(
-					&hcredServer, pServerCtxHandleIn,
+					&hcredClient, pServerCtxHandleIn,
 					pServerInput,
 					grfRequiredCtxAttrsServer,
 					SECURITY_NATIVE_DREP,
@@ -351,7 +361,7 @@ void menu_CREDENTIALUID_OldBehavior()
 		FALSE, 0);
 	if (dwStatus == NO_ERROR)
 	{
-		if (!AuthenticateWithSSPI(szUsername, szPassword, TEXT("Negotiate")))
+		if (!AuthenticateWithSSPI(szUsername, szPassword,AUTHENTICATIONPACKAGENAMET))
 		{
 			MessageBoxWin32(GetLastError());
 		}

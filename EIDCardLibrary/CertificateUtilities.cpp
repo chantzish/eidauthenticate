@@ -140,7 +140,7 @@ PCCERT_CONTEXT SelectFirstCertificateWithPrivateKey()
 		{
 			
 			PBYTE KeySpec = NULL;
-			DWORD dwSize = 0;
+			dwSize = 0;
 			if (CertGetCertificateContextProperty(pCertContext,CERT_KEY_PROV_INFO_PROP_ID,KeySpec,&dwSize))
 			{
 				//The certificate has a private key
@@ -1068,18 +1068,18 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 				if (_tcscmp(szProviderName,MS_SCARD_PROV) == 0)
 				{
 					// check if MS Base crypto allow the import. If not, enable it
-					HKEY hKey;
+					HKEY hRegKey;
 					DWORD dwKeyData = 0;
-					DWORD dwSize = sizeof(DWORD);
-					if (RegOpenKey(HKEY_CLASSES_ROOT, TEXT("SOFTWARE\\Microsoft\\Cryptography\\Defaults\\Provider\\Microsoft Base Smart Card Crypto Provider"), &hKey))
+					dwSize = sizeof(DWORD);
+					if (RegOpenKey(HKEY_CLASSES_ROOT, TEXT("SOFTWARE\\Microsoft\\Cryptography\\Defaults\\Provider\\Microsoft Base Smart Card Crypto Provider"), &hRegKey))
 					{
 						if (dwKeySpec == AT_SIGNATURE)
 						{
-							RegQueryValueEx(hKey,TEXT("AllowPrivateSignatureKeyImport"),NULL, NULL,(PBYTE)&dwKeyData,&dwSize);
+							RegQueryValueEx(hRegKey,TEXT("AllowPrivateSignatureKeyImport"),NULL, NULL,(PBYTE)&dwKeyData,&dwSize);
 						}
 						else
 						{
-							RegQueryValueEx(hKey,TEXT("AllowPrivateExchangeKeyImport"),NULL, NULL,(PBYTE)&dwKeyData,&dwSize);
+							RegQueryValueEx(hRegKey,TEXT("AllowPrivateExchangeKeyImport"),NULL, NULL,(PBYTE)&dwKeyData,&dwSize);
 						}
 						if (!dwKeyData)
 						{
@@ -1087,14 +1087,14 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 							dwKeyData = 1;
 							if (dwKeySpec == AT_SIGNATURE)
 							{
-								RegSetValueEx(hKey,TEXT("AllowPrivateSignatureKeyImport"),NULL, REG_DWORD,(PBYTE)&dwKeyData,dwSize);
+								RegSetValueEx(hRegKey,TEXT("AllowPrivateSignatureKeyImport"),NULL, REG_DWORD,(PBYTE)&dwKeyData,dwSize);
 							}
 							else
 							{
-								RegSetValueEx(hKey,TEXT("AllowPrivateExchangeKeyImport"),NULL, REG_DWORD,(PBYTE)&dwKeyData,dwSize);
+								RegSetValueEx(hRegKey,TEXT("AllowPrivateExchangeKeyImport"),NULL, REG_DWORD,(PBYTE)&dwKeyData,dwSize);
 							}
 						}
-						RegCloseKey(hKey);
+						RegCloseKey(hRegKey);
 					}
 
 				}
@@ -1173,20 +1173,20 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 			CloseHandle(hFile);
 		if (fSetBackMSBaseSCCryptoFlagImport)
 		{
-			HKEY hKey;
+			HKEY hRegKey;
 			DWORD dwKeyData = 0;
-			DWORD dwSize = sizeof(DWORD);
-			if (RegOpenKey(HKEY_CLASSES_ROOT, TEXT("SOFTWARE\\Microsoft\\Cryptography\\Defaults\\Provider\\Microsoft Base Smart Card Crypto Provider"), &hKey))
+			dwSize = sizeof(DWORD);
+			if (RegOpenKey(HKEY_CLASSES_ROOT, TEXT("SOFTWARE\\Microsoft\\Cryptography\\Defaults\\Provider\\Microsoft Base Smart Card Crypto Provider"), &hRegKey))
 			{
 				if (dwKeySpec == AT_SIGNATURE)
 				{
-					RegSetValueEx(hKey,TEXT("AllowPrivateSignatureKeyImport"),NULL, REG_DWORD,(PBYTE)&dwKeyData,dwSize);
+					RegSetValueEx(hRegKey,TEXT("AllowPrivateSignatureKeyImport"),NULL, REG_DWORD,(PBYTE)&dwKeyData,dwSize);
 				}
 				else
 				{
-					RegSetValueEx(hKey,TEXT("AllowPrivateExchangeKeyImport"),NULL, REG_DWORD,(PBYTE)&dwKeyData,dwSize);
+					RegSetValueEx(hRegKey,TEXT("AllowPrivateExchangeKeyImport"),NULL, REG_DWORD,(PBYTE)&dwKeyData,dwSize);
 				}
-				RegCloseKey(hKey);
+				RegCloseKey(hRegKey);
 			}
 		}
 	}
@@ -1196,11 +1196,203 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 
 // find certificate using its hash
 
+PCCERT_CONTEXT FindCertificateFromHashOnCard(PCRYPT_DATA_BLOB pCertInfo, PTSTR szReaderName, PTSTR szProviderName)
+{
+	PCCERT_CONTEXT pCertContext = NULL;
+	HCRYPTPROV HCryptProv = NULL, hProv = NULL;
+	TCHAR szMainContainerName[1024];
+	DWORD dwContainerNameLen = ARRAYSIZE(szMainContainerName);
+	CHAR szContainerName[1024];
+	DWORD dwError = 0;
+	DWORD pKeySpecs[2] = {AT_KEYEXCHANGE,AT_SIGNATURE};
+	HCRYPTKEY hKey = NULL;
+	__try
+	{
+		if (!pCertInfo)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pCertInfo null");
+			__leave;
+		}
+		_stprintf_s(szMainContainerName, dwContainerNameLen, TEXT("\\\\.\\%s\\"), szReaderName);
+		if (!CryptAcquireContext(&HCryptProv,
+					szMainContainerName,
+					szProviderName,
+					PROV_RSA_FULL,
+					CRYPT_SILENT))
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptGetUserKey 0x%08x",dwError);
+			__leave;
+		}
+		DWORD dwFlags = CRYPT_FIRST;
+		/* Enumerate all the containers */
+		while (CryptGetProvParam(HCryptProv,
+					PP_ENUMCONTAINERS,
+					(LPBYTE) szContainerName,
+					&dwContainerNameLen,
+					dwFlags)
+				)
+		{
+			// convert the container name to unicode
+	#ifdef UNICODE
+			int wLen = MultiByteToWideChar(CP_ACP, 0, szContainerName, -1, NULL, 0);
+			LPTSTR szWideContainerName = (LPTSTR) EIDAlloc(sizeof(TCHAR)*wLen);
+			if (szWideContainerName)
+			{
+				MultiByteToWideChar(CP_ACP, 0, szContainerName, -1, szWideContainerName, wLen);
+	#else
+			LPTSTR szWideContainerName = (LPTSTR) EIDAlloc(sizeof(TCHAR)*(_tcslen(szContainerName)+1));
+			if (szWideContainerName)
+				{
+				_tcscpy_s(szWideContainerName,_tcslen(szContainerName)+1,szContainerName);
+
+	#endif
+				// create a CContainer item
+				if (CryptAcquireContext(&hProv,
+					szWideContainerName,
+					szProviderName,
+					PROV_RSA_FULL,
+					CRYPT_SILENT))
+				{
+					for (DWORD i = 0; i < ARRAYSIZE(pKeySpecs); i++)
+					{
+						if (CryptGetUserKey(hProv,
+								pKeySpecs[i],
+								&hKey) )
+						{
+							BYTE Data[4096];
+							DWORD DataSize = 4096;
+							if (CryptGetKeyParam(hKey,
+									KP_CERTIFICATE,
+									Data,
+									&DataSize,
+									0))
+							{
+								BYTE pbHash[100];
+								DWORD dwHashSize = ARRAYSIZE(pbHash);
+								PCCERT_CONTEXT pTempContext = CertCreateCertificateContext(X509_ASN_ENCODING ,Data,DataSize);
+								if (CryptHashCertificate(NULL, 0, 0, Data, DataSize, (PBYTE) &pbHash, &dwHashSize))
+								{
+									if (memcmp(pbHash, pCertInfo->pbData, pCertInfo->cbData) == 0)
+									{
+										// found
+										pCertContext = pTempContext;
+										CRYPT_KEY_PROV_INFO KeyProvInfo;
+										KeyProvInfo.dwFlags = 0;
+										KeyProvInfo.dwKeySpec = pKeySpecs[i];
+										KeyProvInfo.dwProvType = PROV_RSA_FULL;
+										KeyProvInfo.pwszContainerName = (LPTSTR) szWideContainerName;
+										KeyProvInfo.pwszProvName = (LPTSTR) szProviderName;
+										KeyProvInfo.rgProvParam = 0;
+										KeyProvInfo.cProvParam = NULL;
+										CertSetCertificateContextProperty(pCertContext, CERT_KEY_PROV_INFO_PROP_ID, 0, &KeyProvInfo);
+										__leave;
+									}
+								}
+								else
+								{
+									dwError = GetLastError();
+									EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptHashPublicKeyInfo 0x%08x",dwError);
+								}
+							}
+						CryptDestroyKey(hKey);
+						hKey = NULL;
+						}
+					}
+				}
+				CryptReleaseContext(hProv, 0);
+				hProv = NULL;
+			}
+			dwFlags = CRYPT_NEXT;
+			dwContainerNameLen = 1024;
+			EIDFree(szWideContainerName);
+		}
+	
+	}
+	__finally
+	{
+		if (hKey)
+			CryptDestroyKey(hKey);
+		if (hProv)
+			CryptReleaseContext(hProv,0);
+		if (HCryptProv)
+			CryptReleaseContext(HCryptProv,0);
+	}
+	SetLastError(dwError);
+	return pCertContext;
+}
+
+PCCERT_CONTEXT FindCertificateFromHashInReader(PCRYPT_DATA_BLOB pCertInfo, SCARDCONTEXT hSCardContext, PTSTR szReader)
+{
+	PCCERT_CONTEXT pCertContext = NULL;
+	LONG Status = 0;
+	SCARDHANDLE hCard = NULL;
+	DWORD dwProto;
+	DWORD dwState;
+	LPTSTR szReaders = NULL;
+	DWORD dwSize = SCARD_AUTOALLOCATE;
+	PBYTE pbAtr = NULL;
+	DWORD dwAtrSize = SCARD_AUTOALLOCATE;
+	LPTSTR szCards = NULL;
+	DWORD dwCardSize = SCARD_AUTOALLOCATE;
+	LPTSTR szProvider = NULL;
+	DWORD dwProviderSize = SCARD_AUTOALLOCATE;
+	__try
+	{
+		Status = SCardConnect(hSCardContext, szReader, SCARD_SHARE_SHARED, SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1, &hCard, &dwProto);
+		if (Status != SCARD_S_SUCCESS)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SCardConnect 0x%08x",Status);
+			__leave;
+		}
+		Status = SCardStatus(hCard, (PTSTR) &szReaders, &dwSize, &dwState, &dwProto, (PBYTE)&pbAtr, &dwAtrSize);
+		if (Status != SCARD_S_SUCCESS)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SCardStatus 0x%08x",Status);
+			__leave;
+		}
+		Status = SCardListCards(hSCardContext, pbAtr, NULL, 0, (PTSTR)&szCards, &dwCardSize);
+		if (Status != SCARD_S_SUCCESS)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SCardListCards 0x%08x",Status);
+			__leave;
+		}
+		Status = SCardGetCardTypeProviderName(hSCardContext, szCards, SCARD_PROVIDER_CSP, (PTSTR)&szProvider, &dwProviderSize);
+		if (Status != SCARD_S_SUCCESS)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SCardListCards 0x%08x",Status);
+			__leave;
+		}
+		SCardDisconnect(hCard, 0);
+		hCard = NULL;
+		pCertContext = FindCertificateFromHashOnCard(pCertInfo, szReaders, szProvider);
+	}
+	__finally
+	{
+		if (szProvider)
+			SCardFreeMemory(hSCardContext, szProvider);
+		if (szCards)
+			SCardFreeMemory(hSCardContext, szCards);
+		if (szReaders)
+			SCardFreeMemory(hSCardContext, szReaders);
+		if (pbAtr)
+			SCardFreeMemory(hSCardContext, pbAtr);
+		if (hCard)
+			SCardDisconnect(hCard, 0);
+	}
+	SetLastError(Status);
+	return pCertContext;
+}
+
 PCCERT_CONTEXT FindCertificateFromHash(PCRYPT_DATA_BLOB pCertInfo)
 {
 	PCCERT_CONTEXT pCertContext = NULL;
 	HCERTSTORE hCertStore = NULL;
 	DWORD dwError = 0;
+	LONG Status;
+	SCARDCONTEXT hSCardContext = NULL;
+	DWORD dwReaderCount;
+	LPTSTR szReaders = NULL;
 	__try
 	{
 		// first, try to look into user certificate store
@@ -1218,10 +1410,46 @@ PCCERT_CONTEXT FindCertificateFromHash(PCRYPT_DATA_BLOB pCertInfo)
 			__leave;
 		}
 		// else, look in every smart card
-		DebugBreak();
+		Status = SCardEstablishContext(SCARD_SCOPE_USER,NULL,NULL,&hSCardContext);
+		if (Status != SCARD_S_SUCCESS)
+		{
+			dwError = Status;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SCardEstablishContext 0x%08x",dwError);
+			__leave;
+		}
+		dwReaderCount = SCARD_AUTOALLOCATE;
+		Status = SCardListReaders(hSCardContext, NULL, (LPTSTR)&szReaders, &dwReaderCount);
+		if (Status == SCARD_E_NO_READERS_AVAILABLE)
+		{
+			dwError = Status;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SCardEstablishContext SCARD_E_NO_READERS_AVAILABLE");
+			__leave;
+		}
+		if (Status != SCARD_S_SUCCESS)
+		{
+			dwError = Status;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SCardEstablishContext 0x%08x",dwError);
+			__leave;
+		}
+		LPTSTR szRdr = szReaders;
+		while ( 0 != *szRdr ) 
+		{
+			pCertContext = FindCertificateFromHashInReader(pCertInfo, hSCardContext, szRdr);
+			if (pCertContext)
+			{
+				// OK, found
+				__leave;
+			}
+			szRdr += lstrlen(szRdr) + 1;
+		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Not Found");
 	}
 	__finally
 	{
+		if (szReaders)
+			SCardFreeMemory(hSCardContext, szReaders);
+		if (hSCardContext)
+			SCardReleaseContext(hSCardContext);
 		if (hCertStore)
 			CertCloseStore(hCertStore, 0);
 	}

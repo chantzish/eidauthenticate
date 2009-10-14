@@ -69,10 +69,10 @@ BOOL TestLogon(HWND hMainWnd)
 	RetrieveNegotiateAuthPackage(&authPackage);
 	
 	CoInitializeEx(NULL,COINIT_APARTMENTTHREADED); 
-
+	TCHAR szTitle[256] = TEXT("");
+	TCHAR szMessage[256] = TEXT("");
 	TCHAR szCaption[256] = TEXT("");
 	LoadString(g_hinst, IDS_05CREDINFOCAPTION, szCaption, ARRAYSIZE(szCaption));
-	TCHAR szMessage[256] = TEXT("");
 	LoadString(g_hinst, IDS_05CREDINFOMESSAGE, szMessage, ARRAYSIZE(szMessage));
 	credUiInfo.pszCaptionText = szCaption;
 	credUiInfo.pszMessageText = szMessage;
@@ -95,8 +95,6 @@ BOOL TestLogon(HWND hMainWnd)
 		}
 		else
 		{
-			TCHAR szTitle[256] = TEXT("");
-			TCHAR szMessage[256] = TEXT("");
 			LoadString(g_hinst, IDS_05CREDINFOCONFIRMTITLE, szTitle, ARRAYSIZE(szTitle));
 			LoadString(g_hinst, IDS_05CREDINFOCONFIRMMESSAGE, szMessage, ARRAYSIZE(szMessage));
 			MessageBox(hMainWnd,szMessage,szTitle,0);
@@ -116,7 +114,7 @@ BOOL TestLogon(HWND hMainWnd)
 	{
 		MessageBoxWin32(GetLastError());
 	}
-	CredUIConfirmCredentials(NULL,FALSE);
+	//CredUIConfirmCredentials(NULL,FALSE);
 	return fReturn;
 }
 
@@ -172,6 +170,7 @@ INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPAR
 			SendMessage(GetDlgItem(hWnd,IDC_05REMOVEPOLICYICON),STM_SETICON ,(WPARAM)ShieldIcon,0);
 		}
 		InitListViewListIcon(GetDlgItem(hWnd,IDC_05LIST));
+		SendMessage(GetDlgItem(hWnd,IDC_05TEST), BM_SETCHECK, BST_CHECKED,0);
 		break;
 	case WM_MYMESSAGE:
 		if (fHasDeselected)

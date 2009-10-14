@@ -37,12 +37,14 @@ CCredential* CCredential::CreateCredential(PLUID LogonIdToUse, PCERT_CREDENTIAL_
 	}
 	if (pCertInfo)
 	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"new Credential");
 		credential = new CCredential(LogonIdToUse,pCertInfo,szPin, CredentialUseFlags);
 		Credentials.insert(credential);
 	}
 	else
 	{
 		// find previous credential
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Credential reuse");
 		std::set<CCredential*>::iterator iter;
 		for ( iter = Credentials.begin( ); iter != Credentials.end( ); iter++ )
 		{
@@ -72,6 +74,7 @@ CCredential::CCredential(PLUID LogonIdToUse, PCERT_CREDENTIAL_INFO pCertInfo,PWS
 	_szPin = new WCHAR[_dwLen];
 	wcscpy_s(_szPin,_dwLen, szPin);
 	Use = CredentialUseFlags;
+	// certinfo
 	_pCertInfo = (PCERT_CREDENTIAL_INFO) EIDAlloc(pCertInfo->cbSize);
 	memcpy(_pCertInfo, pCertInfo, pCertInfo->cbSize);
 
@@ -114,6 +117,7 @@ CCredential* CCredential::GetCredentialFromHandle(ULONG_PTR CredentialHandle)
 			return currentCredential;
 		}
 	}
+	EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pCredential = %p not Found",pCredential);
 	return NULL;
 }
 
@@ -301,12 +305,13 @@ NTSTATUS CSecurityContext::BuildChallengeMessage(PSecBufferDesc Buffer)
 	{
 		return SEC_E_UNKNOWN_CREDENTIALS;
 	}
-	if (!manager->GetChallenge(dwRid, &pbChallenge, &dwChallengeSize))
+	if (!manager->GetChallenge(dwRid, &pbChallenge, &dwChallengeSize, &dwChallengeType))
 	{
 		return SEC_E_INTERNAL_ERROR;
 	}
 	message->ChallengeLen = dwChallengeSize;
 	message->ChallengeOffset = sizeof(EID_CHALLENGE_MESSAGE);
+	message->ChallengeType = dwChallengeType;
 	memcpy((PBYTE)message + message->ChallengeOffset, pbChallenge, dwChallengeSize);
 	_State = EIDMSChallenge;
 	return SEC_I_CONTINUE_NEEDED;
@@ -323,6 +328,7 @@ NTSTATUS CSecurityContext::ReceiveChallengeMessage(PSecBufferDesc Buffer)
 	{
 		return STATUS_INVALID_SIGNATURE;
 	}
+	dwChallengeType = message->ChallengeType;
 	pbChallenge = (PBYTE) EIDAlloc(message->ChallengeLen);
 	memcpy(pbChallenge, (PBYTE)message + message->ChallengeOffset, message->ChallengeLen);
 	dwChallengeSize = message->ChallengeLen;
@@ -343,7 +349,7 @@ NTSTATUS CSecurityContext::BuildResponseMessage(PSecBufferDesc Buffer)
 	message->MessageType = EIDMTResponse;
 	message->Version = EID_MESSAGE_VERSION;
 	CStoredCredentialManager* manager = CStoredCredentialManager::Instance();
-	if (!manager->GetResponseFromChallenge(pbChallenge, dwChallengeSize, pCertContext,_pCredential->_szPin, &pbResponse, &dwResponseSize))
+	if (!manager->GetResponseFromChallenge(pbChallenge, dwChallengeSize, dwChallengeType, pCertContext,_pCredential->_szPin, &pbResponse, &dwResponseSize))
 	{
 		return SEC_E_LOGON_DENIED;
 	}
@@ -377,7 +383,7 @@ NTSTATUS CSecurityContext::BuildCompleteMessage(PSecBufferDesc Buffer)
 	// vérification du challenge
 	UNREFERENCED_PARAMETER(Buffer);
 	CStoredCredentialManager* manager = CStoredCredentialManager::Instance();
-	if (!manager->GetPasswordFromChallengeResponse(dwRid, pbResponse, dwResponseSize, &szPassword))
+	if (!manager->GetPasswordFromChallengeResponse(dwRid, pbChallenge, dwChallengeSize, dwChallengeType,pbResponse, dwResponseSize, &szPassword))
 	{
 		return SEC_E_LOGON_DENIED;
 	}

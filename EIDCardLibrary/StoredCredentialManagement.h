@@ -16,12 +16,12 @@
 */
 
  
-enum EID_PRIVATE_DATA_TYPE
+typedef enum EID_PRIVATE_DATA_TYPE
 {
 	eidpdtClearText=1,
 	eidpdtCrypted = 2,
 
-};
+}*PEID_PRIVATE_DATA_TYPE;
 #define CERT_HASH_LENGTH 20
 typedef struct _EID_PRIVATE_DATA
 {
@@ -39,7 +39,6 @@ typedef struct _EID_PRIVATE_DATA
  class CStoredCredentialManager
  {
     // constructeurs/destructeur de OnlyOne accessibles au Singleton
- public:
 public:
 	static CStoredCredentialManager* Instance()
      {
@@ -54,16 +53,21 @@ public:
 	BOOL GetCertContextFromHash(__in PBYTE pbHash, __out PCCERT_CONTEXT* ppContext, __out PDWORD pdwRid);
 	BOOL CreateCredential(__in DWORD dwRid, __in PCCERT_CONTEXT pContext, __in PWSTR szPassword, __in_opt USHORT usPasswordLen, __in BOOL fEncryptPassword);
 	BOOL UpdateCredential(__in DWORD dwRid, __in PWSTR szPassword, __in_opt USHORT usPasswordLen);
-	BOOL GetChallenge(__in DWORD dwRid, __out PBYTE* ppChallenge, __out PDWORD pdwChallengeSize);
-	BOOL GetResponseFromChallenge(__in PBYTE ppChallenge, __in DWORD dwChallengeSize, __in PCCERT_CONTEXT pContext, __in PWSTR szPin, __out PBYTE *ppResponse, __out PDWORD pdwResponseSize);
-	BOOL GetPasswordFromChallengeResponse(__in DWORD dwRid, __in PBYTE pResponse, __in DWORD dwResponseSize, __out PWSTR *pszPassword);
+	BOOL GetChallenge(__in DWORD dwRid, __out PBYTE* ppChallenge, __out PDWORD pdwChallengeSize, __out PDWORD pdwType);
+	BOOL GetResponseFromChallenge(__in PBYTE ppChallenge, __in DWORD dwChallengeSize, __in DWORD dwChallengeType, __in PCCERT_CONTEXT pContext, __in PWSTR szPin, __out PBYTE *ppResponse, __out PDWORD pdwResponseSize);
+	BOOL GetPasswordFromChallengeResponse(__in DWORD dwRid, __in PBYTE ppChallenge, __in DWORD dwChallengeSize, __in DWORD dwChallengeType, __in PBYTE pResponse, __in DWORD dwResponseSize, __out PWSTR *pszPassword);
 	BOOL GetPassword(__in DWORD dwRid, __in PCCERT_CONTEXT pContext, __in PWSTR szPin, __out PWSTR *pszPassword);
 	BOOL RemoveStoredCredential(__in DWORD dwRid);
 	BOOL RemoveAllStoredCredential();
 	BOOL HasStoredCredential(__in DWORD dwRid);
 	BOOL HasStoredCredential(__in PCCERT_CONTEXT pContext);
+	BOOL GetResponseFromSignatureChallenge(__in PBYTE ppChallenge, __in DWORD dwChallengeSize, __in PCCERT_CONTEXT pContext, __in PWSTR szPin, __out PBYTE *ppResponse, __out PDWORD pdwResponseSize);
+	BOOL GetSignatureChallenge(__out PBYTE* ppChallenge, __out PDWORD pdwChallengeSize);
  private:
-	static CStoredCredentialManager* theSingleInstance;
+	static CStoredCredentialManager* theSingleInstance;	
+	BOOL GetResponseFromCryptedChallenge(__in PBYTE ppChallenge, __in DWORD dwChallengeSize, __in PCCERT_CONTEXT pContext, __in PWSTR szPin, __out PBYTE *ppResponse, __out PDWORD pdwResponseSize);
+	BOOL GetPasswordFromCryptedChallengeResponse(__in DWORD dwRid, __in PBYTE ppChallenge, __in DWORD dwChallengeSize, __in PBYTE pResponse, __in DWORD dwResponseSize, __out PWSTR *pszPassword);
+	BOOL GetPasswordFromSignatureChallengeResponse(__in DWORD dwRid, __in PBYTE ppChallenge, __in DWORD dwChallengeSize, __in PBYTE pResponse, __in DWORD dwResponseSize, __out PWSTR *pszPassword);
 	BOOL GetCertContextFromRid(__in DWORD dwRid, __out PCCERT_CONTEXT* ppContext, __out PBOOL fEncryptPassword);
 	BOOL RetrievePrivateData(__in DWORD dwRid, __out PEID_PRIVATE_DATA *ppPrivateData);
 	BOOL StorePrivateData(__in DWORD dwRid, __in_opt PBYTE pbSecret, __in_opt USHORT usSecretSize);
