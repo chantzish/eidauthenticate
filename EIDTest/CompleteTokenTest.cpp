@@ -15,25 +15,19 @@
 
 
 #include "../EIDCardLibrary/EIDCardLibrary.h"
+#include "../EIDCardLibrary/Tracing.h"
 #include "../EIDCardLibrary/CompleteToken.h"
 #include "EIDTestUIUtil.h"
 
 extern HINSTANCE hInst;
 extern HWND hMainWnd;
 
-static PVOID NTAPI EIDCardLibraryTestMyLsaAlloc(ULONG Length) {
-	return EIDAlloc(Length);
-}
-static VOID NTAPI EIDCardLibraryMyLsaFree(PVOID MyPointer) {
-	EIDFree(MyPointer);
-}
 
 void Menu_AP_Token()
 {
 	NTSTATUS Status, SubStatus;
 	LSA_UNICODE_STRING UserName;
 	LSA_UNICODE_STRING ComputerName;
-	LSA_DISPATCH_TABLE FunctionTable;
 	PLSA_TOKEN_INFORMATION_V2 TokenInformation;
 	DWORD TokenLength;
 	WCHAR UserNameBuffer[UNLEN+1];
@@ -50,22 +44,19 @@ void Menu_AP_Token()
 	ComputerName.Length = (USHORT) wcslen(ComputerNameBuffer)*sizeof(WCHAR);
 	ComputerName.MaximumLength = (USHORT) ComputerName.Length+sizeof(WCHAR);
 
-	// function table
-	FunctionTable.AllocateLsaHeap = (PLSA_ALLOCATE_LSA_HEAP)EIDCardLibraryTestMyLsaAlloc;
-	FunctionTable.FreeLsaHeap = (PLSA_FREE_LSA_HEAP)EIDCardLibraryMyLsaFree;
 
 	// call function
-	Status = UserNameToToken(&UserName,&FunctionTable,&TokenInformation,&TokenLength, &SubStatus);
+	Status = UserNameToToken(&UserName,&TokenInformation,&TokenLength, &SubStatus);
 	//Status = GetTokenInformationv2(NULL,ComputerNameBuffer,UserNameBuffer,&TokenInformation);
 	// analyze results & free buffer
 	if (Status == STATUS_SUCCESS)
 	{
 		MessageBox(NULL,TEXT("Success !"),TEXT(""),0);
-		EIDCardLibraryMyLsaFree(TokenInformation);
+		EIDFree(TokenInformation);
 	}
 	else
 	{
-		switch(Status)
+		/*switch(Status)
 		{
 			case STATUS_ACCESS_DENIED:
 				MessageBox(NULL,TEXT("STATUS_ACCESS_DENIED"),TEXT(""),0);
@@ -81,6 +72,7 @@ void Menu_AP_Token()
 				break;
 			default:
 				MessageBox(NULL,TEXT("Unknown Failure !"),TEXT(""),0);
-		}
+		}*/
+		MessageBoxWin32(LsaNtStatusToWinError(Status));
 	}
 }

@@ -57,7 +57,7 @@ void Menu_TestPackageRegistration() {
 	WCHAR Buffer[256];
 	WCHAR* Pointer;
 	RegSize = sizeof(Buffer);
-	Status = RegQueryValueEx( phkResult,TEXT("Authentication Packages"),NULL,&RegType,(LPBYTE)&Buffer,&RegSize);
+	Status = RegQueryValueEx( phkResult,TEXT("Security Packages"),NULL,&RegType,(LPBYTE)&Buffer,&RegSize);
 	if (Status != ERROR_SUCCESS) {
 		MessageBoxWin32(Status);
 		return;
@@ -164,8 +164,7 @@ void menu_AP_Protect()
 	//-------------------------------------------------------------------
 	//  Clean up.
 
-	EIDFree(DataOut.pbData);
-	EIDFree(DataVerify.pbData);
+	LocalFree(DataVerify.pbData);
 
 }
 

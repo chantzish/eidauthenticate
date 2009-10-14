@@ -627,6 +627,10 @@ HRESULT CEIDCredential::GetSerialization(
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"not SUCCEEDED hr=0x%08x",hr);
 	}
+	else
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"OK");
+	}
     return hr;
 }
 

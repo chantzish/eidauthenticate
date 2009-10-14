@@ -82,9 +82,9 @@ BOOL CContainerHolderFactory<T>::ConnectNotificationGeneric(__in LPCTSTR szReade
 	HCRYPTPROV HCryptProv,hProv=NULL;
 	BOOL bStatus;
 	CHAR szContainerName[1024];
-	DWORD dwContainerNameLen = 1024;
+	DWORD dwContainerNameLen = ARRAYSIZE(szContainerName);
 	TCHAR szProviderName[1024] = TEXT("");
-	DWORD dwProviderNameLen = 1024;
+	DWORD dwProviderNameLen = ARRAYSIZE(szProviderName);
 	DWORD pKeySpecs[2] = {AT_KEYEXCHANGE,AT_SIGNATURE};
 	DWORD dwKeyNumMax = 1;
 	HCRYPTKEY hKey;

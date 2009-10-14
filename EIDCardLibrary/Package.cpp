@@ -14,6 +14,9 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
+#define _CRTDBG_MAP_ALLOC
+#include <stdlib.h>
+#include <crtdbg.h>
 
 #include <ntstatus.h>
 #define WIN32_NO_STATUS
@@ -32,15 +35,15 @@
 
 #include <CodeAnalysis/warnings.h>
 #pragma warning(push)
-#pragma warning(disable : ALL_CODE_ANALYSIS_WARNINGS)
+#pragma warning(disable : 4995)
+#include <shlwapi.h>
+#pragma warning(pop)
+#pragma warning(push)
+#pragma warning(disable : 4995)
 #include <strsafe.h>
 #pragma warning(pop)
 
 #include <credentialprovider.h>
-#pragma warning(push)
-#pragma warning(disable : 4995)
-#include <shlwapi.h>
-#pragma warning(pop)
 
 #include "EIDCardLibrary.h"
 #include "Tracing.h"
@@ -50,15 +53,66 @@
 #pragma comment(lib, "Netapi32.lib")
 #pragma comment(lib, "Wtsapi32.lib")
 
+
+
+PLSA_ALLOCATE_LSA_HEAP MyAllocateHeap = NULL;  
+PLSA_FREE_LSA_HEAP MyFreeHeap = NULL;  
+PLSA_IMPERSONATE_CLIENT MyImpersonate = NULL;
+
+void SetAlloc(PLSA_ALLOCATE_LSA_HEAP AllocateLsaHeap)
+{
+	MyAllocateHeap = AllocateLsaHeap;
+}
+
+void SetFree(PLSA_FREE_LSA_HEAP FreeHeap)
+{
+	MyFreeHeap = FreeHeap;
+}
+
 PVOID EIDAlloc(DWORD dwSize)
 {
+	if (MyAllocateHeap)
+	{
+		return MyAllocateHeap(dwSize);
+	}
 	return malloc(dwSize);
 }
 VOID EIDFree(PVOID buffer)
 {
+	if (MyFreeHeap)
+	{
+		return MyFreeHeap(buffer);
+	}
 	free(buffer);
 }
 
+void SetImpersonate(PLSA_IMPERSONATE_CLIENT Impersonate)
+{
+	MyImpersonate = Impersonate;
+}
+
+VOID EIDImpersonate()
+{
+	if (MyImpersonate)
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Impersonating");
+		MyImpersonate();
+	}
+}
+
+VOID EIDRevertToSelf()
+{
+	if (MyImpersonate)
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"RevertToSelf");
+		RevertToSelf();
+	}
+}
+
+BOOL EIDIsComponentInLSAContext()
+{
+	return (MyImpersonate != NULL);
+}
 //
 // This function copies the length of pwz and the pointer pwz into the UNICODE_STRING structure
 // This function is intended for serializing a credential in GetSerialization only.

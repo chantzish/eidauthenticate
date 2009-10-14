@@ -454,8 +454,8 @@ extern "C"
 			}
 			else
 			{
-				*MachineName = NULL;
-				*AuthenticatingAuthority = NULL;
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetComputerName NULL 0x%08x",GetLastError());
+				return STATUS_BAD_VALIDATION_CLASS;
 			}
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"MachineName OK");
 
@@ -469,7 +469,7 @@ extern "C"
 				{
 					if (!CredUnprotectW(FALSE,pwzPin,UNLEN,pwzPinUncrypted,&dPinUncrypted))
 					{
-						EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CredUnprotectW %d",GetLastError());
+						EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CredUnprotectW 0x%08x",GetLastError());
 						return STATUS_BAD_VALIDATION_CLASS;
 					}
 					pPin = pwzPinUncrypted;
@@ -478,14 +478,13 @@ extern "C"
 			}
 			// impersonate the client to beneficiate from the smart card redirection
 			// if enabled on terminal session
-			MyLsaDispatchTable->ImpersonateClient();
-
+			
 			pCertContext = GetCertificateFromCspInfo(pSmartCardCspInfo);
 			if (!pCertContext) {
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Unable to create certificate from logon info");
 				return STATUS_LOGON_FAILURE;
 			}
-			RevertToSelf();
+			
 			// username = username on certificate
 			if (!manager->GetUsernameFromCertContext(pCertContext, &szUserName, &dwRid))
 			{
@@ -509,11 +508,9 @@ extern "C"
 			EIDFree(szUserName);
 
 
-
 			// create token
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"TokenInformation ?");
-			Status = UserNameToToken(*AccountName,(PLSA_DISPATCH_TABLE)MyLsaDispatchTable,
-						&MyTokenInformation,&TokenLength, SubStatus);
+			Status = UserNameToToken(*AccountName,&MyTokenInformation,&TokenLength, SubStatus);
 			if (Status != STATUS_SUCCESS) 
 			{
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"UserNameToToken failed %d",Status);

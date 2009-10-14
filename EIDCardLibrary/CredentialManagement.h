@@ -59,6 +59,7 @@ private:
 	PBYTE pbResponse;
 	DWORD dwResponseSize;
 	PWSTR szPassword;
+	DWORD dwChallengeType;
 };
 
 class CUsermodeContext

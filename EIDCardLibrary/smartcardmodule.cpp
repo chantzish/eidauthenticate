@@ -1,11 +1,12 @@
 #include <windows.h>
+#include <tchar.h>
 #pragma warning(push)
 #pragma warning(disable : 4201)
 #include <winscard.h>
 #pragma warning(pop)
 
 #include <cardmod.h>
-#include <strsafe.h>
+#include "Tracing.h"
 
 //
 // Internal context structure for interfacing with a card module
@@ -35,7 +36,7 @@ typedef struct _INTERNAL_CONTEXT
 
 #define CHECK_DWORD(_X) {                                                   \
     if (ERROR_SUCCESS != (status = (_X))) {                                 \
-        printf("%s\n", #_X);                                                \
+        EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,TEXT("%s"), TEXT(#_X));  \
         __leave;                                                            \
     }                                                                       \
 }
@@ -43,7 +44,7 @@ typedef struct _INTERNAL_CONTEXT
 #define CHECK_BOOL(_X) {                                                    \
     if (FALSE == (_X)) {                                                    \
         status = GetLastError();                                            \
-        printf("%s\n", #_X);                                                \
+        EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,TEXT("%s"), TEXT(#_X));  \
         __leave;                                                            \
     }                                                                       \
 }
@@ -248,12 +249,8 @@ DWORD MgScCardAcquireContext(
         cch = (DWORD) wcslen(wszCardName) + 1;
         CHECK_ALLOC(pInternal->CardData.pwszCardName = (LPWSTR) _Alloc(
             sizeof(WCHAR) * cch));
-        if (FAILED(StringCchCopy(
-            pInternal->CardData.pwszCardName, cch, wszCardName)))
-        {
-            status = ERROR_INSUFFICIENT_BUFFER;
-            __leave;
-        }
+        _tcscpy_s(
+            pInternal->CardData.pwszCardName, cch, wszCardName);
 
         //
         // Call the card module

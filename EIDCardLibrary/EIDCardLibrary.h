@@ -28,6 +28,9 @@
 
 PVOID EIDAlloc(DWORD);
 VOID EIDFree(PVOID);
+VOID EIDImpersonate();
+VOID EIDRevertToSelf();
+BOOL EIDIsComponentInLSAContext();
 
 typedef enum _EID_INTERACTIVE_LOGON_SUBMIT_TYPE
 {
@@ -158,6 +161,7 @@ typedef struct _EID_CHALLENGE_MESSAGE
 	USHORT UsernameOffset;
 	DWORD ChallengeLen;
 	DWORD ChallengeOffset;
+	DWORD ChallengeType;
 	DWORD Version;
 } EID_CHALLENGE_MESSAGE, *PEID_CHALLENGE_MESSAGE;
 

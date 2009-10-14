@@ -32,6 +32,9 @@
 #include "../EIDCardLibrary/Tracing.h"
 #include "../EIDCardLibrary/CredentialManagement.h"
 
+void SetAlloc(PLSA_ALLOCATE_LSA_HEAP AllocateLsaHeap);
+void SetFree(PLSA_FREE_LSA_HEAP FreeHeap);
+
 extern "C"
 {
 
@@ -87,6 +90,8 @@ extern "C"
 		UNREFERENCED_PARAMETER(Version);
 		UNREFERENCED_PARAMETER(UserFunctions);
 		MyUserDispatchTable = FunctionTable;
+		SetAlloc(MyUserDispatchTable->AllocateHeap);
+		SetFree(MyUserDispatchTable->FreeHeap);
 		return STATUS_SUCCESS;
 	}
 
