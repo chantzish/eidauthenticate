@@ -47,6 +47,7 @@ public:
 	NTSTATUS BuildCompleteMessage(PSecBufferDesc Buffer);
 	DWORD GetRid();
 	~CSecurityContext();
+	PWSTR GetUserName();
 private:
 	
 	CCredential* _pCredential;
@@ -58,8 +59,7 @@ private:
 	DWORD dwChallengeSize;
 	PBYTE pbResponse;
 	DWORD dwResponseSize;
-	PWSTR szPassword;
-	DWORD dwChallengeType;
+	PWSTR szUserName;
 };
 
 class CUsermodeContext

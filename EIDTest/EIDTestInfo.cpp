@@ -627,7 +627,17 @@ DWORD WINAPI  menu_TRACE_TRACING_Thread(LPVOID lpParameter)
 	  DisplayTrace(hTracingWindow, TEXT("Monitoring Active\r\n"));
 	  rc = ProcessTrace(&handle, 1, 0, 0);
 	  if (rc != ERROR_SUCCESS && rc != ERROR_CANCELLED)
-		DisplayTrace(hTracingWindow, TEXT("ProcessTrace failed, %d"));
+	  {
+		if (rc ==  0x00001069)
+		{
+			DisplayTrace(hTracingWindow, TEXT("Tracing was not started"));
+		}
+		else
+		{
+		  DisplayTrace(hTracingWindow, TEXT("ProcessTrace failed"));
+		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"ProcessTrace 0x%08x",rc);
+	  }
 
 	  rc = CloseTrace(handle);
 	  handle = NULL;

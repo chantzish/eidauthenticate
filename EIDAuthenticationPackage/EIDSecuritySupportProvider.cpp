@@ -48,6 +48,13 @@ extern "C"
 	BOOL DoUnicode = TRUE; 
 	LUID PackageUid;
 	void initializeExportedFunctionsTable(PSECPKG_FUNCTION_TABLE exportedFunctions);
+	ULONG MutualAuthLevel=0;
+	// 1.3.6.1.4.1.35000.1
+	// cf http://msdn.microsoft.com/en-us/library/bb540809%28VS.85%29.aspx
+	// 1.3 . 6  .  1 .  4 .1   .35000    .1
+	// 0x2B,0x06,0x01,0x04,0x01,0x88,0xB8,0x01
+	UCHAR GssOid[] = {0x2B,0x06,0x01,0x04,0x01,0x88,0xB8,0x01};
+	DWORD GssOidLen = ARRAYSIZE(GssOid);
 
 
 	TimeStamp Forever = {0x7fffffff,0xfffffff};
@@ -125,7 +132,13 @@ extern "C"
 		__out  PSecPkgInfo PackageInfo
 	)
 	{
-		PackageInfo->fCapabilities = SECPKG_FLAG_LOGON;
+		PackageInfo->fCapabilities = SECPKG_FLAG_LOGON |
+			SECPKG_FLAG_MULTI_REQUIRED|
+			SECPKG_FLAG_CLIENT_ONLY|
+			SECPKG_FLAG_IMPERSONATION|
+			SECPKG_FLAG_NEGOTIABLE|
+			SECPKG_FLAG_ACCEPT_WIN32_NAME |
+			SECPKG_FLAG_GSS_COMPATIBLE;
 		PackageInfo->wVersion = SECURITY_SUPPORT_PROVIDER_INTERFACE_VERSION;
 		PackageInfo->wRPCID = SECPKG_ID_NONE;
 		PackageInfo->cbMaxToken = 5000;
@@ -147,13 +160,20 @@ extern "C"
 		switch(Class)
 		{
 			case SecpkgGssInfo:
-				Status = SEC_E_UNSUPPORTED_FUNCTION ; 
+				*ppInformation = (PSECPKG_EXTENDED_INFORMATION) EIDAlloc(sizeof(SECPKG_EXTENDED_INFORMATION)+GssOidLen);
+				(*ppInformation)->Class = SecpkgGssInfo;
+				(*ppInformation)->Info.GssInfo.EncodedIdLength = GssOidLen;
+				memcpy((*ppInformation)->Info.GssInfo.EncodedId, GssOid,GssOidLen);
+				Status = STATUS_SUCCESS ; 
 				break;
 			case SecpkgContextThunks:
 				Status = SEC_E_UNSUPPORTED_FUNCTION ; 
 				break;
 			case SecpkgMutualAuthLevel:
-				Status = SEC_E_UNSUPPORTED_FUNCTION ; 
+				*ppInformation = (PSECPKG_EXTENDED_INFORMATION) EIDAlloc(sizeof(SECPKG_EXTENDED_INFORMATION));
+				(*ppInformation)->Class = SecpkgMutualAuthLevel;
+				(*ppInformation)->Info.MutualAuthLevel.MutualAuthLevel = MutualAuthLevel; 
+				Status = STATUS_SUCCESS; 
 				break;
 		}
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave");
@@ -178,7 +198,8 @@ extern "C"
 				Status = SEC_E_UNSUPPORTED_FUNCTION ; 
 				break;
 			case SecpkgMutualAuthLevel:
-				Status = SEC_E_UNSUPPORTED_FUNCTION ; 
+				MutualAuthLevel = Info->Info.MutualAuthLevel.MutualAuthLevel ; 
+				Status = STATUS_SUCCESS;
 				break;
 		}
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave");
@@ -323,11 +344,11 @@ extern "C"
 			{ 
 				// copy the authorization data to our user space
 				pAuthIdentityEx = (PSEC_WINNT_AUTH_IDENTITY_EXW)
-												MyLsaDispatchTable->AllocateLsaHeap(sizeof(SEC_WINNT_AUTH_IDENTITY_EXW)); 
+												EIDAlloc(sizeof(SEC_WINNT_AUTH_IDENTITY_EXW)); 
 				if (!pAuthIdentityEx) 
 				{ 
 					Status = STATUS_INSUFFICIENT_RESOURCES; 
-					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"AllocateLsaHeap is 0x%08x", Status); 
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EIDAlloc is 0x%08x", Status); 
 					__leave;
 				}
 				Status = MyLsaDispatchTable->CopyFromClientBuffer( 
@@ -384,11 +405,11 @@ extern "C"
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pAuthIdentity->Flags is 0x%lx", pAuthIdentity->Flags); 
 					__leave;
 				}
-				szCredential = MyLsaDispatchTable->AllocateLsaHeap((pAuthIdentity->UserLength + 1) * dwCharSize);
+				szCredential = EIDAlloc((pAuthIdentity->UserLength + 1) * dwCharSize);
 				if (!szCredential)
 				{
 					Status = STATUS_INSUFFICIENT_RESOURCES; 
-					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"AllocateLsaHeap"); 
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EIDAlloc"); 
 					__leave;
 				}
 				Status = MyLsaDispatchTable->CopyFromClientBuffer(NULL, 
@@ -421,11 +442,11 @@ extern "C"
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CredType is 0x%lx", CredType); 
 					__leave;
 				}
-				szPassword = MyLsaDispatchTable->AllocateLsaHeap((pAuthIdentity->PasswordLength + 1) * dwCharSize);
+				szPassword = EIDAlloc((pAuthIdentity->PasswordLength + 1) * dwCharSize);
 				if (!szPassword)
 				{
 					Status = STATUS_INSUFFICIENT_RESOURCES; 
-					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"AllocateLsaHeap"); 
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EIDAlloc"); 
 					__leave;
 				}
 				Status = MyLsaDispatchTable->CopyFromClientBuffer(NULL, 
@@ -445,11 +466,11 @@ extern "C"
 				}
 				else
 				{
-					szPasswordW = (PWSTR) MyLsaDispatchTable->AllocateLsaHeap((pAuthIdentity->PasswordLength + 1) * sizeof(WCHAR));
+					szPasswordW = (PWSTR) EIDAlloc((pAuthIdentity->PasswordLength + 1) * sizeof(WCHAR));
 					if (!szPasswordW)
 					{
 						Status = STATUS_INSUFFICIENT_RESOURCES; 
-						EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"AllocateLsaHeap"); 
+						EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EIDAlloc"); 
 						__leave;
 					}
 					MultiByteToWideChar(CP_ACP, 0, (PSTR) szPassword, -1, szPasswordW, pAuthIdentity->PasswordLength + 1);
@@ -463,7 +484,7 @@ extern "C"
 			pCredential = CCredential::CreateCredential(LogonIdToUse,pCertInfo, szPasswordW, CredentialUseFlags);
 			if (!pCredential)
 			{
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"AllocateLsaHeap"); 
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EIDAlloc"); 
 					__leave;
 			}
 			*pCredentialHandle = (LSA_SEC_HANDLE) pCredential;
@@ -655,49 +676,39 @@ extern "C"
 		  __out  PVOID pBuffer
 		)
 	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
-		CSecurityContext* pContext = CSecurityContext::GetContextFromHandle(ContextHandle);
-		if (!ContextHandle)
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"ContextHandle = %d",ContextHandle);
-			return STATUS_INVALID_HANDLE;
-		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter ContextAttribute = %d",ContextAttribute);
+		CSecurityContext* pContext;
 		PSecPkgContext_Sizes ContextSizes;
 		PSecPkgContext_NamesW ContextNames;
 		PSecPkgContext_Lifespan ContextLifespan;
-		PSecPkgContext_DceInfo  ContextDceInfo;
 		switch(ContextAttribute) {
 			case SECPKG_ATTR_SIZES:
 				ContextSizes = (PSecPkgContext_Sizes) pBuffer;
 				ContextSizes->cbMaxSignature = 0;
 				ContextSizes->cbSecurityTrailer = 0;
 				ContextSizes->cbBlockSize = 0;
-				ContextSizes->cbMaxToken = 0;
+				ContextSizes->cbMaxToken = 300;
 				break;
 			case SECPKG_ATTR_NAMES:
+				if (!ContextHandle)
+				{
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"ContextHandle = %d",ContextHandle);
+					return STATUS_INVALID_HANDLE;
+				}
+				pContext = CSecurityContext::GetContextFromHandle(ContextHandle);
 				ContextNames = (PSecPkgContext_Names) pBuffer;
-				ContextNames->sUserName = (LPWSTR) EIDAlloc( sizeof(L"dummy user"));
+				ContextNames->sUserName = pContext->GetUserName();
 				if (ContextNames->sUserName == NULL)
 				{
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SEC_E_INSUFFICIENT_MEMORY");
 					return(SEC_E_INSUFFICIENT_MEMORY);
 				}
-				RtlCopyMemory(ContextNames->sUserName, L"dummy user", sizeof(L"dummy user"));
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Username = %s",ContextNames->sUserName);
 				break;
 			case SECPKG_ATTR_LIFESPAN:
 				ContextLifespan = (PSecPkgContext_Lifespan) pBuffer;
 				ContextLifespan->tsStart = Never;
 				ContextLifespan->tsExpiry = Forever;
-				break;
-			case SECPKG_ATTR_DCE_INFO:
-				ContextDceInfo = (PSecPkgContext_DceInfo) pBuffer;
-				ContextDceInfo->AuthzSvc = 0;
-				ContextDceInfo->pPac = (PVOID) EIDAlloc(sizeof(L"dummy user"));
-				if (ContextDceInfo->pPac == NULL)
-				{
-					return(SEC_E_INSUFFICIENT_MEMORY);
-				}
-				RtlCopyMemory((LPWSTR) ContextDceInfo->pPac, L"dummy user", sizeof(L"dummy user"));
-
 				break;
 			default:
 				return(SEC_E_INVALID_TOKEN);
@@ -962,7 +973,7 @@ extern "C"
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SpCreateToken = 0x%08X",Status);
 				__leave;
 			}
-			callbackMessage = (PEID_SSP_CALLBACK_MESSAGE) MyLsaDispatchTable->AllocateLsaHeap(sizeof(EID_SSP_CALLBACK_MESSAGE));
+			callbackMessage = (PEID_SSP_CALLBACK_MESSAGE) EIDAlloc(sizeof(EID_SSP_CALLBACK_MESSAGE));
 			if (!callbackMessage)
 			{
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"callbackMessage no memory");

@@ -43,7 +43,7 @@ void EIDCardLibraryTracingUnRegister();
 #define EIDCardLibraryTrace(dwLevel, ...) \
 	EIDCardLibraryTraceEx(__FILE__,__LINE__,__FUNCTION__, dwLevel, __VA_ARGS__);
 
-void EIDCardLibraryTraceEx(LPCSTR szFile, DWORD dwLine, LPCSTR szFunction, UCHAR dwLevel, PCWSTR szFormat,...);
+void EIDCardLibraryTraceEx(PCSTR szFile, DWORD dwLine, PCSTR szFunction, UCHAR dwLevel, PCWSTR szFormat,...);
 
 #define EIDCardLibraryDumpMemory(memory, memorysize) \
 	EIDCardLibraryDumpMemoryEx(__FILE__,__LINE__,__FUNCTION__, memory, memorysize);

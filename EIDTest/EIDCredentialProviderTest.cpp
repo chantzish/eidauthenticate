@@ -9,6 +9,9 @@
 #define SECURITY_WIN32
 #include <Security.h>
 #include <sspi.h>
+#include <schannel.h>
+#include <credssp.h>
+#include <Ntdsapi.h>
 
 #include "../EIDCardLibrary/EIDCardLibrary.h"
 #include "../EIDCardLibrary/Tracing.h"
@@ -18,6 +21,7 @@
 #include "EIDTestUIUtil.h"
 
 #pragma comment(lib,"Credui")
+#pragma comment(lib,"Ntdsapi")
 extern HWND hMainWnd;
 
 #include "EIDCredentialProviderTest.h"
@@ -27,6 +31,72 @@ AuthenticationType authenticationType;
 void SetAuthentication(AuthenticationType type)
 {
 	authenticationType = type;
+}
+
+void menu_CREDSSP_DEL_REG()
+{
+	RegDeleteTree(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\CredentialsDelegation"));
+}
+
+
+void menu_CREDSSP_ADD_REG()
+{
+	menu_CREDSSP_DEL_REG();
+	DWORD dwValue = 1;
+	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+		TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\CredentialsDelegation"), 
+		TEXT("AllowDefCredentialsWhenNTLMOnly"), REG_DWORD, &dwValue,sizeof(DWORD));
+	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+		TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\CredentialsDelegation"), 
+		TEXT("ConcatenateDefaults_AllowDefNTLMOnly"), REG_DWORD, &dwValue,sizeof(DWORD));
+	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+		TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\CredentialsDelegation"), 
+		TEXT("AllowDefaultCredentials"), REG_DWORD, &dwValue,sizeof(DWORD));
+	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+		TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\CredentialsDelegation"), 
+		TEXT("ConcatenateDefaults_AllowDefault"), REG_DWORD, &dwValue,sizeof(DWORD));
+	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+		TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\CredentialsDelegation"), 
+		TEXT("AllowFreshCredentials"), REG_DWORD, &dwValue,sizeof(DWORD));
+	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+		TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\CredentialsDelegation"), 
+		TEXT("ConcatenateDefaults_AllowFresh"), REG_DWORD, &dwValue,sizeof(DWORD));
+	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+		TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\CredentialsDelegation"), 
+		TEXT("AllowFreshCredentialsWhenNTLMOnly"), REG_DWORD, &dwValue,sizeof(DWORD));
+	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+		TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\CredentialsDelegation"), 
+		TEXT("ConcatenateDefaults_AllowFreshNTLMOnly"), REG_DWORD, &dwValue,sizeof(DWORD));
+	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+		TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\CredentialsDelegation"), 
+		TEXT("AllowSavedCredentials"), REG_DWORD, &dwValue,sizeof(DWORD));
+	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+		TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\CredentialsDelegation"), 
+		TEXT("ConcatenateDefaults_AllowSaved"), REG_DWORD, &dwValue,sizeof(DWORD));
+	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+		TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\CredentialsDelegation"), 
+		TEXT("AllowSavedCredentialsWhenNTLMOnly"), REG_DWORD, &dwValue,sizeof(DWORD));
+	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+		TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\CredentialsDelegation"), 
+		TEXT("ConcatenateDefaults_AllowSavedNTLMOnly"), REG_DWORD, &dwValue,sizeof(DWORD));
+	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+		TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\CredentialsDelegation\\AllowDefaultCredentials"), 
+		TEXT("1"), REG_SZ, TEXT("EIDAuthenticate"),sizeof(TEXT("EIDAuthenticate")));
+	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+		TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\CredentialsDelegation\\AllowDefCredentialsWhenNTLMOnly"), 
+		TEXT("1"), REG_SZ, TEXT("EIDAuthenticate"),sizeof(TEXT("EIDAuthenticate")));
+	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+		TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\CredentialsDelegation\\AllowFreshCredentials"), 
+		TEXT("1"), REG_SZ, TEXT("EIDAuthenticate"),sizeof(TEXT("EIDAuthenticate")));
+	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+		TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\CredentialsDelegation\\AllowFreshCredentialsWhenNTLMOnly"), 
+		TEXT("1"), REG_SZ, TEXT("EIDAuthenticate"),sizeof(TEXT("EIDAuthenticate")));
+	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+		TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\CredentialsDelegation\\AllowSavedCredentials"), 
+		TEXT("1"), REG_SZ, TEXT("EIDAuthenticate"),sizeof(TEXT("EIDAuthenticate")));
+	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+		TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\CredentialsDelegation\\AllowSavedCredentialsWhenNTLMOnly"), 
+		TEXT("1"), REG_SZ, TEXT("EIDAuthenticate"),sizeof(TEXT("EIDAuthenticate")));
 }
 
 BOOL AuthenticateWithLsaLogonUser(LONG authPackage, PVOID authBuffer, DWORD authBufferSize)
@@ -60,17 +130,149 @@ BOOL AuthenticateWithLsaLogonUser(LONG authPackage, PVOID authBuffer, DWORD auth
 	return fReturn;
 }
 
+BOOL IsElevated();
+BOOL AddServerCertInfo(IN OUT PSCHANNEL_CRED pSchannelCred)
+{
+    BOOL fRet = FALSE;
+ 
+    LPWSTR pwszSubjectName = NULL;
+    LPWSTR pwszMachineName  = NULL;
+    DWORD cchMachineName  = 0;
+ 
+    HCERTSTORE  hCertStore = NULL;
+    PCCERT_CONTEXT*  ppCertContext   = NULL; // server cert array
+    BOOL fCloseStore = FALSE;
+ 
+	__try
+	{
+		if (!IsElevated())
+		{
+			MessageBox(hMainWnd,TEXT("Must be admin to access certificate"),TEXT("Error"),0);
+			__leave;
+		}
+		if (!pSchannelCred)
+		{
+			__leave;
+		}
+	 
+		
+		if (!pwszSubjectName)
+		{
+			if( !GetComputerNameExW( ComputerNameNetBIOS,
+									NULL,
+									&cchMachineName) )
+			{
+				if( ERROR_MORE_DATA != GetLastError() )
+				{
+					__leave;
+				}
+			}
+	 
+			pwszMachineName = (LPWSTR) EIDAlloc( cchMachineName* sizeof(WCHAR) );
+			if( !pwszMachineName )
+			{  
+				__leave;
+			}
+	 
+			if( !GetComputerNameExW( ComputerNameNetBIOS,
+									pwszMachineName,
+									&cchMachineName) )
+			{     
+				 __leave;
+			}
+			pwszSubjectName = pwszMachineName;
+		} 
+	   
+	  
+		if( !hCertStore )
+		{
+			// Open LM:MY store
+			hCertStore = CertOpenStore(
+							   CERT_STORE_PROV_SYSTEM,
+							   X509_ASN_ENCODING,
+							   0,
+							   CERT_SYSTEM_STORE_LOCAL_MACHINE,
+							   TEXT("MY") );
+	           
+			if(!hCertStore)
+			{
+				__leave;
+			}
+		}
+	 
+		ppCertContext = (PCCERT_CONTEXT *) EIDAlloc( sizeof(PCCERT_CONTEXT) * 1);
+		memset(ppCertContext, 0, sizeof(PCCERT_CONTEXT) * 1);
+		if( !ppCertContext )
+		{
+				__leave;
+		}
+	   
+		// Find server certificates using the server cert CN
+		// Simply searching for a certificate that contains
+		// the supplied name somewhere in the subject name.
+		ppCertContext[0] = CertFindCertificateInStore(
+								   hCertStore,
+								   X509_ASN_ENCODING,
+								   0,
+								   CERT_FIND_SUBJECT_STR_A,
+								   pwszSubjectName,
+								   ppCertContext[0]);
+	   
+		if(!ppCertContext[0])
+		{    
+			__leave;
+		}
+	 
+		pSchannelCred->cCreds = 1;
+		pSchannelCred->paCred =  ppCertContext;
+		pSchannelCred->dwCredFormat = 0;
+	   
+		fRet = TRUE;
+	}
+	__finally
+	{
+  
+		if(hCertStore)
+		{
+			CertCloseStore(hCertStore, 0);
+		}   
+	 
+		if (pwszMachineName)
+		{
+			EIDFree(pwszMachineName);
+			pwszSubjectName = NULL;
+		}
+	}
+    return fRet;
+}
+
 BOOL AuthenticateWithSSPI(PTSTR szPrincipal, PTSTR szPassword, PTSTR szSSP)
 {
 
 	BOOL fReturn = FALSE;
 	DWORD err;
 	TCHAR szDomain[255] = TEXT("");
+	TCHAR szUser[255] = TEXT("");
+
+	TCHAR szTarget[256]=TEXT("EIDAuthenticate");
+	PTSTR szSeparator = _tcschr(szPrincipal, '\\');
+	if (szSeparator)
+	{
+		_tcscpy_s(szUser,ARRAYSIZE(szUser),szSeparator +1);
+		_tcscpy_s(szDomain,ARRAYSIZE(szDomain),szPrincipal);
+		szSeparator = _tcschr(szDomain, '\\');
+		szSeparator[0] = 0;
+
+	}
+	else
+	{
+		_tcscpy_s(szUser,ARRAYSIZE(szUser),szPrincipal);
+	}
 	SEC_WINNT_AUTH_IDENTITY_EX authIdent = {
         SEC_WINNT_AUTH_IDENTITY_VERSION,
         sizeof authIdent,
-        (unsigned short *)szPrincipal,
-		_tcsclen(szPrincipal),
+        (unsigned short *)szUser,
+		_tcsclen(szUser),
         (unsigned short *)szDomain,
 		_tcsclen(szDomain),
 		(unsigned short *)szPassword,
@@ -82,8 +284,8 @@ BOOL AuthenticateWithSSPI(PTSTR szPrincipal, PTSTR szPassword, PTSTR szSSP)
 #endif
         ,0, 0
     };
-	CtxtHandle hctxClient;
-	CtxtHandle hctxServer;
+	CtxtHandle hctxClient = {0,0};
+	CtxtHandle hctxServer = {0,0};
 	// create two buffers:
 	//    one for the client sending tokens to the server,
 	//    one for the server sending tokens to the client
@@ -97,8 +299,8 @@ BOOL AuthenticateWithSSPI(PTSTR szPrincipal, PTSTR szPassword, PTSTR szSSP)
 	SecBufferDesc bdS2C = { SECBUFFER_VERSION, 1, &sbufS2C };
 
 	// don't really need any special context attributes
-	DWORD grfRequiredCtxAttrsClient = ISC_REQ_CONNECTION;
-	DWORD grfRequiredCtxAttrsServer = ISC_REQ_CONNECTION;
+	DWORD grfRequiredCtxAttrsClient = NULL;//ASC_REQ_DELEGATE | ASC_REQ_CONNECTION | ASC_REQ_ALLOCATE_MEMORY;
+	DWORD grfRequiredCtxAttrsServer = NULL;//ASC_REQ_DELEGATE | ASC_REQ_CONNECTION | ASC_REQ_ALLOCATE_MEMORY;
 
 	// set up some aliases to make it obvious what's happening
 	PCtxtHandle    pClientCtxHandleIn  = 0;
@@ -119,31 +321,57 @@ BOOL AuthenticateWithSSPI(PTSTR szPrincipal, PTSTR szPassword, PTSTR szSSP)
 	CredHandle hcredServer;
 	TimeStamp expiryClient;
 	TimeStamp expiryServer;
-
+	CREDSSP_CRED CredClient, CredServer;
+	SCHANNEL_CRED SchannelServerCred, SchannelClientCred;
+	PVOID pCredClient = NULL, pCredServer = NULL;
+	memset(&CredClient, 0, sizeof(CREDSSP_CRED));
+	memset(&CredServer, 0, sizeof(CREDSSP_CRED));
+	memset(&SchannelServerCred, 0, sizeof(SCHANNEL_CRED));
+	memset(&SchannelClientCred, 0, sizeof(SCHANNEL_CRED));
 	__try
 	{
-		err = AcquireCredentialsHandle(NULL, szSSP, SECPKG_CRED_OUTBOUND | SECPKG_CRED_INBOUND,
-											0, &authIdent, 0, 0,
+		if (_tcscmp(szSSP,TEXT("credssp")) == 0)
+		{
+			
+			
+			CredServer.pSchannelCred = &SchannelServerCred;
+			CredClient.pSchannelCred = &SchannelClientCred;
+			CredClient.pSpnegoCred  = &authIdent;
+
+			SchannelServerCred.dwVersion = SCHANNEL_CRED_VERSION;
+			SchannelClientCred.dwVersion = SCHANNEL_CRED_VERSION;
+			AddServerCertInfo(&SchannelServerCred);
+
+			pCredServer = &CredServer;
+			pCredClient = &CredClient;
+			grfRequiredCtxAttrsClient = ASC_REQ_DELEGATE | ASC_REQ_CONNECTION | ASC_REQ_ALLOCATE_MEMORY;
+			grfRequiredCtxAttrsServer = ASC_REQ_DELEGATE | ASC_REQ_CONNECTION | ASC_REQ_ALLOCATE_MEMORY;
+		}
+		else
+		{
+			pCredClient = &authIdent;
+		}
+		
+		err = AcquireCredentialsHandle(NULL, szSSP, SECPKG_CRED_OUTBOUND,
+											0, pCredClient, 0, 0,
 											&hcredClient, &expiryClient);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"AcquireCredentialsHandle client 0x%08x",err);
 		if (err != SEC_E_OK)
 		{
 			__leave;
 		}
-		/*AcquireCredentialsHandle(0, szSSP, SECPKG_CRED_INBOUND,
-											  0, 0, 0, 0, &hcredServer,
+		AcquireCredentialsHandle(0, szSSP, SECPKG_CRED_INBOUND,
+											  0, pCredServer, 0, 0, &hcredServer,
 											  &expiryServer);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"AcquireCredentialsHandle server 0x%08x",err);
 		if (err != SEC_E_OK)
 		{
 			__leave;
-		}*/
+		}
 
 		// since the caller is acting as the server, we need
 		// a server principal name so that the client will
 		// be able to get a Kerb ticket (if Kerb is used)
-		wchar_t szSPN[256];
-		ULONG cchSPN = sizeof szSPN / sizeof *szSPN;
-		GetUserNameEx(NameSamCompatible, szSPN, &cchSPN);
-
 		// perform the authentication handshake, playing the
 		// role of both client *and* server.
 		while (bClientContinue || bServerContinue) {
@@ -151,7 +379,7 @@ BOOL AuthenticateWithSSPI(PTSTR szPrincipal, PTSTR szPassword, PTSTR szSSP)
 				sbufC2S.cbBuffer = sizeof bufC2S;
 				err = InitializeSecurityContext(
 					&hcredClient, pClientCtxHandleIn,
-					szSPN,
+					szTarget,
 					grfRequiredCtxAttrsClient,
 					0, SECURITY_NATIVE_DREP,
 					pClientInput, 0,
@@ -159,6 +387,7 @@ BOOL AuthenticateWithSSPI(PTSTR szPrincipal, PTSTR szPassword, PTSTR szSSP)
 					pClientOutput,
 					&grfCtxAttrsClient,
 					&expiryClientCtx);
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"InitializeSecurityContext 0x%08x",err);
 				switch (err) {
 					case 0:
 						bClientContinue = false;
@@ -175,7 +404,7 @@ BOOL AuthenticateWithSSPI(PTSTR szPrincipal, PTSTR szPassword, PTSTR szSSP)
 			if (bServerContinue) {
 				sbufS2C.cbBuffer = sizeof bufS2C;
 				err = AcceptSecurityContext(
-					&hcredClient, pServerCtxHandleIn,
+					&hcredServer, pServerCtxHandleIn,
 					pServerInput,
 					grfRequiredCtxAttrsServer,
 					SECURITY_NATIVE_DREP,
@@ -183,6 +412,7 @@ BOOL AuthenticateWithSSPI(PTSTR szPrincipal, PTSTR szPassword, PTSTR szSSP)
 					pServerOutput,
 					&grfCtxAttrsServer,
 					&expiryServerCtx);
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"AcceptSecurityContext 0x%08x",err);
 				switch (err) {
 					case 0:
 						bServerContinue = false;
@@ -195,7 +425,46 @@ BOOL AuthenticateWithSSPI(PTSTR szPrincipal, PTSTR szPassword, PTSTR szSSP)
 				}
 			}
 		}
-
+		if (_tcscmp(szSSP,TEXT("Negotiate")) == 0)
+		{
+			SecPkgContext_NegotiationInfo negoinfo;
+			err = QueryContextAttributes(pClientCtxHandleOut,SECPKG_ATTR_NEGOTIATION_INFO, &negoinfo);
+			if (err != SEC_E_OK)
+			{
+				MessageBoxWin32(err);
+			}
+			else
+			{
+				MessageBox(hMainWnd, negoinfo.PackageInfo->Name, TEXT("Security Package Used"),NULL);
+			}
+		}
+		else if (_tcscmp(szSSP,TEXT("credssp")) == 0)
+		{
+			SecPkgContext_PackageInfo negoinfo;
+			err = QueryContextAttributes(pClientCtxHandleOut,SECPKG_ATTR_NEGOTIATION_PACKAGE, &negoinfo);
+			if (err != SEC_E_OK)
+			{
+				MessageBoxWin32(err);
+			}
+			else
+			{
+				MessageBox(hMainWnd, negoinfo.PackageInfo->Name, TEXT("Security Package Used"),NULL);
+			}
+		}
+			
+		err = ImpersonateSecurityContext(pServerCtxHandleOut);
+		if (err  != SEC_E_OK)
+		{
+			MessageBoxWin32(err);
+		}
+		else
+		{
+			TCHAR szUserName[256];
+			DWORD cbUserName = ARRAYSIZE(szUserName);
+			GetUserName (szUserName, &cbUserName);
+			MessageBox(hMainWnd, szUserName, TEXT("Connected as"),NULL);
+			RevertSecurityContext (pServerCtxHandleOut);
+		}
 		// clean up
 		FreeCredentialsHandle(&hcredClient);
 		FreeCredentialsHandle(&hcredServer);
@@ -205,6 +474,13 @@ BOOL AuthenticateWithSSPI(PTSTR szPrincipal, PTSTR szPassword, PTSTR szSSP)
 	}
 	__finally
 	{
+		if (SchannelServerCred.paCred)
+		{
+			PCCERT_CONTEXT* ppCertContext = (PCCERT_CONTEXT*) SchannelServerCred.paCred;
+			CertFreeCertificateContext(ppCertContext[0]);
+			EIDFree(ppCertContext);
+		}
+
 	}
 	SetLastError(err);
 	return fReturn;
@@ -249,6 +525,11 @@ BOOL AuthenticateWithSSPIWrapper(LONG authPackage, PVOID authBuffer, DWORD authB
 	FreeContextBuffer(pPackageInfo);
 	LsaDeregisterLogonProcess(hLsa);
 
+	if (authenticationType == CredSSP)
+	{
+		_tcscpy_s(szSSP, ARRAYSIZE(szSSP),TEXT("credssp"));
+	}
+
 	TCHAR szPrincipal[255] = TEXT("");
 	DWORD dwPrincipalSize = ARRAYSIZE(szPrincipal);
 	TCHAR szDomain[255] = TEXT("");
@@ -265,21 +546,6 @@ BOOL AuthenticateWithSSPIWrapper(LONG authPackage, PVOID authBuffer, DWORD authB
 	}
 	return AuthenticateWithSSPI(szPrincipal,szPassword, szSSP);
 }
-typedef struct _KERB_SMARTCARD_CSP_INFO {
-  DWORD dwCspInfoLen;
-  DWORD MessageType;
-  union {
-    PVOID ContextInformation;
-    ULONG64 SpaceHolderForWow64;
-  } ;
-  DWORD flags;
-  DWORD KeySpec;
-  ULONG nCardNameOffset;
-  ULONG nReaderNameOffset;
-  ULONG nContainerNameOffset;
-  ULONG nCSPNameOffset;
-  TCHAR bBuffer;
-}KERB_SMARTCARD_CSP_INFO, *PKERB_SMARTCARD_CSP_INFO;
 
 void Menu_CREDENTIALUID_GENERIC(DWORD dwFlag)
 {
@@ -350,18 +616,39 @@ void menu_CREDENTIALUID_OldBehavior()
 	CREDUI_INFO credUiInfo;
 	TCHAR szUsername[CREDUI_MAX_USERNAME_LENGTH+1] = TEXT("");
 	TCHAR szPassword[CREDUI_MAX_PASSWORD_LENGTH+1] = TEXT("");
+	TCHAR szTarget[256];
 	credUiInfo.pszCaptionText = TEXT("My caption");
 	credUiInfo.pszMessageText = TEXT("My message");
 	credUiInfo.cbSize = sizeof(credUiInfo);
 	credUiInfo.hbmBanner = NULL;
 	credUiInfo.hwndParent = hMainWnd;
-	dwStatus = CredUIPromptForCredentials(&credUiInfo, TEXT("test"), NULL, 0, 
+	DWORD dwSize = ARRAYSIZE(szTarget);
+	GetComputerName(szTarget,&dwSize);
+	dwStatus = CredUIPromptForCredentials(&credUiInfo, szTarget, NULL, 0, 
 		szUsername, CREDUI_MAX_USERNAME_LENGTH,
 		szPassword, CREDUI_MAX_PASSWORD_LENGTH,
 		FALSE, 0);
+	PTSTR szSSP;
 	if (dwStatus == NO_ERROR)
 	{
-		if (!AuthenticateWithSSPI(szUsername, szPassword,AUTHENTICATIONPACKAGENAMET))
+		if (authenticationType == Negociate)
+		{
+			szSSP = TEXT("Negotiate");
+		}
+		else if (authenticationType == NTLM)
+		{
+			szSSP = TEXT("NTLM");
+		}
+		else if (authenticationType == CredSSP)
+		{
+			szSSP = TEXT("credssp");
+		}
+		else
+		{
+			szSSP = AUTHENTICATIONPACKAGENAMET;
+		}
+		
+		if (!AuthenticateWithSSPI(szUsername, szPassword,szSSP))
 		{
 			MessageBoxWin32(GetLastError());
 		}

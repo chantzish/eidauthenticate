@@ -33,7 +33,7 @@
 
 CContainer::CContainer(LPCTSTR szReaderName, LPCTSTR szCardName, LPCTSTR szProviderName, LPCTSTR szContainerName, DWORD KeySpec,__in USHORT ActivityCount,PCCERT_CONTEXT pCertContext)
 {
-	_dwRid = 0xFFFFFFFF;
+	_dwRid = 0;
 	_szReaderName = (LPTSTR) EIDAlloc (sizeof(TCHAR)*(_tcslen(szReaderName)+1));
 	if (_szReaderName)
 	{
@@ -190,9 +190,10 @@ PTSTR CContainer::GetUserName()
 
 DWORD CContainer::GetRid()
 {
-	if (_dwRid == 0xFFFFFFFF)
+	if (_dwRid == 0)
 	{
 		_dwRid = LsaEIDGetRIDFromStoredCredential(_pCertContext);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"_dwRid set to %x",_dwRid);
 	}
 	return _dwRid;
 }

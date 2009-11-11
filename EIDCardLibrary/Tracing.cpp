@@ -35,6 +35,18 @@ REGHANDLE hPub;
 BOOL bFirst = TRUE;
 WCHAR Section[100];
 
+// to enable tracing in kernel debugger, issue the following command in windbg : ed nt!Kd_DEFAULT_MASK  0xFFFFFFFF
+// OR
+// Open up the registry and go to this path,
+// HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Debug Print Filter 
+// and add the following value "DEFAULT" : REG_DWORD : 0xFFFFFFFF and then reboot
+
+#ifdef WRITE_KERNET_DEBUGGER
+ULONG ( __stdcall *f_vDbgPrintEx)(IN ULONG ComponentId, IN ULONG Level,IN PCCH Format, IN va_list arglist) = 0;
+ULONG ( __cdecl *f_DbgPrintEx)(ULONG ComponentId, ULONG Level, PCHAR Format, ...) = 0; 
+FARPROC f;
+HMODULE hm = NULL;
+#endif
 /**
  *  Tracing function.
  *  Extract data using :
@@ -62,6 +74,13 @@ void MessageBoxWin32Ex(DWORD status, LPCSTR szFile, DWORD dwLine) {
 void EIDCardLibraryTracingRegister() {
 	bFirst = FALSE;
 	EventRegister(&CLSID_CEIDProvider,NULL,NULL,&hPub);
+#ifdef WRITE_KERNET_DEBUGGER
+	hm = GetModuleHandle(TEXT("ntdll.dll"));
+	f = GetProcAddress( hm, "DbgPrintEx" );
+	memcpy( &f_DbgPrintEx, &f, sizeof(f) ); 
+	f = GetProcAddress( hm, "vDbgPrintEx" );
+	memcpy( &f_vDbgPrintEx, &f, sizeof(f) ); 
+#endif
 }
 
 void EIDCardLibraryTracingUnRegister() {
@@ -95,6 +114,9 @@ void EIDCardLibraryTraceEx(LPCSTR szFile, DWORD dwLine, LPCSTR szFunction, UCHAR
 #ifdef _DEBUG
 	swprintf_s(Buffer2,356,L"%S(%d) : %S - %s\r\n",szFile,dwLine,szFunction,Buffer);
 	OutputDebugString(Buffer2);
+#endif
+#ifdef WRITE_KERNET_DEBUGGER
+	f_DbgPrintEx(1,dwLevel,"%s(%d) : %s - %S\r\n",szFile,dwLine,szFunction,Buffer);
 #endif
 	swprintf_s(Buffer2,356,L"%S(%d) : %s",szFunction,dwLine,Buffer);
 	EventWriteString(hPub,dwLevel,0,Buffer2);

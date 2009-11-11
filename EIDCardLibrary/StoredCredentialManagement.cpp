@@ -122,7 +122,10 @@ BOOL CStoredCredentialManager::GetUsernameFromCertContext(__in PCCERT_CONTEXT pC
 				EIDFree(pPrivateData);
 			}
 		}
-		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Not found");
+		if (!fReturn)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Not found");
+		}
 	}
 	__finally
 	{
@@ -727,7 +730,6 @@ NTSTATUS CompletePrimaryCredential(__in PLSA_UNICODE_STRING AuthenticatingAuthor
 						__in PSID UserSid,
 						__in PLUID LogonId,
 						__in PWSTR szPassword,
-						__in PLSA_DISPATCH_TABLE FunctionTable,
 						__out  PSECPKG_PRIMARY_CRED PrimaryCredentials)
 {
 
@@ -738,12 +740,12 @@ NTSTATUS CompletePrimaryCredential(__in PLSA_UNICODE_STRING AuthenticatingAuthor
 
 	PrimaryCredentials->DownlevelName.Length = AccountName->Length;
 	PrimaryCredentials->DownlevelName.MaximumLength = AccountName->MaximumLength;
-	PrimaryCredentials->DownlevelName.Buffer = (PWSTR) FunctionTable->AllocateLsaHeap(AccountName->MaximumLength);
+	PrimaryCredentials->DownlevelName.Buffer = (PWSTR) EIDAlloc(AccountName->MaximumLength);
 	memcpy(PrimaryCredentials->DownlevelName.Buffer, AccountName->Buffer, AccountName->MaximumLength);
 
 	PrimaryCredentials->DomainName.Length = AuthenticatingAuthority->Length;
 	PrimaryCredentials->DomainName.MaximumLength = AuthenticatingAuthority->MaximumLength;
-	PrimaryCredentials->DomainName.Buffer = (PWSTR) FunctionTable->AllocateLsaHeap(AuthenticatingAuthority->MaximumLength);
+	PrimaryCredentials->DomainName.Buffer = (PWSTR) EIDAlloc(AuthenticatingAuthority->MaximumLength);
 	if (PrimaryCredentials->DomainName.Buffer)
 	{
 		memcpy(PrimaryCredentials->DomainName.Buffer, AuthenticatingAuthority->Buffer, AuthenticatingAuthority->MaximumLength);
@@ -751,7 +753,7 @@ NTSTATUS CompletePrimaryCredential(__in PLSA_UNICODE_STRING AuthenticatingAuthor
 
 	PrimaryCredentials->Password.Length = (USHORT) wcslen(szPassword) * sizeof(WCHAR);
 	PrimaryCredentials->Password.MaximumLength = PrimaryCredentials->Password.Length;
-	PrimaryCredentials->Password.Buffer = (PWSTR) FunctionTable->AllocateLsaHeap(PrimaryCredentials->Password.MaximumLength);
+	PrimaryCredentials->Password.Buffer = (PWSTR) EIDAlloc(PrimaryCredentials->Password.MaximumLength);
 	if (PrimaryCredentials->Password.Buffer)
 	{
 		memcpy(PrimaryCredentials->Password.Buffer, szPassword, PrimaryCredentials->Password.Length);
@@ -764,7 +766,7 @@ NTSTATUS CompletePrimaryCredential(__in PLSA_UNICODE_STRING AuthenticatingAuthor
 
 	PrimaryCredentials->Flags = PRIMARY_CRED_CLEAR_PASSWORD;
 
-	PrimaryCredentials->UserSid = (PSID) FunctionTable->AllocateLsaHeap(GetLengthSid(UserSid));
+	PrimaryCredentials->UserSid = (PSID)EIDAlloc(GetLengthSid(UserSid));
 	if (PrimaryCredentials->UserSid)
 	{
 		CopySid(GetLengthSid(UserSid),PrimaryCredentials->UserSid,UserSid);
@@ -780,7 +782,7 @@ NTSTATUS CompletePrimaryCredential(__in PLSA_UNICODE_STRING AuthenticatingAuthor
 
 	PrimaryCredentials->LogonServer.Length = AuthenticatingAuthority->Length;
 	PrimaryCredentials->LogonServer.MaximumLength = AuthenticatingAuthority->MaximumLength;
-	PrimaryCredentials->LogonServer.Buffer = (PWSTR) FunctionTable->AllocateLsaHeap(AuthenticatingAuthority->MaximumLength);
+	PrimaryCredentials->LogonServer.Buffer = (PWSTR) EIDAlloc(AuthenticatingAuthority->MaximumLength);
 	if (PrimaryCredentials->LogonServer.Buffer)
 	{
 		memcpy(PrimaryCredentials->LogonServer.Buffer, AuthenticatingAuthority->Buffer, AuthenticatingAuthority->MaximumLength);
@@ -2037,6 +2039,111 @@ BOOL CStoredCredentialManager::GetPasswordFromSignatureChallengeResponse(__in DW
 			if (*pszPassword) 
 				EIDFree(*pszPassword);
 		}
+		if (pEidPrivateData)
+		{
+			EIDFree(pEidPrivateData);
+		}
+		if (pCertContext)
+			CertFreeCertificateContext(pCertContext);
+		if (hHash)
+			CryptDestroyHash(hHash);
+		if (hKey)
+			CryptDestroyKey(hKey);
+		if (hProv)
+		{
+			CryptReleaseContext(hProv, 0);
+			CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,CRYPT_DELETE_KEYSET);
+		}
+	}
+	return fReturn;
+}
+
+BOOL CStoredCredentialManager::VerifySignatureChallengeResponse(__in DWORD dwRid, __in PBYTE ppChallenge, __in DWORD dwChallengeSize, __in PBYTE pResponse, __in DWORD dwResponseSize)
+{
+	UNREFERENCED_PARAMETER(dwChallengeSize);
+	BOOL fReturn = FALSE, fStatus;
+	DWORD dwError = 0;
+	PEID_PRIVATE_DATA pEidPrivateData = NULL;
+	HCRYPTPROV hProv = NULL;
+	HCRYPTKEY hKey = NULL;
+	HCRYPTHASH hHash = NULL;
+	PCCERT_CONTEXT pCertContext = NULL;
+	__try
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
+		// read the encrypted password
+		if (!dwRid)
+		{
+			dwError = ERROR_NONE_MAPPED;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"dwRid 0x%08x",dwError);
+			__leave;
+		}
+		fStatus = RetrievePrivateData(dwRid,&pEidPrivateData);
+		if (!fStatus)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"RetrievePrivateData 0x%08x",dwError);
+			__leave;
+		}
+		pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, 
+			(PBYTE)pEidPrivateData->Data + pEidPrivateData->dwCertificatOffset, pEidPrivateData->dwCertificatSize);
+		if (!pCertContext)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CertCreateCertificateContext 0x%08x",dwError);
+			__leave;
+		}
+		// import the public key
+		fStatus = CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,0);
+		if(!fStatus)
+		{
+			dwError = GetLastError();
+			if (dwError == NTE_BAD_KEYSET)
+			{
+				fStatus = CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,CRYPT_NEWKEYSET);
+				dwError = GetLastError();
+			}
+			if (!fStatus)
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireContext 0x%08x",dwError);
+				__leave;
+			}
+		}
+		else
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Container already existed !!");
+		}
+		fStatus = CryptImportPublicKeyInfo(hProv, pCertContext->dwCertEncodingType, &(pCertContext->pCertInfo->SubjectPublicKeyInfo),&hKey);
+		if (!fStatus)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptImportKey 0x%08x",GetLastError());
+			__leave;
+		}
+		if (!CryptCreateHash(hProv,CALG_SHA,NULL,0,&hHash))
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CryptCreateHash", GetLastError());
+			__leave;
+		}
+		if (!CryptSetHashParam(hHash, HP_HASHVAL, ppChallenge, 0))
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CryptSetHashParam", GetLastError());
+			__leave;
+		}
+
+		if (!CryptVerifySignature(hHash, pResponse, dwResponseSize, hKey, TEXT(""), 0))
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CryptVerifySignature", GetLastError());
+			__leave;
+		}
+		fReturn = TRUE;
+
+	}
+	__finally
+	{
 		if (pEidPrivateData)
 		{
 			EIDFree(pEidPrivateData);
