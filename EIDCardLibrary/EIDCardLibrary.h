@@ -26,8 +26,11 @@
 
 #define CERT_HASH_LENGTH        20  // SHA1 hashes are used for cert hashes
 
-PVOID EIDAlloc(DWORD);
-VOID EIDFree(PVOID);
+#define EIDAlloc(value) EIDAllocEx(__FILE__,__LINE__,__FUNCTION__,value)
+#define EIDFree(value) EIDFreeEx(__FILE__,__LINE__,__FUNCTION__,value)
+
+PVOID EIDAllocEx(PCSTR szFile, DWORD dwLine, PCSTR szFunction,DWORD);
+VOID EIDFreeEx(PCSTR szFile, DWORD dwLine, PCSTR szFunction,PVOID);
 VOID EIDImpersonate();
 VOID EIDRevertToSelf();
 BOOL EIDIsComponentInLSAContext();
@@ -156,12 +159,10 @@ typedef struct _EID_CHALLENGE_MESSAGE
 	BYTE Signature[8];
 	DWORD MessageType;
 	DWORD Flags;
-	USHORT UsernameLen;
-	USHORT UsernameMaxLen;
-	USHORT UsernameOffset;
+	DWORD UsernameLen;
+	DWORD UsernameOffset;
 	DWORD ChallengeLen;
 	DWORD ChallengeOffset;
-	DWORD ChallengeType;
 	DWORD Version;
 } EID_CHALLENGE_MESSAGE, *PEID_CHALLENGE_MESSAGE;
 

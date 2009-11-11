@@ -63,6 +63,7 @@ public:
 	BOOL HasStoredCredential(__in PCCERT_CONTEXT pContext);
 	BOOL GetResponseFromSignatureChallenge(__in PBYTE ppChallenge, __in DWORD dwChallengeSize, __in PCCERT_CONTEXT pContext, __in PWSTR szPin, __out PBYTE *ppResponse, __out PDWORD pdwResponseSize);
 	BOOL GetSignatureChallenge(__out PBYTE* ppChallenge, __out PDWORD pdwChallengeSize);
+	BOOL VerifySignatureChallengeResponse(__in DWORD dwRid, __in PBYTE ppChallenge, __in DWORD dwChallengeSize, __in PBYTE pResponse, __in DWORD dwResponseSize);
  private:
 	static CStoredCredentialManager* theSingleInstance;	
 	BOOL GetResponseFromCryptedChallenge(__in PBYTE ppChallenge, __in DWORD dwChallengeSize, __in PCCERT_CONTEXT pContext, __in PWSTR szPin, __out PBYTE *ppResponse, __out PDWORD pdwResponseSize);
@@ -87,6 +88,5 @@ NTSTATUS CompletePrimaryCredential(__in PLSA_UNICODE_STRING AuthenticatingAuthor
 						__in PSID UserSid,
 						__in PLUID LogonId,
 						__in PWSTR szPassword,
-						__in PLSA_DISPATCH_TABLE FunctionTable,
 						__out  PSECPKG_PRIMARY_CRED PrimaryCredentials);
 #endif

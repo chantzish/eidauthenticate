@@ -58,6 +58,7 @@
 PLSA_ALLOCATE_LSA_HEAP MyAllocateHeap = NULL;  
 PLSA_FREE_LSA_HEAP MyFreeHeap = NULL;  
 PLSA_IMPERSONATE_CLIENT MyImpersonate = NULL;
+BOOL TraceAllocation = TRUE;
 
 void SetAlloc(PLSA_ALLOCATE_LSA_HEAP AllocateLsaHeap)
 {
@@ -69,21 +70,37 @@ void SetFree(PLSA_FREE_LSA_HEAP FreeHeap)
 	MyFreeHeap = FreeHeap;
 }
 
-PVOID EIDAlloc(DWORD dwSize)
+PVOID EIDAllocEx(PCSTR szFile, DWORD dwLine, PCSTR szFunction,DWORD dwSize)
 {
+	PVOID memory = NULL;
 	if (MyAllocateHeap)
 	{
-		return MyAllocateHeap(dwSize);
+		memory = MyAllocateHeap(dwSize);
 	}
-	return malloc(dwSize);
+	else
+	{
+		memory = malloc(dwSize);
+	}
+	if (TraceAllocation)
+	{
+		EIDCardLibraryTraceEx(szFile, dwLine, szFunction, WINEVENT_LEVEL_VERBOSE, L"Allocation of %p",memory);
+	}
+	return memory;
 }
-VOID EIDFree(PVOID buffer)
+VOID EIDFreeEx(PCSTR szFile, DWORD dwLine, PCSTR szFunction,PVOID buffer)
 {
+	if (TraceAllocation)
+	{
+		EIDCardLibraryTraceEx(szFile, dwLine, szFunction, WINEVENT_LEVEL_VERBOSE, L"Freeing of %p",buffer);
+	}
 	if (MyFreeHeap)
 	{
-		return MyFreeHeap(buffer);
+		MyFreeHeap(buffer);
 	}
-	free(buffer);
+	else
+	{
+		free(buffer);
+	}
 }
 
 void SetImpersonate(PLSA_IMPERSONATE_CLIENT Impersonate)
@@ -514,7 +531,7 @@ PTSTR GetUsernameFromRid(__in DWORD dwRid)
 		}
 		if (!fFound)
 		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"not found");
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Rid not found %x",dwRid);
 			__leave;
 		}
 		dwSize = (_tcslen(pUserInfo[dwI].usri3_name) +1);
@@ -758,15 +775,16 @@ BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPasswo
 	return fReturn;
 }
 
+/** return RID = 0 if failure */
 DWORD LsaEIDGetRIDFromStoredCredential(__in PCCERT_CONTEXT pContext)
 {
-	BOOL fReturn = FALSE;
 	PEID_CALLPACKAGE_BUFFER pBuffer;
     HANDLE hLsa;
 	DWORD dwSize;
 	NTSTATUS status;
 	PBYTE pPointer;
 	DWORD dwError;
+	DWORD dwRid = 0;
 
 	dwSize = (DWORD) (sizeof(EID_CALLPACKAGE_BUFFER) + pContext->cbCertEncoded); 
 
@@ -774,7 +792,7 @@ DWORD LsaEIDGetRIDFromStoredCredential(__in PCCERT_CONTEXT pContext)
 	if( !pBuffer) 
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pBuffer null");
-		return FALSE;
+		return 0;
 	}
 
 	pBuffer->dwRid = 0;
@@ -803,7 +821,8 @@ DWORD LsaEIDGetRIDFromStoredCredential(__in PCCERT_CONTEXT pContext)
             status = LsaCallAuthenticationPackage(hLsa, ulAuthPackage, pBuffer, dwSize, NULL, NULL, NULL);
 			if (status == STATUS_SUCCESS)
 			{
-				fReturn = TRUE;
+				dwRid = pBuffer->dwRid;
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Rid = %x",dwRid);
 			}
 			else
 			{
@@ -823,7 +842,7 @@ DWORD LsaEIDGetRIDFromStoredCredential(__in PCCERT_CONTEXT pContext)
 	dwError = pBuffer->dwError;
 	EIDFree(pBuffer);
 	SetLastError(dwError);
-	return pBuffer->dwRid;
+	return dwRid;
 }
 
 BOOL IsEIDPackageAvailable()

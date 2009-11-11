@@ -61,13 +61,13 @@ extern "C"
 	PLSA_STRING LsaInitializeString(PCHAR Source)
 	{
 		size_t Size = strlen(Source);
-		PCHAR Buffer = (PCHAR)MyLsaDispatchTable->AllocateLsaHeap((DWORD) (sizeof(CHAR)*(Size+1)));
+		PCHAR Buffer = (PCHAR)EIDAlloc((DWORD) (sizeof(CHAR)*(Size+1)));
 		if (Buffer == NULL) {
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"No Memory Buffer");
 			return NULL;
 		}
 
-		PLSA_STRING Destination = (PLSA_STRING)MyLsaDispatchTable->AllocateLsaHeap(sizeof(LSA_STRING));
+		PLSA_STRING Destination = (PLSA_STRING)EIDAlloc(sizeof(LSA_STRING));
 
 		if (Destination == NULL) {
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"No Memory Destination");
@@ -85,14 +85,14 @@ extern "C"
 
 	PLSA_UNICODE_STRING LsaInitializeUnicodeStringFromWideString(PWSTR Source)
 	{
-		DWORD Size = (DWORD) (sizeof(WCHAR)*wcslen(Source));
-		PWSTR Buffer = (PWSTR)MyLsaDispatchTable->AllocateLsaHeap((DWORD) (Size+sizeof(WCHAR)));
+		DWORD Size = (DWORD) (wcslen(Source));
+		PWSTR Buffer = (PWSTR)EIDAlloc((DWORD) (Size+1) * sizeof(WCHAR));
 		if (Buffer == NULL) {
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"No Memory Buffer");
 			return NULL;
 		}
 
-		PLSA_UNICODE_STRING Destination = (PLSA_UNICODE_STRING)MyLsaDispatchTable->AllocateLsaHeap(sizeof(LSA_UNICODE_STRING));
+		PLSA_UNICODE_STRING Destination = (PLSA_UNICODE_STRING)EIDAlloc(sizeof(LSA_UNICODE_STRING));
 
 		if (Destination == NULL) {
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"No Memory Destination");
@@ -100,10 +100,10 @@ extern "C"
 			return NULL;
 		}
 
-		wcsncpy_s(Buffer,Size+sizeof(WCHAR),
-			Source,Size+sizeof(WCHAR));
-		Destination->Length = (USHORT) (Size);
-		Destination->MaximumLength = (USHORT) (Size+sizeof(WCHAR));
+		wcscpy_s(Buffer,Size+1,
+			Source);
+		Destination->Length = (USHORT) (Size * sizeof(WCHAR));
+		Destination->MaximumLength = (USHORT) ((Size+1) * sizeof(WCHAR));
 		Destination->Buffer = Buffer;
 		return Destination;
 	}
@@ -111,12 +111,12 @@ extern "C"
 	PLSA_UNICODE_STRING LsaInitializeUnicodeStringFromUnicodeString(UNICODE_STRING Source)
 	{
 		PLSA_UNICODE_STRING Destination;
-		Destination = (PLSA_UNICODE_STRING)MyLsaDispatchTable->AllocateLsaHeap(sizeof(LSA_UNICODE_STRING));
+		Destination = (PLSA_UNICODE_STRING)EIDAlloc(sizeof(LSA_UNICODE_STRING));
 		if (Destination == NULL) {
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"No Memory Destination");
 			return NULL;
 		}
-		Destination->Buffer = (WCHAR*)MyLsaDispatchTable->AllocateLsaHeap(Source.Length+sizeof(WCHAR));
+		Destination->Buffer = (WCHAR*)EIDAlloc(Source.Length+sizeof(WCHAR));
 		if (Destination->Buffer == NULL) {
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"No Memory Destination->Buffer");
 			MyLsaDispatchTable->FreeLsaHeap(Destination);
@@ -414,7 +414,7 @@ extern "C"
 		UNREFERENCED_PARAMETER(AuthenticationInformationLength);
 		
 		NTSTATUS Status;
-		DWORD dwLen = MAX_COMPUTERNAME_LENGTH;
+		DWORD dwLen = MAX_COMPUTERNAME_LENGTH +1;
 		WCHAR ComputerName[MAX_COMPUTERNAME_LENGTH + 1];
 		DWORD TokenLength;
 		CRED_PROTECTION_TYPE protectionType;
@@ -571,9 +571,9 @@ extern "C"
 
 			// create primary credentials
 			PSID pSid = MyTokenInformation->User.User.Sid;
-			Status = CompletePrimaryCredential(*AuthenticatingAuthority,*AccountName,pSid,LogonId,szPassword,(PLSA_DISPATCH_TABLE)MyLsaDispatchTable,PrimaryCredentials);
+			Status = CompletePrimaryCredential(*AuthenticatingAuthority,*AccountName,pSid,LogonId,szPassword,PrimaryCredentials);
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"CompletePrimaryCredential OK Status = %d",Status);
-			*SupplementalCredentials = (PSECPKG_SUPPLEMENTAL_CRED_ARRAY) MyLsaDispatchTable->AllocateLsaHeap(sizeof(SECPKG_SUPPLEMENTAL_CRED_ARRAY));
+			*SupplementalCredentials = (PSECPKG_SUPPLEMENTAL_CRED_ARRAY) EIDAlloc(sizeof(SECPKG_SUPPLEMENTAL_CRED_ARRAY));
 			if (*SupplementalCredentials)
 			{
 				(*SupplementalCredentials)->CredentialCount = 0;
@@ -589,15 +589,19 @@ extern "C"
 			return Status;
 		}
 // disable warning because we want to trap ALL exception
+#ifdef _DEBUG
+		__except(EXCEPTION_CONTINUE_SEARCH)
+			// crash on debug to allow kernel debugger to break were the exception was triggered
+#else
 #pragma warning(push)
 #pragma warning(disable : 6320)
 	__except(EXCEPTION_EXECUTE_HANDLER)
 #pragma warning(pop)
+#endif
 		{
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"NT exception 0x%08x",GetExceptionCode());
 			return STATUS_LOGON_FAILURE;
 		}
-
 	}
 
 	void initializeLSAExportedFunctionsTable(PSECPKG_FUNCTION_TABLE exportedFunctions)

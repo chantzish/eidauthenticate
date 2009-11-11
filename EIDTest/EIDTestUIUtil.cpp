@@ -401,6 +401,7 @@ static BOOL CALLBACK SelectCertificateInfoCallBack(HWND hwndDlg, UINT message, W
 			CheckDlgButton(hwndDlg,IDC_SELFSIGNED,BST_CHECKED);
 			SendDlgItemMessage(hwndDlg,IDC_SAVEON,CB_ADDSTRING,0,(LPARAM) _T("On User Store"));
 			SendDlgItemMessage(hwndDlg,IDC_SAVEON,CB_ADDSTRING,0,(LPARAM) _T("On Machine Store"));
+			SendDlgItemMessage(hwndDlg,IDC_SAVEON,CB_ADDSTRING,0,(LPARAM) _T("On Machine Store : My Certificates"));
 			SendDlgItemMessage(hwndDlg,IDC_SAVEON,CB_ADDSTRING,0,(LPARAM) _T("On File"));
 			SendDlgItemMessage(hwndDlg,IDC_SAVEON,CB_ADDSTRING,0,(LPARAM) _T("On Smart Card"));
 			SendDlgItemMessage(hwndDlg,IDC_SAVEON,CB_SETCURSEL, 0, 0);

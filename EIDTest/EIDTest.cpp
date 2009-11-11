@@ -220,6 +220,16 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			CheckMenuRadioItem(hmenu,IDM_CRED_LSA,IDM_CRED_CredSSP,IDM_CRED_LSA,MF_BYCOMMAND);
 			SetAuthentication(LSA);
 			break;
+		case IDM_CRED_NEGOTIATE:
+			hmenu = GetMenu(hWnd);
+			CheckMenuRadioItem(hmenu,IDM_CRED_LSA,IDM_CRED_CredSSP,IDM_CRED_NEGOTIATE,MF_BYCOMMAND);
+			SetAuthentication(Negociate);
+			break;
+		case IDM_CRED_NTLM:
+			hmenu = GetMenu(hWnd);
+			CheckMenuRadioItem(hmenu,IDM_CRED_LSA,IDM_CRED_CredSSP,IDM_CRED_NTLM,MF_BYCOMMAND);
+			SetAuthentication(NTLM);
+			break;
 		case IDM_CRED_SSPI:
 			hmenu = GetMenu(hWnd);
 			CheckMenuRadioItem(hmenu,IDM_CRED_LSA,IDM_CRED_CredSSP,IDM_CRED_SSPI,MF_BYCOMMAND);
@@ -241,6 +251,12 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		case IDM_CRED_OLD:
 			menu_CREDENTIALUID_OldBehavior();
+			break;
+		case IDM_CREDSSP_REG_DEL:
+			menu_CREDSSP_DEL_REG();
+			break;
+		case IDM_CREDSSP_REG_ADD:
+			menu_CREDSSP_ADD_REG();
 			break;
 		case IDM_CRED_LIST:
 			menu_CREDENTIAL_List();

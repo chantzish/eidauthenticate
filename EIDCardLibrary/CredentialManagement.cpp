@@ -8,7 +8,7 @@
 #include <WinCred.h>
 #include <Ntsecapi.h>
 #include <ntsecpkg.h>
-//#include <WinCred.h>
+#include <lm.h>
 #include <set>
 #include <map>
 #include "../EIDCardLibrary/EIDCardLibrary.h"
@@ -150,7 +150,7 @@ CSecurityContext::CSecurityContext(CCredential* pCredential)
 	dwResponseSize = 0;
 	dwRid = 0;
 	pCertContext = NULL;
-	szPassword = NULL;
+	szUserName = NULL;
 	if (pCredential)
 	{
 		if (pCredential->_pCertInfo)
@@ -290,30 +290,73 @@ NTSTATUS CSecurityContext::ReceiveNegociateMessage(PSecBufferDesc Buffer)
 
 NTSTATUS CSecurityContext::BuildChallengeMessage(PSecBufferDesc Buffer)
 {
-	Buffer->pBuffers[0].BufferType = SECBUFFER_TOKEN;
-	if (Buffer->pBuffers[0].cbBuffer < 300)
+	DWORD dwEntriesRead, dwTotalEntries, dwI;
+	USER_INFO_3 *pInfo = NULL;
+	NTSTATUS Status = STATUS_SUCCESS;
+	__try
 	{
-		return SEC_E_INSUFFICIENT_MEMORY;
+		Buffer->pBuffers[0].BufferType = SECBUFFER_TOKEN;
+		if (Buffer->pBuffers[0].cbBuffer < 300)
+		{
+			Status = SEC_E_INSUFFICIENT_MEMORY;
+			__leave;
+		}
+		PEID_CHALLENGE_MESSAGE message = (PEID_CHALLENGE_MESSAGE) Buffer->pBuffers[0].pvBuffer;
+		memset(message, 0, sizeof(EID_CHALLENGE_MESSAGE));
+		memcpy(message->Signature, EID_MESSAGE_SIGNATURE, 8);
+		message->MessageType = EIDMTChallenge;
+		message->Version = EID_MESSAGE_VERSION;
+		CStoredCredentialManager* manager = CStoredCredentialManager::Instance();
+		if (!manager->GetCertContextFromHash(Hash, &pCertContext, &dwRid))
+		{
+			Status = SEC_E_UNKNOWN_CREDENTIALS;
+			__leave;
+		}
+		// get username
+		Status = NetUserEnum(NULL, 3, 0, (PBYTE*)&pInfo, MAX_PREFERRED_LENGTH, &dwEntriesRead,&dwTotalEntries, NULL);
+		if (Status != NERR_Success)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"NetUserEnum = 0x%08X",Status);
+			__leave;
+		}
+		for (dwI = 0; dwI < dwEntriesRead; dwI++)
+		{
+			if ( pInfo[dwI].usri3_user_id == dwRid)
+			{
+				DWORD dwLen= (wcslen(pInfo[dwI].usri3_name)+1);
+				szUserName = (PWSTR) EIDAlloc(dwLen*sizeof(WCHAR));
+				if (!szUserName)
+				{
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"No memory");
+					__leave;
+				}
+				wcscpy_s(szUserName, dwLen, pInfo[dwI].usri3_name);
+				break;
+			}
+		}
+		if (dwI >= dwEntriesRead)
+		{
+			Status = SEC_E_INTERNAL_ERROR;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Userid not found");
+			__leave;
+		}
+		if (!manager->GetSignatureChallenge(&pbChallenge, &dwChallengeSize))
+		{
+			Status = SEC_E_INTERNAL_ERROR;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetSignatureChallenge 0x%08x",GetLastError());
+			__leave;
+		}
+		message->ChallengeLen = dwChallengeSize;
+		message->ChallengeOffset = sizeof(EID_CHALLENGE_MESSAGE);
+		memcpy((PBYTE)message + message->ChallengeOffset, pbChallenge, dwChallengeSize);
+		message->UsernameLen = wcslen(szUserName) * sizeof(WCHAR);
+		message->UsernameOffset = message->ChallengeOffset + message->ChallengeLen;
+		memcpy((PBYTE)message + message->UsernameOffset,szUserName,message->UsernameLen);
+		_State = EIDMSChallenge;
 	}
-	PEID_CHALLENGE_MESSAGE message = (PEID_CHALLENGE_MESSAGE) Buffer->pBuffers[0].pvBuffer;
-	memset(message, 0, sizeof(EID_CHALLENGE_MESSAGE));
-	memcpy(message->Signature, EID_MESSAGE_SIGNATURE, 8);
-	message->MessageType = EIDMTChallenge;
-	message->Version = EID_MESSAGE_VERSION;
-	CStoredCredentialManager* manager = CStoredCredentialManager::Instance();
-	if (!manager->GetCertContextFromHash(Hash, &pCertContext, &dwRid))
+	__finally
 	{
-		return SEC_E_UNKNOWN_CREDENTIALS;
 	}
-	if (!manager->GetChallenge(dwRid, &pbChallenge, &dwChallengeSize, &dwChallengeType))
-	{
-		return SEC_E_INTERNAL_ERROR;
-	}
-	message->ChallengeLen = dwChallengeSize;
-	message->ChallengeOffset = sizeof(EID_CHALLENGE_MESSAGE);
-	message->ChallengeType = dwChallengeType;
-	memcpy((PBYTE)message + message->ChallengeOffset, pbChallenge, dwChallengeSize);
-	_State = EIDMSChallenge;
 	return SEC_I_CONTINUE_NEEDED;
 }
 
@@ -328,7 +371,9 @@ NTSTATUS CSecurityContext::ReceiveChallengeMessage(PSecBufferDesc Buffer)
 	{
 		return STATUS_INVALID_SIGNATURE;
 	}
-	dwChallengeType = message->ChallengeType;
+	szUserName = (PWSTR) EIDAlloc(message->UsernameLen + sizeof(WCHAR));
+	memcpy(szUserName, (PBYTE) message + message->UsernameOffset, message->UsernameLen);
+	memset((PBYTE) szUserName + message->UsernameLen,0,sizeof(WCHAR));
 	pbChallenge = (PBYTE) EIDAlloc(message->ChallengeLen);
 	memcpy(pbChallenge, (PBYTE)message + message->ChallengeOffset, message->ChallengeLen);
 	dwChallengeSize = message->ChallengeLen;
@@ -349,7 +394,7 @@ NTSTATUS CSecurityContext::BuildResponseMessage(PSecBufferDesc Buffer)
 	message->MessageType = EIDMTResponse;
 	message->Version = EID_MESSAGE_VERSION;
 	CStoredCredentialManager* manager = CStoredCredentialManager::Instance();
-	if (!manager->GetResponseFromChallenge(pbChallenge, dwChallengeSize, dwChallengeType, pCertContext,_pCredential->_szPin, &pbResponse, &dwResponseSize))
+	if (!manager->GetResponseFromSignatureChallenge(pbChallenge, dwChallengeSize, pCertContext,_pCredential->_szPin, &pbResponse, &dwResponseSize))
 	{
 		return SEC_E_LOGON_DENIED;
 	}
@@ -383,7 +428,7 @@ NTSTATUS CSecurityContext::BuildCompleteMessage(PSecBufferDesc Buffer)
 	// vérification du challenge
 	UNREFERENCED_PARAMETER(Buffer);
 	CStoredCredentialManager* manager = CStoredCredentialManager::Instance();
-	if (!manager->GetPasswordFromChallengeResponse(dwRid, pbChallenge, dwChallengeSize, dwChallengeType,pbResponse, dwResponseSize, &szPassword))
+	if (!manager->VerifySignatureChallengeResponse(dwRid, pbChallenge, dwChallengeSize, pbResponse, dwResponseSize))
 	{
 		return SEC_E_LOGON_DENIED;
 	}
@@ -393,6 +438,18 @@ NTSTATUS CSecurityContext::BuildCompleteMessage(PSecBufferDesc Buffer)
 DWORD CSecurityContext::GetRid()
 {
 	return dwRid;
+}
+
+PWSTR CSecurityContext::GetUserName()
+{
+	PWSTR szString = NULL;
+	if (!szUserName)
+		return NULL;
+	DWORD dwLen = wcslen(szString) + 1;
+	szString = (PWSTR) EIDAlloc(dwLen * sizeof(WCHAR));
+	if (!szString) return NULL;
+	wcscpy_s(szString,dwLen,szUserName);
+	return szString;
 }
 
 CSecurityContext::~CSecurityContext()
@@ -407,14 +464,13 @@ CSecurityContext::~CSecurityContext()
 		SecureZeroMemory(pbResponse, dwResponseSize);
 		EIDFree(pbResponse);
 	}
+	if (szUserName)
+	{
+		EIDFree(szUserName);
+	}
 	if (pCertContext)
 	{
 		CertFreeCertificateContext(pCertContext);
-	}
-	if (szPassword)
-	{
-		SecureZeroMemory(szPassword, wcslen(szPassword) * sizeof(WCHAR));
-		EIDFree(szPassword);
 	}
 }
 

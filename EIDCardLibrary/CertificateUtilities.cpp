@@ -841,6 +841,23 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 				__leave;
 			}
 			break;		
+		case UI_CERTIFICATE_INFO_SAVEON_SYSTEMSTORE_MY:
+			hCertStore = CertOpenStore(CERT_STORE_PROV_SYSTEM,0,NULL,CERT_SYSTEM_STORE_LOCAL_MACHINE,_T("My"));
+			if (!hCertStore)
+			{
+				dwError = GetLastError();
+				__leave;
+			}
+			if (CertAddCertificateContextToStore(hCertStore,pNewCertificateContext,CERT_STORE_ADD_ALWAYS,NULL))
+			{
+				//CryptUIDlgViewContext(CERT_STORE_CERTIFICATE_CONTEXT,pNewCertificateContext,NULL,NULL,0,NULL);
+			}
+			else
+			{
+				dwError = GetLastError();
+				__leave;
+			}
+			break;
 		case UI_CERTIFICATE_INFO_SAVEON_FILE: // file
 			
 			WizInfo.dwSize = sizeof(CRYPTUI_WIZ_EXPORT_INFO);
