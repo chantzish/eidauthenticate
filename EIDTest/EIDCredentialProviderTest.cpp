@@ -272,11 +272,11 @@ BOOL AuthenticateWithSSPI(PTSTR szPrincipal, PTSTR szPassword, PTSTR szSSP)
         SEC_WINNT_AUTH_IDENTITY_VERSION,
         sizeof authIdent,
         (unsigned short *)szUser,
-		_tcsclen(szUser),
+		(DWORD)_tcsclen(szUser),
         (unsigned short *)szDomain,
-		_tcsclen(szDomain),
+		(DWORD)_tcsclen(szDomain),
 		(unsigned short *)szPassword,
-		_tcsclen(szPassword),
+		(DWORD)_tcsclen(szPassword),
 #ifdef UNICODE
         SEC_WINNT_AUTH_IDENTITY_UNICODE
 #else
@@ -511,7 +511,7 @@ BOOL AuthenticateWithSSPIWrapper(LONG authPackage, PVOID authBuffer, DWORD authB
 		ULONG ulAuthPackage;
         LSA_STRING lsaszPackageName;
 		CHAR szTemp[255];
-		WideCharToMultiByte(CP_ACP, 0, pPackageInfo[dwI].Name, _tcsclen(pPackageInfo[dwI].Name) +1,
+		WideCharToMultiByte(CP_ACP, 0, pPackageInfo[dwI].Name,(int) _tcsclen(pPackageInfo[dwI].Name) +1,
 				szTemp, ARRAYSIZE(szTemp), NULL, NULL);
 		LsaInitString(&lsaszPackageName,szTemp );
 

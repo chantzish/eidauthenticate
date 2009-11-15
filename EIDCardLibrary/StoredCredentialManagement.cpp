@@ -99,7 +99,7 @@ BOOL CStoredCredentialManager::GetUsernameFromCertContext(__in PCCERT_CONTEXT pC
 					// found
 					*pdwRid = pUserInfo[dwI].usri3_user_id;
 					PWSTR Username = pUserInfo[dwI].usri3_name;
-					*pszUsername = (PWSTR) EIDAlloc((wcslen(Username) +1) * sizeof(WCHAR));
+					*pszUsername = (PWSTR) EIDAlloc((DWORD)(wcslen(Username) +1) * sizeof(WCHAR));
 					
 					if (*pszUsername)
 					{
@@ -293,7 +293,7 @@ BOOL CStoredCredentialManager::CreateCredential(__in DWORD dwRid, __in PCCERT_CO
 	DWORD dwSize = 0;
 	__try
 	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter fEncryptPassword = %d",fEncryptPassword);
 		// check password
 		if (!dwRid)
 		{
@@ -430,7 +430,7 @@ BOOL CStoredCredentialManager::CreateCredential(__in DWORD dwRid, __in PCCERT_CO
 			pbSecret->dwPasswordSize = usPasswordSize;
 			pbSecret->dwCertificatOffset = 0;
 			memcpy(pbSecret->Data + pbSecret->dwCertificatOffset, pCertContext->pbCertEncoded, pbSecret->dwCertificatSize);
-			pbSecret->dwSymetricKeyOffset = pbSecret->dwCertificatOffset + pbSecret->dwSymetricKeySize;
+			pbSecret->dwSymetricKeyOffset = pbSecret->dwCertificatOffset + pbSecret->dwCertificatSize;
 			pbSecret->dwPasswordOffset = pbSecret->dwSymetricKeyOffset;
 			memcpy(pbSecret->Data + pbSecret->dwPasswordOffset, szPassword, pbSecret->dwPasswordSize);
 		}
@@ -617,6 +617,7 @@ BOOL CStoredCredentialManager::GetSignatureChallenge(__out PBYTE* ppChallenge, _
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptGenRandom 0x%08x",dwError);
 			__leave;
 		}
+		fReturn = TRUE;
 	}
 	__finally
 	{
@@ -695,7 +696,7 @@ BOOL CStoredCredentialManager::GetPassword(__in DWORD dwRid, __in PCCERT_CONTEXT
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetResponseFromChallenge 0x%08x",dwError);
 			__leave;
 		}
-		fStatus = GetPasswordFromChallengeResponse(dwRid, pChallenge, dwChallengeSize, type, pResponse, dwResponseSize, pszPassword);
+		fStatus = GetPasswordFromChallengeResponse(dwRid, pChallenge, dwChallengeSize, pContext, type, pResponse, dwResponseSize, pszPassword);
 		if (!fStatus)
 		{
 			dwError = GetLastError();
@@ -845,562 +846,7 @@ BOOL CanEncryptPassword(__in_opt HCRYPTPROV hProv, __in_opt DWORD dwKeySpec,  __
 	SetLastError(dwError);
 	return fEncryptPassword;
 }
-/*
 
-BOOL CreateStoredCredential(__in DWORD dwRid,  __in PWSTR szPassword, __in_opt USHORT dwPasswordLen,
-							__in PCWSTR szProvider, __in PCWSTR szContainer, __in DWORD dwKeySpec)
-{
-	BOOL fReturn = FALSE;
-	BOOL fStatus;
-	DWORD dwSize = 0, dwSize2 = 0;
-	HCRYPTPROV HCryptProv = NULL;
-	HCRYPTKEY hKey = NULL;
-	PBYTE pBlob = NULL;
-	BOOL fEncryptPassword = FALSE;
-	DWORD dwError = 0;
-	PBYTE pbData = NULL;
-	PUCHAR pbHash = NULL;
-	// save the public key into a file
-	// so it can do UpdateCredential
-	__try
-	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter Rid = %d Container = '%s' Provider = '%s' KeySpec = %d",dwRid, szContainer,szProvider,dwKeySpec);
-		// Export public key designated by the container
-		fStatus = CryptAcquireContext(&HCryptProv,
-				szContainer,
-				szProvider,
-				PROV_RSA_FULL,
-				CRYPT_SILENT);
-		if (!fStatus)
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireContext 0x%08x",GetLastError());
-			__leave;
-		}
-		fStatus = CryptGetUserKey(HCryptProv, dwKeySpec, &hKey);
-		if (!fStatus)
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptGetUserKey 0x%08x",GetLastError());
-			__leave;
-		}
-
-		fStatus = CryptExportKey( hKey, NULL, PUBLICKEYBLOB, 0, NULL, &dwSize);
-		if (!fStatus)
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptExportKey 0x%08x",GetLastError());
-			__leave;
-		}
-		pBlob = (PBYTE) EIDAlloc(dwSize);
-		if (!pBlob)
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EIDAlloc 0x%08x",GetLastError());
-			__leave;
-		}
-		fStatus = CryptExportKey( hKey, NULL, PUBLICKEYBLOB, 0, pBlob, &dwSize);
-		if (!fStatus)
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptExportKey 0x%08x",GetLastError());
-			__leave;
-		}
-		fStatus = CryptGetKeyParam( hKey, KP_CERTIFICATE, NULL,&dwSize, 0);
-		if (!fStatus)
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptGetKeyParam 0x%08x",GetLastError());
-			__leave;
-		}
-		pbData = (PBYTE) EIDAlloc(dwSize);
-		if (!pbData)
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EIDAlloc 0x%08x",GetLastError());
-			__leave;
-		}
-		fStatus = CryptGetKeyParam( hKey, KP_CERTIFICATE, pbData, &dwSize, 0);
-		if (!fStatus)
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptGetKeyParam 0x%08x",GetLastError());
-			__leave;
-		}
-		fStatus = CryptHashCertificate(NULL, CALG_SHA1, 0, pbData, dwSize, NULL, &dwSize2);
-		if (!fStatus)
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptHashCertificate 0x%08x",GetLastError());
-			__leave;
-		}
-		pbHash = (PBYTE) EIDAlloc(dwSize2);
-		if (!pbHash)
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EIDAlloc 0x%08x",GetLastError());
-			__leave;
-		}
-		fStatus = CryptHashCertificate(NULL, CALG_SHA1, 0, pbData, dwSize, pbHash, &dwSize2);
-		if (!fStatus)
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptHashCertificate 0x%08x",GetLastError());
-			__leave;
-		}
-		fEncryptPassword = CanEncryptPassword(HCryptProv, dwKeySpec, NULL);
-		
-		// store
-		fReturn = UpdateStoredCredentialEx(dwRid, szPassword, dwPasswordLen, pBlob, (USHORT) dwSize, pbHash, fEncryptPassword);
-	}
-	__finally
-	{
-		if (pbHash)
-			EIDFree(pbHash);
-		if (pBlob)
-			EIDFree(pBlob);
-		if (pbData)
-			EIDFree(pbData);
-		if (hKey)
-			CryptDestroyKey(hKey);
-		if (HCryptProv)
-			CryptReleaseContext(HCryptProv, 0);
-	}
-	SetLastError(dwError);
-	return fReturn;
-}
-
-BOOL UpdateStoredCredential(__in DWORD dwRid, __in PWSTR szPassword, __in_opt USHORT usPasswordLen)
-{
-	return UpdateStoredCredentialEx(dwRid, szPassword, usPasswordLen, NULL, 0, NULL, FALSE);
-}
-
-BOOL UpdateStoredCredentialEx(__in DWORD dwRid, __in PWSTR szPassword, __in_opt USHORT usPasswordLen,
-							__in_opt PBYTE pPublicKeyBlob, __in_opt USHORT usPublicKeySize, 
-							__in_opt UCHAR Hash[CERT_HASH_LENGTH], __in_opt BOOL fEncryptPassword)
-{
-	HCRYPTPROV hProv = NULL;
-	BOOL fStatus;
-	BOOL fReturn = FALSE;
-	HCRYPTKEY hKey = NULL;;
-	PBYTE pBlob = NULL;
-	HCRYPTKEY hSymetricKey = NULL;
-	PBYTE pSymetricKey = NULL;
-	USHORT usSymetricKeySize;
-	PBYTE pEncryptedPassword = NULL;
-	USHORT usEncryptedPasswordSize;
-	PEID_PRIVATE_DATA pbSecret = NULL;
-	USHORT usSecretSize;
-	PEID_PRIVATE_DATA pEidPrivateData = NULL;
-	USHORT usPasswordSize;
-	DWORD dwError = 0;
-	NTSTATUS Status;
-	__try
-	{
-		// get Public Key
-		if (pPublicKeyBlob)
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"With public key");
-			pBlob = pPublicKeyBlob;
-			// dwPermissions = 0  => all access
-			// check password
-			Status = CheckPassword(dwRid, szPassword);
-			if (Status != STATUS_SUCCESS)
-			{
-				dwError = LsaNtStatusToWinError(Status);
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CheckPassword 0x%08x",dwError);
-				__leave;
-			}
-		}
-		else
-		{
-			// retrieve from previous save
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Without public key");
-			fEncryptPassword = FALSE;
-			fStatus = RetrievePrivateData(dwRid,&pEidPrivateData);
-			if (!fStatus)
-			{
-				dwError = GetLastError();
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"RetrievePrivateData 0x%08x",dwError);
-				__leave;
-			}
-			pBlob = pEidPrivateData->Data + pEidPrivateData->dwCertificatOffset;
-			usPublicKeySize = pEidPrivateData->dwCertificatSize;
-			if (pEidPrivateData->dwSymetricKeySize) 
-			{
-				fEncryptPassword = TRUE;
-			}
-		}
-		usPasswordSize = (usPasswordLen ? usPasswordLen : (USHORT) (wcslen(szPassword) * sizeof(WCHAR)));
-		if (!usPasswordSize) fEncryptPassword = FALSE;
-		if (fEncryptPassword)
-		{
-			// crypted
-			// import the public key into hKey
-			fStatus = CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,0);
-			if(!fStatus)
-			{
-				dwError = GetLastError();
-				if (dwError == NTE_BAD_KEYSET)
-				{
-					fStatus = CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,CRYPT_NEWKEYSET);
-					dwError = GetLastError();
-				}
-				if (!fStatus)
-				{
-					dwError = GetLastError();
-					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireContext 0x%08x",dwError);
-					__leave;
-				}
-			}
-			else
-			{
-				dwError = GetLastError();
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Container already existed !!");
-			}
-			fStatus = CryptImportKey(hProv,pBlob,usPublicKeySize,0,CRYPT_EXPORTABLE,&hKey);
-			if(!fStatus)
-			{
-				dwError = GetLastError();
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptImportKey 0x%08x",GetLastError());
-				__leave;
-			}
-			// create a symetric key which can be used to crypt data and
-			// which is saved and protected by the public key
-			fStatus = GenerateSymetricKeyAndSaveIt(hProv, hKey, &hSymetricKey, &pSymetricKey, &usSymetricKeySize);
-			if(!fStatus)
-			{
-				dwError = GetLastError();
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GenerateSymetricKeyAndSaveIt");
-				__leave;
-			}
-			// encrypt the password and save it
-			fStatus = EncryptPasswordAndSaveIt(hSymetricKey,szPassword,usPasswordLen, &pEncryptedPassword, &usEncryptedPasswordSize);
-			if(!fStatus)
-			{
-				dwError = GetLastError();
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EncryptPasswordAndSaveIt");
-				__leave;
-			}
-			usSecretSize = (USHORT) sizeof(EID_PRIVATE_DATA) + usEncryptedPasswordSize + usSymetricKeySize + usPublicKeySize;
-			pbSecret = (PEID_PRIVATE_DATA) EIDAlloc(usSecretSize);
-			if (!pbSecret)
-			{
-				dwError = GetLastError();
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by EIDAlloc", GetLastError());
-				__leave;
-			}
-			// copy data
-			pbSecret->dwType = eidpdtCrypted;
-			pbSecret->dwCertificatSize = usPublicKeySize;
-			pbSecret->dwSymetricKeySize = usSymetricKeySize;
-			pbSecret->dwPasswordSize = usEncryptedPasswordSize;
-			pbSecret->dwCertificatOffset = 0;
-			memcpy(pbSecret->Data + pbSecret->dwCertificatOffset, pBlob, pbSecret->dwCertificatSize);
-			pbSecret->dwSymetricKeyOffset = pbSecret->dwCertificatOffset + usPublicKeySize;
-			memcpy(pbSecret->Data + pbSecret->dwSymetricKeyOffset, pSymetricKey, pbSecret->dwSymetricKeySize);
-			pbSecret->dwPasswordOffset = pbSecret->dwSymetricKeyOffset + usSymetricKeySize;
-			memcpy(pbSecret->Data + pbSecret->dwPasswordOffset, pEncryptedPassword, pbSecret->dwPasswordSize);
-		}
-		else
-		{
-			// uncrypted
-			usSecretSize = (USHORT) sizeof(EID_PRIVATE_DATA) + usPasswordSize + usPublicKeySize;
-			pbSecret = (PEID_PRIVATE_DATA) EIDAlloc(usSecretSize);
-			if (!pbSecret)
-			{
-				dwError = GetLastError();
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by EIDAlloc", GetLastError());
-				__leave;
-			}
-			pbSecret->dwType = eidpdtClearText;
-			pbSecret->dwCertificatSize = usPublicKeySize;
-			pbSecret->dwSymetricKeySize = 0;
-			pbSecret->dwPasswordSize = usPasswordSize;
-			pbSecret->dwCertificatOffset = 0;
-			memcpy(pbSecret->Data + pbSecret->dwCertificatOffset, pBlob, pbSecret->dwCertificatSize);
-			pbSecret->dwSymetricKeyOffset = pbSecret->dwCertificatOffset + usPublicKeySize;
-			pbSecret->dwPasswordOffset = pbSecret->dwSymetricKeyOffset;
-			memcpy(pbSecret->Data + pbSecret->dwPasswordOffset, szPassword, pbSecret->dwPasswordSize);
-		}
-		// forward Hash
-		if (pEidPrivateData)
-		{
-			memcpy(pbSecret->Hash, pEidPrivateData->Hash, 20);
-		}
-		else if (Hash)
-		{
-			memcpy(pbSecret->Hash, Hash, 20);
-		}
-		else
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"No Hash");
-			__leave;
-		}
-
-		// save the data
-		if (!StorePrivateData(dwRid, (PBYTE) pbSecret, usSecretSize))
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"StorePrivateData");
-			__leave;
-		}
-		fReturn = TRUE;
-	}
-	__finally
-	{
-		if (pEidPrivateData)
-			EIDFree(pEidPrivateData);
-		if (pSymetricKey)
-			EIDFree(pSymetricKey);
-		if (pEncryptedPassword)
-			EIDFree(pEncryptedPassword);
-		if (pbSecret)
-			EIDFree(pbSecret);
-		if (hSymetricKey)
-			CryptDestroyKey(hSymetricKey);
-		if (hKey)
-			CryptDestroyKey(hKey);
-		if (hProv)
-		{
-			CryptReleaseContext(hProv, 0);
-			CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,CRYPT_DELETE_KEYSET);
-		}
-	}
-	SetLastError(dwError);
-	return fReturn;
-}*/
-
-/*BOOL RetrieveStoredCredential(__in DWORD dwRid, __in PCCERT_CONTEXT pCertContext, __in LPCTSTR Pin, __out PWSTR *pszPassword)
-{
-	BOOL fReturn = FALSE;
-	PEID_PRIVATE_DATA pEidPrivateData = NULL;
-	PBYTE pSymetricKey = NULL;
-	USHORT usSymetricKeySize;
-	DWORD dwSize;
-	PCRYPT_KEY_PROV_INFO pKeyProvInfo = NULL;
-	DWORD dwError = 0;
-	*pszPassword = NULL;
-	PBYTE pbPublicKey = NULL;
-	PBYTE StoredPublicKeyBlob;
-	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter Rid = %d", dwRid);
-	__try
-	{
-		if (!RetrievePrivateData(dwRid, &pEidPrivateData))
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error returned by RetrievePrivateData");
-			__leave;
-		}
-		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Type %d ", pEidPrivateData->dwType);
-		switch (pEidPrivateData->dwType)
-		{
-		case eidpdtClearText:
-			// detect Provider name
-			dwSize = 0;
-			if (!CertGetCertificateContextProperty(pCertContext, CERT_KEY_PROV_INFO_PROP_ID, NULL, &dwSize))
-			{
-				dwError = GetLastError();
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CertGetCertificateContextProperty", GetLastError());
-				__leave;
-			}
-			pKeyProvInfo = (PCRYPT_KEY_PROV_INFO) EIDAlloc(dwSize);
-			if (!pKeyProvInfo)
-			{
-				dwError = GetLastError();
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by EIDAlloc", GetLastError());
-				__leave;
-			}
-			if (!CertGetCertificateContextProperty(pCertContext, CERT_KEY_PROV_INFO_PROP_ID, (PBYTE) pKeyProvInfo, &dwSize))
-			{
-				dwError = GetLastError();
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CertGetCertificateContextProperty", GetLastError());
-				__leave;
-			}
-			// authenticate card depending of the CSP
-			// belgium identity card
-			if (wcscmp(pKeyProvInfo->pwszProvName, WBEIDCSP) == 0)
-			{
-				if (!SolveBEIDChallenge(pCertContext, Pin))
-				{
-					dwError = GetLastError();
-					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error returned by SolveBEIDChallenge");
-					__leave;
-				}
-			}
-			// vanilla authentication
-			else
-			{
-				StoredPublicKeyBlob = (PBYTE) (pEidPrivateData->Data + pEidPrivateData->dwCertificatOffset);
-				if (!GetPublicKeyBlobFromCertificate(pCertContext, &pbPublicKey))
-				{
-					dwError = GetLastError();
-					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error returned by GetPublicKeyBlobFromCertificate");
-					__leave;
-				}
-				if (!pEidPrivateData->dwCertificatSize)
-				{
-					// dont hang lsa if there is bad data
-					dwError = 0x80090015; //NTE_BAD_PUBLIC_KEY;
-					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"public key does not match dwCertificatSize=0");
-					__leave;
-				}
-				for (DWORD dwI = 0; dwI < pEidPrivateData->dwCertificatSize; dwI++)
-				{
-					if (pbPublicKey[dwI] != StoredPublicKeyBlob[dwI])
-					{
-						dwError = 0x80090015; //NTE_BAD_PUBLIC_KEY;
-						EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"public key does not match");
-						__leave;
-					}
-				}
-
-				if (!SolveChallenge(pCertContext, Pin))
-				{
-					dwError = GetLastError();
-					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error returned by SolveChallenge");
-					__leave;
-				}
-			}
-			*pszPassword = (PWSTR) EIDAlloc(pEidPrivateData->dwPasswordSize + sizeof(WCHAR));
-			if (!*pszPassword)
-			{
-				dwError = GetLastError();
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by EIDAlloc", GetLastError());
-				__leave;
-			}
-			memcpy(*pszPassword, pEidPrivateData->Data + pEidPrivateData->dwPasswordOffset, pEidPrivateData->dwPasswordSize);
-			*(PWSTR)(((PBYTE)*pszPassword) + pEidPrivateData->dwPasswordSize) = '\0';
-			break;
-		case eidpdtCrypted:
-			StoredPublicKeyBlob = (PBYTE) (pEidPrivateData->Data + pEidPrivateData->dwCertificatOffset);
-			if (!GetPublicKeyBlobFromCertificate(pCertContext, &pbPublicKey))
-			{
-				dwError = GetLastError();
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error returned by GetPublicKeyBlobFromCertificate");
-				__leave;
-			}
-			if (!pEidPrivateData->dwCertificatSize)
-			{
-				// dont hang lsa if there is bad data
-				dwError = 0x80090015; //NTE_BAD_PUBLIC_KEY;
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"public key does not match dwCertificatSize=0");
-				__leave;
-			}
-			for (DWORD dwI = 0; dwI < pEidPrivateData->dwCertificatSize; dwI++)
-			{
-				if (pbPublicKey[dwI] != StoredPublicKeyBlob[dwI])
-				{
-					dwError = 0x80090015; //NTE_BAD_PUBLIC_KEY;
-					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"public key does not match at %d",dwI);
-					__leave;
-				}
-			}
-			if (!DecryptSymetricKey(pCertContext, pEidPrivateData, Pin, &pSymetricKey, &usSymetricKeySize))
-			{
-				dwError = GetLastError();
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error returned by DecryptSymetricKey");
-				__leave;
-			}
-			if (!DecryptPassword(pEidPrivateData, pSymetricKey, usSymetricKeySize, pszPassword))
-			{
-				dwError = GetLastError();
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error returned by DecryptPassword");
-				__leave;
-			}
-			break;
-		}
-		fReturn = TRUE;
-	}
-	__finally
-	{
-		if (!fReturn)
-		{
-			if (*pszPassword)
-				EIDFree(*pszPassword);
-		}
-		if (pbPublicKey)
-			EIDFree(pbPublicKey);
-		if (pKeyProvInfo)
-			EIDFree(pKeyProvInfo);
-		if (pSymetricKey)
-			EIDFree(pSymetricKey);
-		if (pEidPrivateData)
-			EIDFree(pEidPrivateData);
-	}
-	SetLastError(dwError);
-	return fReturn;
-}
-*/
-////////////////////////////////////////////////////////////////////////////////
-// LEVEL 2
-////////////////////////////////////////////////////////////////////////////////
-/*
-BOOL GetPublicKeyBlobFromCertificate(PCCERT_CONTEXT pCertContext, PBYTE *ppbPublicKey)
-{
-	BOOL fStatus, fFreeProv;
-	DWORD dwKeySpec;
-	DWORD dwPublicKeySize;
-	HCRYPTPROV hProv = NULL;
-	HCRYPTKEY hKey = NULL;
-	DWORD dwError = 0;
-	BOOL fReturn = FALSE;
-	__try
-	{
-		fStatus = CryptAcquireCertificatePrivateKey(pCertContext, 0, NULL, &hProv, &dwKeySpec, &fFreeProv);
-		if (!fStatus)
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireCertificatePrivateKey 0x%08x",GetLastError());
-			__leave;
-		}
-		fStatus = CryptGetUserKey(hProv, dwKeySpec, &hKey);
-		if (!fStatus)
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptGetUserKey 0x%08x",GetLastError());
-			__leave;
-		}
-		fStatus = CryptExportKey( hKey, NULL, PUBLICKEYBLOB, 0, NULL, &dwPublicKeySize);
-		if (!fStatus)
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptExportKey 0x%08x",GetLastError());
-			__leave;
-		}
-		*ppbPublicKey = (PBYTE) EIDAlloc(dwPublicKeySize);
-		if (!*ppbPublicKey)
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EIDAlloc 0x%08x",GetLastError());
-			__leave;
-		}
-		fStatus = CryptExportKey( hKey, NULL, PUBLICKEYBLOB, 0, *ppbPublicKey, &dwPublicKeySize);
-		if (!fStatus)
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptExportKey 0x%08x",GetLastError());
-			__leave;
-		}
-		fReturn = TRUE;
-	}
-	__finally
-	{
-		if (!fReturn)
-		{
-			if (*ppbPublicKey)
-				EIDFree(*ppbPublicKey);
-		}
-		if (hKey)
-			CryptDestroyKey(hKey);
-
-		if (hProv)
-			CryptReleaseContext(hProv, 0);
-	}
-	SetLastError(dwError);
-	return fReturn;
-}
-*/
 BOOL CStoredCredentialManager::GetResponseFromChallenge(__in PBYTE pChallenge, __in DWORD dwChallengeSize,__in DWORD dwChallengeType, __in PCCERT_CONTEXT pCertContext, __in PWSTR Pin, __out PBYTE *pSymetricKey, __out DWORD *usSize)
 {
 	switch(dwChallengeType)
@@ -1803,24 +1249,25 @@ BOOL CStoredCredentialManager::EncryptPasswordAndSaveIt(__in HCRYPTKEY hKey, __i
 	return fReturn;
 }
 
-BOOL CStoredCredentialManager::GetPasswordFromChallengeResponse(__in DWORD dwRid, __in PBYTE ppChallenge, __in DWORD dwChallengeSize, __in DWORD dwChallengeType, __in PBYTE pResponse, __in DWORD dwResponseSize, PWSTR *pszPassword)
+BOOL CStoredCredentialManager::GetPasswordFromChallengeResponse(__in DWORD dwRid, __in PBYTE ppChallenge, __in DWORD dwChallengeSize,  __in PCCERT_CONTEXT pCertContext, __in DWORD dwChallengeType, __in PBYTE pResponse, __in DWORD dwResponseSize, PWSTR *pszPassword)
 {
 	switch(dwChallengeType)
 	{
 	case eidpdtClearText:
-		
+		return GetPasswordFromSignatureChallengeResponse(dwRid,ppChallenge,dwChallengeSize,pCertContext,pResponse,dwResponseSize,pszPassword);
 		break;
 	case eidpdtCrypted:
-		return GetPasswordFromCryptedChallengeResponse(dwRid,ppChallenge,dwChallengeSize,pResponse,dwResponseSize,pszPassword);
+		return GetPasswordFromCryptedChallengeResponse(dwRid,ppChallenge,dwChallengeSize,pCertContext,pResponse,dwResponseSize,pszPassword);
 		break;
 	}
 	EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Type not implemented");
 	return FALSE;
 }
 
-BOOL CStoredCredentialManager::GetPasswordFromCryptedChallengeResponse(__in DWORD dwRid, __in PBYTE ppChallenge, __in DWORD dwChallengeSize, __in PBYTE pResponse, __in DWORD dwResponseSize, PWSTR *pszPassword)
+BOOL CStoredCredentialManager::GetPasswordFromCryptedChallengeResponse(__in DWORD dwRid, __in PBYTE ppChallenge, __in DWORD dwChallengeSize,__in PCCERT_CONTEXT pCertContext, __in PBYTE pResponse, __in DWORD dwResponseSize, PWSTR *pszPassword)
 {
 	UNREFERENCED_PARAMETER(ppChallenge);
+	UNREFERENCED_PARAMETER(pCertContext);
 	UNREFERENCED_PARAMETER(dwChallengeSize);
 	BOOL fReturn = FALSE, fStatus;
 	DWORD dwSize;
@@ -1940,7 +1387,7 @@ BOOL CStoredCredentialManager::GetPasswordFromCryptedChallengeResponse(__in DWOR
 	return fReturn;
 }
 
-BOOL CStoredCredentialManager::GetPasswordFromSignatureChallengeResponse(__in DWORD dwRid, __in PBYTE ppChallenge, __in DWORD dwChallengeSize, __in PBYTE pResponse, __in DWORD dwResponseSize, PWSTR *pszPassword)
+BOOL CStoredCredentialManager::GetPasswordFromSignatureChallengeResponse(__in DWORD dwRid, __in PBYTE ppChallenge, __in DWORD dwChallengeSize, __in PCCERT_CONTEXT pCertContext, __in PBYTE pResponse, __in DWORD dwResponseSize, PWSTR *pszPassword)
 {
 	UNREFERENCED_PARAMETER(dwChallengeSize);
 	BOOL fReturn = FALSE, fStatus;
@@ -1949,7 +1396,8 @@ BOOL CStoredCredentialManager::GetPasswordFromSignatureChallengeResponse(__in DW
 	HCRYPTPROV hProv = NULL;
 	HCRYPTKEY hKey = NULL;
 	HCRYPTHASH hHash = NULL;
-	PCCERT_CONTEXT pCertContext = NULL;
+	PCCERT_CONTEXT pCertContextVerif = NULL;
+	PCRYPT_KEY_PROV_INFO pKeyProvInfo = NULL;
 	__try
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
@@ -1960,6 +1408,13 @@ BOOL CStoredCredentialManager::GetPasswordFromSignatureChallengeResponse(__in DW
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"dwRid 0x%08x",dwError);
 			__leave;
 		}
+		if (pszPassword == NULL)
+		{
+			dwError = ERROR_NONE_MAPPED;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pszPassword null");
+			__leave;
+		}
+		*pszPassword = NULL;
 		fStatus = RetrievePrivateData(dwRid,&pEidPrivateData);
 		if (!fStatus)
 		{
@@ -1967,61 +1422,87 @@ BOOL CStoredCredentialManager::GetPasswordFromSignatureChallengeResponse(__in DW
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"RetrievePrivateData 0x%08x",dwError);
 			__leave;
 		}
-		pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, 
-			(PBYTE)pEidPrivateData->Data + pEidPrivateData->dwCertificatOffset, pEidPrivateData->dwCertificatSize);
-		if (!pCertContext)
+
+		DWORD dwSize = 0;
+		if (!CertGetCertificateContextProperty(pCertContext, CERT_KEY_PROV_INFO_PROP_ID, NULL, &dwSize))
 		{
 			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CertCreateCertificateContext 0x%08x",dwError);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CertGetCertificateContextProperty", GetLastError());
 			__leave;
 		}
-		// import the public key
-		fStatus = CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,0);
-		if(!fStatus)
+		pKeyProvInfo = (PCRYPT_KEY_PROV_INFO) EIDAlloc(dwSize);
+		if (!pKeyProvInfo)
 		{
 			dwError = GetLastError();
-			if (dwError == NTE_BAD_KEYSET)
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by malloc", GetLastError());
+			__leave;
+		}
+		if (!CertGetCertificateContextProperty(pCertContext, CERT_KEY_PROV_INFO_PROP_ID, (PBYTE) pKeyProvInfo, &dwSize))
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CertGetCertificateContextProperty", GetLastError());
+			__leave;
+		}
+		// verif card depending of the CSP
+		// belgium identity card
+		if (wcscmp(pKeyProvInfo->pwszProvName, WBEIDCSP) != 0)
+		{
+			pCertContextVerif = CertCreateCertificateContext(X509_ASN_ENCODING, 
+				(PBYTE)pEidPrivateData->Data + pEidPrivateData->dwCertificatOffset, pEidPrivateData->dwCertificatSize);
+			if (!pCertContextVerif)
 			{
-				fStatus = CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,CRYPT_NEWKEYSET);
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CertCreateCertificateContext 0x%08x",dwError);
+				__leave;
 			}
+			// import the public key
+			fStatus = CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,0);
+			if(!fStatus)
+			{
+				dwError = GetLastError();
+				if (dwError == NTE_BAD_KEYSET)
+				{
+					fStatus = CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,CRYPT_NEWKEYSET);
+					dwError = GetLastError();
+				}
+				if (!fStatus)
+				{
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireContext 0x%08x",dwError);
+					__leave;
+				}
+			}
+			else
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Container already existed !!");
+			}
+			fStatus = CryptImportPublicKeyInfo(hProv, pCertContextVerif->dwCertEncodingType, &(pCertContextVerif->pCertInfo->SubjectPublicKeyInfo),&hKey);
 			if (!fStatus)
 			{
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireContext 0x%08x",dwError);
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptImportKey 0x%08x",GetLastError());
+				__leave;
+			}
+			if (!CryptCreateHash(hProv,CALG_SHA,NULL,0,&hHash))
+			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CryptCreateHash", GetLastError());
+				__leave;
+			}
+			if (!CryptSetHashParam(hHash, HP_HASHVAL, ppChallenge, 0))
+			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CryptSetHashParam", GetLastError());
+				__leave;
+			}
+
+			if (!CryptVerifySignature(hHash, pResponse, dwResponseSize, hKey, TEXT(""), 0))
+			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CryptVerifySignature", GetLastError());
 				__leave;
 			}
 		}
-		else
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Container already existed !!");
-		}
-		fStatus = CryptImportPublicKeyInfo(hProv, pCertContext->dwCertEncodingType, &(pCertContext->pCertInfo->SubjectPublicKeyInfo),&hKey);
-		if (!fStatus)
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptImportKey 0x%08x",GetLastError());
-			__leave;
-		}
-		if (!CryptCreateHash(hProv,CALG_SHA,NULL,0,&hHash))
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CryptCreateHash", GetLastError());
-			__leave;
-		}
-		if (!CryptSetHashParam(hHash, HP_HASHVAL, ppChallenge, 0))
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CryptSetHashParam", GetLastError());
-			__leave;
-		}
-
-		if (!CryptVerifySignature(hHash, pResponse, dwResponseSize, hKey, TEXT(""), 0))
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CryptVerifySignature", GetLastError());
-			__leave;
-		}
-		*pszPassword = (PWSTR) EIDAlloc(pEidPrivateData->dwPasswordSize);
+		*pszPassword = (PWSTR) EIDAlloc(pEidPrivateData->dwPasswordSize + sizeof(WCHAR));
 		if (!*pszPassword)
 		{
 			dwError = GetLastError();
@@ -2029,6 +1510,7 @@ BOOL CStoredCredentialManager::GetPasswordFromSignatureChallengeResponse(__in DW
 			__leave;
 		}
 		memcpy(*pszPassword, (PBYTE)pEidPrivateData->Data + pEidPrivateData->dwPasswordOffset,pEidPrivateData->dwPasswordSize);
+		(*pszPassword)[pEidPrivateData->dwPasswordSize / sizeof(WCHAR)] = '\0';
 		fReturn = TRUE;
 
 	}
@@ -2036,15 +1518,20 @@ BOOL CStoredCredentialManager::GetPasswordFromSignatureChallengeResponse(__in DW
 	{
 		if (!fReturn)
 		{
-			if (*pszPassword) 
-				EIDFree(*pszPassword);
+			if (pszPassword)
+			{
+				if (*pszPassword) 
+					EIDFree(*pszPassword);
+			}
 		}
 		if (pEidPrivateData)
 		{
 			EIDFree(pEidPrivateData);
 		}
-		if (pCertContext)
-			CertFreeCertificateContext(pCertContext);
+		if (pKeyProvInfo)
+			EIDFree(pKeyProvInfo);
+		if (pCertContextVerif)
+			CertFreeCertificateContext(pCertContextVerif);
 		if (hHash)
 			CryptDestroyHash(hHash);
 		if (hKey)

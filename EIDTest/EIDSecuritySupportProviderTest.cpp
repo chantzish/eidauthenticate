@@ -80,11 +80,11 @@ ULONG_PTR AcquireTestCredential()
 			SEC_WINNT_AUTH_IDENTITY_VERSION,
 			sizeof authIdent,
 			(unsigned short *)szUsername,
-			_tcsclen(szUsername),
+			(DWORD)_tcsclen(szUsername),
 			(unsigned short *)szDomain,
-			_tcsclen(szDomain),
+			(DWORD)_tcsclen(szDomain),
 			(unsigned short *)szPassword,
-			_tcsclen(szPassword),
+			(DWORD)_tcsclen(szPassword),
 	#ifdef UNICODE
 			SEC_WINNT_AUTH_IDENTITY_UNICODE
 	#else

@@ -331,7 +331,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			}
 			// container name from card name
 			size_t ulNameLen = _tcslen(pCertificateInfo->szReader);
-			szContainerName = (LPTSTR) EIDAlloc( (ulNameLen + 6) * sizeof(TCHAR));
+			szContainerName = (LPTSTR) EIDAlloc( (DWORD) (ulNameLen + 6) * sizeof(TCHAR));
 			if (!szContainerName)
 			{
 				dwError = GetLastError();
@@ -948,7 +948,7 @@ BOOL ClearCard(PTSTR szReaderName, PTSTR szCardName)
 	}
 
 	size_t ulNameLen = _tcslen(szReaderName);
-	LPTSTR szMainContainerName = (LPTSTR) EIDAlloc((ulNameLen + 6) * sizeof(TCHAR));
+	LPTSTR szMainContainerName = (LPTSTR) EIDAlloc((DWORD)(ulNameLen + 6) * sizeof(TCHAR));
 	if (!szMainContainerName)
 	{
 		return FALSE;
@@ -1061,7 +1061,7 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 			__leave;
 		}
 		// container name from card name
-		szContainerName = (LPTSTR) EIDAlloc((_tcslen(szReaderName) + 6) * sizeof(TCHAR));
+		szContainerName = (LPTSTR) EIDAlloc((DWORD)(_tcslen(szReaderName) + 6) * sizeof(TCHAR));
 		if (!szContainerName)
 		{
 			//dwError = GetLastError();

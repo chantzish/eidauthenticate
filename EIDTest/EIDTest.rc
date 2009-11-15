@@ -47,7 +47,8 @@ BEGIN
   END
   POPUP "EID&PasswordChangeNotification",IDM_
   BEGIN
-    MENUITEM "Create Stored Credential",IDM_PASS_CREATE
+    MENUITEM "Create Stored Credential with crypt",IDM_PASS_CREATE
+    MENUITEM "Create Stored Credential with no crypt",IDM_PASS_CREATE2
     MENUITEM "Update Credential",IDM_PASS_UPDATE
     MENUITEM "Delete Credential",IDM_PASS_DELETE
     MENUITEM "Retrieve Credential",IDM_PASS_RETRIEVE

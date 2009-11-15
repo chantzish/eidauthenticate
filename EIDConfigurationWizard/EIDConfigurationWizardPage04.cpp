@@ -268,26 +268,29 @@ BOOL InitListViewCheckIcon(HWND hWndListView)
 	// Add an icon to each image list.  
 	HMODULE hDll = LoadLibrary(TEXT("imageres.dll") );
 	//Check if hIcon is valid
-    hiconItem = LoadIcon(hDll, MAKEINTRESOURCE(105)); 
-    ImageList_AddIcon(hLarge, hiconItem); 
-    ImageList_AddIcon(hSmall, hiconItem); 
-	DestroyIcon(hiconItem); 
-    
-	hiconItem = LoadIcon(hDll, MAKEINTRESOURCE(107)); 
-    ImageList_AddIcon(hLarge, hiconItem); 
-    ImageList_AddIcon(hSmall, hiconItem); 
-    DestroyIcon(hiconItem); 
-    
-	hiconItem = LoadIcon(hDll, MAKEINTRESOURCE(106)); 
-    ImageList_AddIcon(hLarge, hiconItem); 
-    ImageList_AddIcon(hSmall, hiconItem); 
-    DestroyIcon(hiconItem); 
+	if (hDll)
+	{
+		hiconItem = LoadIcon(hDll, MAKEINTRESOURCE(105)); 
+		ImageList_AddIcon(hLarge, hiconItem); 
+		ImageList_AddIcon(hSmall, hiconItem); 
+		DestroyIcon(hiconItem); 
+	    
+		hiconItem = LoadIcon(hDll, MAKEINTRESOURCE(107)); 
+		ImageList_AddIcon(hLarge, hiconItem); 
+		ImageList_AddIcon(hSmall, hiconItem); 
+		DestroyIcon(hiconItem); 
+	    
+		hiconItem = LoadIcon(hDll, MAKEINTRESOURCE(106)); 
+		ImageList_AddIcon(hLarge, hiconItem); 
+		ImageList_AddIcon(hSmall, hiconItem); 
+		DestroyIcon(hiconItem); 
 
-	hiconItem = LoadIcon(hDll, MAKEINTRESOURCE(81)); 
-    ImageList_AddIcon(hLarge, hiconItem); 
-    ImageList_AddIcon(hSmall, hiconItem); 
-    DestroyIcon(hiconItem);
-	FreeLibrary(hDll) ;
+		hiconItem = LoadIcon(hDll, MAKEINTRESOURCE(81)); 
+		ImageList_AddIcon(hLarge, hiconItem); 
+		ImageList_AddIcon(hSmall, hiconItem); 
+		DestroyIcon(hiconItem);
+		FreeLibrary(hDll) ;
+	}
 
 	// Assign the image lists to the list-view control. 
     ListView_SetImageList(hWndListView, hLarge, LVSIL_NORMAL); 
@@ -354,24 +357,30 @@ BOOL InitListViewListIcon(HWND hWndListView)
 
 	// Add an icon to each image list.  
 	HMODULE hDll = LoadLibrary(TEXT("certmgr.dll") );
-	//Check if hIcon is valid
-    HICON hIcon = LoadIcon(hDll, MAKEINTRESOURCE(218));
-	ImageList_AddIcon(hLarge, hIcon ); 
-	ImageList_AddIcon(hSmall, hIcon ); 
-	
-    DestroyIcon(hIcon ); 
-FreeLibrary(hDll);
+	if (hDll)
+	{
+		//Check if hIcon is valid
+		HICON hIcon = LoadIcon(hDll, MAKEINTRESOURCE(218));
+		ImageList_AddIcon(hLarge, hIcon ); 
+		ImageList_AddIcon(hSmall, hIcon ); 
+		
+		DestroyIcon(hIcon ); 
+		FreeLibrary(hDll);
+	}
 	hDll = LoadLibrary(TEXT("imageres.dll") );
-hIcon = MiniIcon(LoadModIcon(105));
+	if (hDll)
+	{
+		HICON hIcon = MiniIcon(LoadModIcon(105));
 
-	ImageList_AddIcon(hLarge, hIcon ); 
-	ImageList_AddIcon(hSmall, hIcon ); 
-	DestroyIcon(hIcon ); 
-hIcon =  MiniIcon(LoadModIcon(106));
-	ImageList_AddIcon(hLarge, hIcon ); 
-	ImageList_AddIcon(hSmall, hIcon ); 
-	DestroyIcon(hIcon ); 
-	FreeLibrary(hDll);
+		ImageList_AddIcon(hLarge, hIcon ); 
+		ImageList_AddIcon(hSmall, hIcon ); 
+		DestroyIcon(hIcon ); 
+		hIcon =  MiniIcon(LoadModIcon(106));
+		ImageList_AddIcon(hLarge, hIcon ); 
+		ImageList_AddIcon(hSmall, hIcon ); 
+		DestroyIcon(hIcon ); 
+		FreeLibrary(hDll);
+	}
 	ImageList_SetOverlayImage(hLarge, 1, 1);
 	ImageList_SetOverlayImage(hLarge, 2, 2);
 	ImageList_SetOverlayImage(hSmall, 1, 1);

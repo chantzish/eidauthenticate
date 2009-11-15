@@ -92,6 +92,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 			RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 				TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\SmartCardCredentialProvider"),
 				TEXT("AllowCertificatesWithNoEKU"), REG_DWORD, &dwValue,sizeof(dwValue));
+			return 0;
 		}
 		else if (_tcscmp(pszCommandLine[0],TEXT("TRUST")) == 0)
 		{

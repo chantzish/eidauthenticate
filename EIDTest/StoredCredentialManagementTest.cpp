@@ -13,7 +13,7 @@
 extern HWND hMainWnd;
 
 
-void menu_CREDMGMT_CreateStoredCredential()
+void menu_CREDMGMT_CreateStoredCredential(BOOL fCrypt)
 {
 	WCHAR szUserName[256];
 	WCHAR szComputerName[256];
@@ -34,7 +34,7 @@ void menu_CREDMGMT_CreateStoredCredential()
 				if (AskPin(szPin))
 				{
 					CStoredCredentialManager* manager = CStoredCredentialManager::Instance();
-					if (manager->CreateCredential(GetRidFromUsername(szUserName), Context,szPin,0, TRUE))
+					if (manager->CreateCredential(GetRidFromUsername(szUserName), Context,szPin,0, fCrypt))
 					{
 						MessageBox(hMainWnd,_T("Success"),_T("Success"),0);
 					}

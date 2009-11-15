@@ -34,22 +34,22 @@
 CContainer::CContainer(LPCTSTR szReaderName, LPCTSTR szCardName, LPCTSTR szProviderName, LPCTSTR szContainerName, DWORD KeySpec,__in USHORT ActivityCount,PCCERT_CONTEXT pCertContext)
 {
 	_dwRid = 0;
-	_szReaderName = (LPTSTR) EIDAlloc (sizeof(TCHAR)*(_tcslen(szReaderName)+1));
+	_szReaderName = (LPTSTR) EIDAlloc ((DWORD)(sizeof(TCHAR)*(_tcslen(szReaderName)+1)));
 	if (_szReaderName)
 	{
 		_tcscpy_s(_szReaderName,_tcslen(szReaderName)+1,szReaderName);
 	}
-	_szProviderName = (LPTSTR) EIDAlloc (sizeof(TCHAR)*(_tcslen(szProviderName)+1));
+	_szProviderName = (LPTSTR) EIDAlloc ((DWORD)(sizeof(TCHAR)*(_tcslen(szProviderName)+1)));
 	if (_szProviderName)
 	{
 		_tcscpy_s(_szProviderName,_tcslen(szProviderName)+1,szProviderName);
 	}
-	_szContainerName = (LPTSTR) EIDAlloc (sizeof(TCHAR)*(_tcslen(szContainerName)+1));
+	_szContainerName = (LPTSTR) EIDAlloc ((DWORD)(sizeof(TCHAR)*(_tcslen(szContainerName)+1)));
 	if (_szContainerName)
 	{
 		_tcscpy_s(_szContainerName,_tcslen(szContainerName)+1,szContainerName);
 	}
-	_szCardName = (LPTSTR) EIDAlloc (sizeof(TCHAR)*(_tcslen(szCardName)+1));
+	_szCardName = (LPTSTR) EIDAlloc ((DWORD)(sizeof(TCHAR)*(_tcslen(szCardName)+1)));
 	if (_szCardName)
 	{
 		_tcscpy_s(_szCardName,_tcslen(szCardName)+1,szCardName);
@@ -153,7 +153,7 @@ PTSTR CContainer::GetUserName()
 		if (_tcsclen(_szUserName) >= 21) 
 			_szUserName[20]=0;
 		// remove terminating dot
-		for(int i = _tcsclen(_szUserName)-1; i>= 0; i--)
+		for(int i = (int)_tcsclen(_szUserName)-1; i>= 0; i--)
 		{
 			if (_szUserName[i] == '.')
 			{

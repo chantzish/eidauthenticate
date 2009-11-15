@@ -75,7 +75,6 @@ SectionEnd
 Section /o "Belgium EID Patch" SecBeid
 
   System::Call "EIDAuthenticationPackage.dll::EIDPatch()"
-  CopyFiles  "$PROGRAMFILES\Belgium Identity Card\beid35libCpp.dll" "$SYSDIR"
 
 SectionEnd
 

@@ -98,7 +98,7 @@ BOOL CContainerHolderFactory<T>::ConnectNotificationGeneric(__in LPCTSTR szReade
 	}
 
 	size_t ulNameLen = _tcslen(szReaderName);
-	LPTSTR szMainContainerName = (LPTSTR) EIDAlloc(sizeof(TCHAR)*(ulNameLen + 6));
+	LPTSTR szMainContainerName = (LPTSTR) EIDAlloc((DWORD)(sizeof(TCHAR)*(ulNameLen + 6)));
 	if (!szMainContainerName)
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"szMainContainerName %d",GetLastError());
@@ -336,7 +336,7 @@ BOOL CContainerHolderFactory<T>::DisconnectNotification(LPCTSTR szReaderName)
 		{
 			MultiByteToWideChar(CP_ACP, 0, szReaderName, -1, szWideReaderName, wLen);
 #else
-		LPWSTR szWideReaderName = (LPWSTR) EIDAlloc(sizeof(WCHAR)*(_tcslen(szReaderName)+1));
+		LPWSTR szWideReaderName = (LPWSTR) EIDAlloc((DWORD)(sizeof(WCHAR)*(_tcslen(szReaderName)+1)));
 		if (szWideReaderName)
 			{
 			_tcscpy_s(szWideReaderName,_tcslen(szReaderName)+1,szReaderName);
