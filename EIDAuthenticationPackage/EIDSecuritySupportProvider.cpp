@@ -619,7 +619,7 @@ extern "C"
 						status = SEC_E_INSUFFICIENT_MEMORY;
 						__leave;
 					}
-					dwSize = (_tcslen(szName)+1) * sizeof(TCHAR);
+					dwSize = (DWORD)(_tcslen(szName)+1) * sizeof(TCHAR);
 					status = MyLsaDispatchTable->AllocateClientBuffer(NULL, dwSize, (PVOID*) Buffer);
 					if (status != STATUS_SUCCESS)
 					{
@@ -832,6 +832,7 @@ extern "C"
 			{
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"phToken null");
 				Status = STATUS_INVALID_PARAMETER;
+				__leave;
 			}
 			*phToken = INVALID_HANDLE_VALUE;
 			// create the sid from the rid

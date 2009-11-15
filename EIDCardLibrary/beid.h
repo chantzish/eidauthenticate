@@ -27,3 +27,4 @@ BOOL GetBEIDCertificateData(__in LPCTSTR szReaderName,__out LPTSTR *pszContainer
 							__in_opt DWORD dwKeySpec = 0);
 PCCERT_CONTEXT GetBEIDCertificateFromCspInfo(__in PEID_SMARTCARD_CSP_INFO pCspInfo);
 BOOL SolveBEIDChallenge(__in PCCERT_CONTEXT pCertContext, __in LPCWSTR Pin);
+

@@ -65,7 +65,7 @@ CCredential* CCredential::CreateCredential(PLUID LogonIdToUse, PCERT_CREDENTIAL_
 
 CCredential::CCredential(PLUID LogonIdToUse, PCERT_CREDENTIAL_INFO pCertInfo,PWSTR szPin, ULONG CredentialUseFlags)
 {
-	_dwLen = wcslen(szPin) + 1;
+	_dwLen = (DWORD) wcslen(szPin) + 1;
 	_LogonId = *LogonIdToUse;
 	for (int i = 0; i < CERT_HASH_LENGTH; i++)
 	{
@@ -323,7 +323,7 @@ NTSTATUS CSecurityContext::BuildChallengeMessage(PSecBufferDesc Buffer)
 		{
 			if ( pInfo[dwI].usri3_user_id == dwRid)
 			{
-				DWORD dwLen= (wcslen(pInfo[dwI].usri3_name)+1);
+				DWORD dwLen= (DWORD)(wcslen(pInfo[dwI].usri3_name)+1);
 				szUserName = (PWSTR) EIDAlloc(dwLen*sizeof(WCHAR));
 				if (!szUserName)
 				{
@@ -349,7 +349,7 @@ NTSTATUS CSecurityContext::BuildChallengeMessage(PSecBufferDesc Buffer)
 		message->ChallengeLen = dwChallengeSize;
 		message->ChallengeOffset = sizeof(EID_CHALLENGE_MESSAGE);
 		memcpy((PBYTE)message + message->ChallengeOffset, pbChallenge, dwChallengeSize);
-		message->UsernameLen = wcslen(szUserName) * sizeof(WCHAR);
+		message->UsernameLen = (DWORD)wcslen(szUserName) * sizeof(WCHAR);
 		message->UsernameOffset = message->ChallengeOffset + message->ChallengeLen;
 		memcpy((PBYTE)message + message->UsernameOffset,szUserName,message->UsernameLen);
 		_State = EIDMSChallenge;
@@ -445,9 +445,10 @@ PWSTR CSecurityContext::GetUserName()
 	PWSTR szString = NULL;
 	if (!szUserName)
 		return NULL;
-	DWORD dwLen = wcslen(szString) + 1;
-	szString = (PWSTR) EIDAlloc(dwLen * sizeof(WCHAR));
 	if (!szString) return NULL;
+	DWORD dwLen = (DWORD) wcslen(szString) + 1;
+	szString = (PWSTR) EIDAlloc(dwLen * sizeof(WCHAR));
+	
 	wcscpy_s(szString,dwLen,szUserName);
 	return szString;
 }

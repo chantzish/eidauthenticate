@@ -691,7 +691,10 @@ HRESULT CEIDCredential::ReportResult(
 		PWSTR Error = NULL;
 		DWORD dwLen = 2048;
 		Error = (PWSTR) CoTaskMemAlloc(dwLen);
-		FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM,NULL,LsaNtStatusToWinError(ntsStatus),0,(PWSTR)Error,dwLen,NULL);
+		if (Error)
+		{
+			FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM,NULL,LsaNtStatusToWinError(ntsStatus),0,(PWSTR)Error,dwLen,NULL);
+		}
 		*ppwszOptionalStatusText = Error;
 
 	}

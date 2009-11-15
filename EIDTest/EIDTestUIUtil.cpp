@@ -157,7 +157,7 @@ PCCERT_CONTEXT SelectCerts(__in LPCWSTR szReaderName,__in LPCWSTR szCardName,
 				if (pCertContext)
 				{
 					pContextArray[dwContextArrayLen] = pCertContext;
-					pContainerName[dwContextArrayLen] = (LPWSTR) EIDAlloc((wcslen(szContainerName)+1) * sizeof(WCHAR));
+					pContainerName[dwContextArrayLen] = (LPWSTR) EIDAlloc((DWORD)(wcslen(szContainerName)+1) * sizeof(WCHAR));
 					dwKeySpecs[i] = dwKeySpec;
 					memcpy((PVOID)pContainerName[dwContextArrayLen],szContainerName, (wcslen(szContainerName)+1) * sizeof(WCHAR));
 					dwContextArrayLen++;
@@ -181,7 +181,7 @@ PCCERT_CONTEXT SelectCerts(__in LPCWSTR szReaderName,__in LPCWSTR szCardName,
 	else
 	{
 		size_t ulNameLen = _tcslen(szReaderName);
-		szMainContainerName = (LPWSTR) EIDAlloc((ulNameLen + 6) * sizeof(WCHAR));
+		szMainContainerName = (LPWSTR) EIDAlloc((DWORD)(ulNameLen + 6) * sizeof(WCHAR));
 		if (!szMainContainerName)
 		{
 			return NULL;

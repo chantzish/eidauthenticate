@@ -283,7 +283,10 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			menu_SSP_login();
 			break;
 		case IDM_PASS_CREATE:
-			menu_CREDMGMT_CreateStoredCredential();
+			menu_CREDMGMT_CreateStoredCredential(TRUE);
+			break;
+		case IDM_PASS_CREATE2:
+			menu_CREDMGMT_CreateStoredCredential(FALSE);
 			break;
 		case IDM_PASS_UPDATE:
 			menu_CREDMGMT_UpdateStoredCredential();

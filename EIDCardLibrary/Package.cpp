@@ -72,6 +72,9 @@ void SetFree(PLSA_FREE_LSA_HEAP FreeHeap)
 
 PVOID EIDAllocEx(PCSTR szFile, DWORD dwLine, PCSTR szFunction,DWORD dwSize)
 {
+	UNREFERENCED_PARAMETER(szFile);
+	UNREFERENCED_PARAMETER(dwLine);
+	UNREFERENCED_PARAMETER(szFunction);
 	PVOID memory = NULL;
 	if (MyAllocateHeap)
 	{
@@ -81,18 +84,21 @@ PVOID EIDAllocEx(PCSTR szFile, DWORD dwLine, PCSTR szFunction,DWORD dwSize)
 	{
 		memory = malloc(dwSize);
 	}
-	if (TraceAllocation)
-	{
-		EIDCardLibraryTraceEx(szFile, dwLine, szFunction, WINEVENT_LEVEL_VERBOSE, L"Allocation of %p",memory);
-	}
+	//if (TraceAllocation)
+	//{
+	//	EIDCardLibraryTraceEx(szFile, dwLine, szFunction, WINEVENT_LEVEL_VERBOSE, L"Allocation of %p",memory);
+	//}
 	return memory;
 }
 VOID EIDFreeEx(PCSTR szFile, DWORD dwLine, PCSTR szFunction,PVOID buffer)
 {
-	if (TraceAllocation)
-	{
-		EIDCardLibraryTraceEx(szFile, dwLine, szFunction, WINEVENT_LEVEL_VERBOSE, L"Freeing of %p",buffer);
-	}
+	UNREFERENCED_PARAMETER(szFile);
+	UNREFERENCED_PARAMETER(dwLine);
+	UNREFERENCED_PARAMETER(szFunction);
+	//if (TraceAllocation)
+	//{
+	//	EIDCardLibraryTraceEx(szFile, dwLine, szFunction, WINEVENT_LEVEL_VERBOSE, L"Freeing of %p",buffer);
+	//}
 	if (MyFreeHeap)
 	{
 		MyFreeHeap(buffer);
@@ -534,7 +540,7 @@ PTSTR GetUsernameFromRid(__in DWORD dwRid)
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Rid not found %x",dwRid);
 			__leave;
 		}
-		dwSize = (_tcslen(pUserInfo[dwI].usri3_name) +1);
+		dwSize = (DWORD)(_tcslen(pUserInfo[dwI].usri3_name) +1);
 		szUsername = (PTSTR) EIDAlloc(dwSize *sizeof(TCHAR));
 		if (!szUsername)
 		{
