@@ -6,6 +6,7 @@
 #include "global.h"
 #include "EIDConfigurationWizard.h"
 #include "../EIDCardLibrary/CertificateUtilities.h"
+#include "../EIDCardLibrary/Tracing.h"
 
 INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -38,6 +39,14 @@ INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 					fShowNewCertificatePanel = TRUE;
 					PropSheet_SetCurSelByID(hWnd,IDD_03NEW);
 				}
+				else
+				{
+					LONG lReturn = GetLastError();
+					if (lReturn != SCARD_W_CANCELLED_BY_USER)
+					{
+						MessageBoxWin32(lReturn);
+					}
+				}
 			}
 			else
 			{
@@ -66,6 +75,14 @@ INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 				//next screen
 				fShowNewCertificatePanel = FALSE;
 				PropSheet_SetCurSelByID(hWnd,IDD_04CHECKS);
+			}
+			else
+			{
+				LONG lReturn = GetLastError();
+				if (lReturn != SCARD_W_CANCELLED_BY_USER)
+				{
+					MessageBoxWin32(lReturn);
+				}
 			}
 			break;
 

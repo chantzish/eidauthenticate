@@ -337,7 +337,7 @@ void EnableLogging()
 	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
 	err = RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 		TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider"), 
-		TEXT("FileName"), REG_SZ, TEXT("c:\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl"),sizeof(TEXT("c:\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl")));
+		TEXT("FileName"), REG_SZ, TEXT("c:\\windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl"),sizeof(TEXT("c:\\windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl")));
 	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
 	dwValue = 8;
 	err = RegSetKeyValue(	HKEY_LOCAL_MACHINE, 

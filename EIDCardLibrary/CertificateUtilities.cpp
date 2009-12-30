@@ -221,53 +221,54 @@ LPBYTE AllocateAndEncodeObject(LPVOID pvStruct, LPCSTR lpszStructType, LPDWORD p
 
 BOOL AskForCard(LPWSTR szReader, DWORD ReaderLength,LPWSTR szCard,DWORD CardLength)
 {
-	SCARDCONTEXT     hSC;
+	SCARDCONTEXT     hSC = NULL;
 	OPENCARDNAME_EX  dlgStruct;
-	LONG             lReturn;
+	LONG             lReturn = 0;
 	BOOL			 fReturn = FALSE;
-	// Establish a context.
-	// It will be assigned to the structure's hSCardContext field.
-	lReturn = SCardEstablishContext(SCARD_SCOPE_USER,
-									NULL,
-									NULL,
-									&hSC );
-	if ( SCARD_S_SUCCESS != lReturn )
+	__try
 	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed SCardReleaseContext 0x%08X",lReturn);
-		return FALSE;
-	}
+		// Establish a context.
+		// It will be assigned to the structure's hSCardContext field.
+		lReturn = SCardEstablishContext(SCARD_SCOPE_USER,
+										NULL,
+										NULL,
+										&hSC );
+		if ( SCARD_S_SUCCESS != lReturn )
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed SCardReleaseContext 0x%08X",lReturn);
+			__leave;
+		}
 
-	// Initialize the structure.
-	memset(&dlgStruct, 0, sizeof(dlgStruct));
-	dlgStruct.dwStructSize = sizeof(dlgStruct);
-	dlgStruct.hSCardContext = hSC;
-	dlgStruct.dwFlags = SC_DLG_MINIMAL_UI;
-	dlgStruct.lpstrRdr = szReader;
-	dlgStruct.nMaxRdr = ReaderLength;
-	dlgStruct.lpstrCard = szCard;
-	dlgStruct.nMaxCard = CardLength;
-	dlgStruct.lpstrTitle = L"Select Card";
-	dlgStruct.dwShareMode = 0;
-	// Display the select card dialog box.
-	lReturn = SCardUIDlgSelectCard(&dlgStruct);
-	if ( SCARD_S_SUCCESS != lReturn )
-	{
-		szReader[0]=0;
-		szCard[0]=0;
-		fReturn = FALSE;
-		MessageBoxWin32(lReturn);
-	}
-	else
-	{
+		// Initialize the structure.
+		memset(&dlgStruct, 0, sizeof(dlgStruct));
+		dlgStruct.dwStructSize = sizeof(dlgStruct);
+		dlgStruct.hSCardContext = hSC;
+		dlgStruct.dwFlags = SC_DLG_MINIMAL_UI;
+		dlgStruct.lpstrRdr = szReader;
+		dlgStruct.nMaxRdr = ReaderLength;
+		dlgStruct.lpstrCard = szCard;
+		dlgStruct.nMaxCard = CardLength;
+		dlgStruct.lpstrTitle = L"Select Card";
+		dlgStruct.dwShareMode = 0;
+		// Display the select card dialog box.
+		lReturn = SCardUIDlgSelectCard(&dlgStruct);
+		if ( SCARD_S_SUCCESS != lReturn )
+		{
+			szReader[0]=0;
+			szCard[0]=0;
+			__leave;
+		}
 		fReturn = TRUE;
 	}
-
+	__finally
+	{
+		if (hSC)
+			SCardReleaseContext(hSC);
+	}
 	// Free the context.
 	// lReturn is of type LONG.
 	// hSC was set by an earlier call to SCardEstablishContext.
-	lReturn = SCardReleaseContext(hSC);
-	if ( SCARD_S_SUCCESS != lReturn )
-		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed SCardReleaseContext 0x%08X",lReturn);
+	SetLastError(lReturn);
 	return fReturn;
 }
 
@@ -913,7 +914,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 		
 		if (szContainerName) 
 		{
-			if (pCertificateInfo->dwSaveon == 3)
+			if (pCertificateInfo->dwSaveon == UI_CERTIFICATE_INFO_SAVEON_SMARTCARD)
 				EIDFree(szContainerName);
 			else
 				RpcStringFree((RPC_WSTR*)&szContainerName);
@@ -923,7 +924,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 		if (pSidAdmins)
 			FreeSid(pSidAdmins);
 		if (pDacl)
-			EIDFree((HLOCAL)pDacl);
+			LocalFree(pDacl);
 		if (pSD)
 			EIDFree(pSD);
 	}

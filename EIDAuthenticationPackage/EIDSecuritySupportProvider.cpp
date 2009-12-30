@@ -86,6 +86,16 @@ extern "C"
 			initializeExportedFunctionsTable(&MyExportedFunctions);
 			*ppTables = &MyExportedFunctions;
 			*pcTables = MyExportedFunctionsCount;
+			SECURITY_PACKAGE_OPTIONS Options;
+			Options.Size = sizeof(SECURITY_PACKAGE_OPTIONS);
+			Options.Flags = 0;
+			Options.Type = SECPKG_OPTIONS_TYPE_SSPI;
+			Options.SignatureSize = 0;
+			Status = AddSecurityPackage(AUTHENTICATIONPACKAGENAMET,&Options);
+			if (Status != SEC_E_OK) 
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"AddSecurityPackage = 0x%08x",Status);
+			}
 			Status = STATUS_SUCCESS;
 		}
 		__finally
@@ -136,9 +146,10 @@ extern "C"
 			SECPKG_FLAG_MULTI_REQUIRED|
 			SECPKG_FLAG_CLIENT_ONLY|
 			SECPKG_FLAG_IMPERSONATION|
-			SECPKG_FLAG_NEGOTIABLE|
+			SECPKG_FLAG_NEGOTIABLE| 
 			SECPKG_FLAG_ACCEPT_WIN32_NAME |
-			SECPKG_FLAG_GSS_COMPATIBLE;
+			SECPKG_FLAG_GSS_COMPATIBLE |
+			0x00200000; //SECPKG_FLAG_NEGOTIABLE2
 		PackageInfo->wVersion = SECURITY_SUPPORT_PROVIDER_INTERFACE_VERSION;
 		PackageInfo->wRPCID = SECPKG_ID_NONE;
 		PackageInfo->cbMaxToken = 5000;
@@ -167,12 +178,29 @@ extern "C"
 				Status = STATUS_SUCCESS ; 
 				break;
 			case SecpkgContextThunks:
-				Status = SEC_E_UNSUPPORTED_FUNCTION ; 
+				*ppInformation = (PSECPKG_EXTENDED_INFORMATION) EIDAlloc(sizeof(SECPKG_EXTENDED_INFORMATION));
+				(*ppInformation)->Class = SecpkgContextThunks;
+				(*ppInformation)->Info.ContextThunks.InfoLevelCount = 0; 
+				Status = STATUS_SUCCESS; 
 				break;
 			case SecpkgMutualAuthLevel:
 				*ppInformation = (PSECPKG_EXTENDED_INFORMATION) EIDAlloc(sizeof(SECPKG_EXTENDED_INFORMATION));
 				(*ppInformation)->Class = SecpkgMutualAuthLevel;
 				(*ppInformation)->Info.MutualAuthLevel.MutualAuthLevel = MutualAuthLevel; 
+				Status = STATUS_SUCCESS; 
+				break;
+			case SecpkgWowClientDll:
+				*ppInformation = (PSECPKG_EXTENDED_INFORMATION) EIDAlloc(sizeof(SECPKG_EXTENDED_INFORMATION));
+				(*ppInformation)->Class = SecpkgWowClientDll;
+				(*ppInformation)->Info.WowClientDll.WowClientDllPath.Buffer = NULL; 
+				(*ppInformation)->Info.WowClientDll.WowClientDllPath.Length = 0;
+				(*ppInformation)->Info.WowClientDll.WowClientDllPath.MaximumLength = 0;
+				Status = STATUS_SUCCESS; 
+				break;
+			case SecpkgExtraOids:
+				*ppInformation = (PSECPKG_EXTENDED_INFORMATION) EIDAlloc(sizeof(SECPKG_EXTENDED_INFORMATION));
+				(*ppInformation)->Class = SecpkgExtraOids;
+				(*ppInformation)->Info.ExtraOids.OidCount = 0; 
 				Status = STATUS_SUCCESS; 
 				break;
 		}

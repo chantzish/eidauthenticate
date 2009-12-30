@@ -368,7 +368,7 @@ BOOL AuthenticateWithSSPI(PTSTR szPrincipal, PTSTR szPassword, PTSTR szSSP)
 		{
 			__leave;
 		}
-
+		int packetnum = 1;
 		// since the caller is acting as the server, we need
 		// a server principal name so that the client will
 		// be able to get a Kerb ticket (if Kerb is used)
@@ -399,8 +399,18 @@ BOOL AuthenticateWithSSPI(PTSTR szPrincipal, PTSTR szPassword, PTSTR szSSP)
 					default:
 						__leave;
 				}
+				
+				if (packetnum == 1 && _tcscmp(szSSP,TEXT("Negotiate")) == 0)
+				{
+					// on essaie de vérifier la négotiation
+					if (strcmp((PCHAR)bufC2S,("NTLMSSP")) == 0)
+					{
+						MessageBox(hMainWnd,TEXT("Only NTLM SSP availale"),TEXT("test"),0);
+					}
+				}
+				packetnum++;
 			}
-
+			
 			if (bServerContinue) {
 				sbufS2C.cbBuffer = sizeof bufS2C;
 				err = AcceptSecurityContext(
@@ -423,6 +433,7 @@ BOOL AuthenticateWithSSPI(PTSTR szPrincipal, PTSTR szPassword, PTSTR szSSP)
 					default:
 						__leave;
 				}
+				packetnum++;
 			}
 		}
 		if (_tcscmp(szSSP,TEXT("Negotiate")) == 0)
@@ -555,7 +566,7 @@ void Menu_CREDENTIALUID_GENERIC(DWORD dwFlag)
 	ULONG authBufferSize = 0;
 	CREDUI_INFO credUiInfo;
 
-	if (dwFlag | CREDUIWIN_AUTHPACKAGE_ONLY)
+	if (dwFlag & CREDUIWIN_AUTHPACKAGE_ONLY)
 	{
 		RetrieveNegotiateAuthPackage(&authPackage);
 	}

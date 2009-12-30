@@ -589,6 +589,14 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 							pCredentialList->ConnectNotification(szReader,szCard,0);
 							SendMessage(hWnd, WM_NOTIFY, 0, (LPARAM)&nmh);
 						}
+						else
+						{
+							LONG lReturn = GetLastError();
+							if (lReturn != SCARD_W_CANCELLED_BY_USER)
+							{
+								MessageBoxWin32(lReturn);
+							}
+						}
 					}
 				}
 		}

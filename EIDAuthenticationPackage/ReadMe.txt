@@ -5,6 +5,9 @@ http://blogs.msdn.com/alejacma/archive/2007/11/13/how-to-debug-lsass-exe-process
 Run Virtual PC -> not working : use vmware
 http://www.microsoft.com/downloads/details.aspx?FamilyId=28C97D22-6EB8-4A09-A7F7-F6C7A1F000B5
 
+Enable kernel debugging on the virtual machine
+bcdedit /debug yes
+
 Run kernel debugger
 1) don't forget to set symbol path (path to .dll & .pdb) and source path,
 else you will find only asm, not cpp code.

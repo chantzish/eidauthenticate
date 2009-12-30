@@ -486,6 +486,18 @@
 				>
 			</File>
 			<File
+				RelativePath=".\CWinBioNotifier.cpp"
+				>
+				<FileConfiguration
+					Name="Analyze|x64"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath=".\GPO.cpp"
 				>
 			</File>
@@ -553,6 +565,10 @@
 			</File>
 			<File
 				RelativePath=".\CSmartCardNotifier.h"
+				>
+			</File>
+			<File
+				RelativePath=".\CWinBioNotifier.h"
 				>
 			</File>
 			<File
