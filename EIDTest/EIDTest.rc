@@ -28,10 +28,15 @@ BEGIN
       MENUITEM "Trace",IDM_CRED_RP_TRACE
       MENUITEM "Trigger",IDM_CRED_RP_TRIGGER
     END
-    POPUP "&WaitThread"
+    POPUP "&SmartCardWaitThread"
     BEGIN
       MENUITEM "&Start",IDM_STARTWAITTHREAD
       MENUITEM "&Stop",IDM_STOPWAITTHREAD
+    END
+    POPUP "WinBioWaitThread",166
+    BEGIN
+      MENUITEM "&Start",IDM_WINBIOSTARTWAITTHREAD
+      MENUITEM "&Stop",IDM_WINBIOSTOPWAITTHREAD
     END
     MENUITEM "Credential&List",IDM_CRED_LIST
     MENUITEM "Retrieve Certificate context from CSP Info",IDM_CRED_CSPINFO

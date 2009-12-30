@@ -85,8 +85,8 @@ SectionEnd
   LangString DESC_SecCore ${LANG_ENGLISH} "Core"
   LangString DESC_SecCore ${LANG_FRENCH} "Core"
 
-  LangString DESC_SecBeid ${LANG_ENGLISH} "Insert missing configuration parameters required to use Belgium EID Card"
-  LangString DESC_SecBeid ${LANG_FRENCH} "Insère des paramètres de configuration nécessaires pour l'utilisation de la carte d'identité belge"
+  LangString DESC_SecBeid ${LANG_ENGLISH} "Insert missing configuration parameters required to use Belgium EID Card - the Belgium middleware must be installed !"
+  LangString DESC_SecBeid ${LANG_FRENCH} "Insère des paramètres de configuration nécessaires pour l'utilisation de la carte d'identité belge - le middleware doit être installé !"
 
   ;Assign language strings to sections
   !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
