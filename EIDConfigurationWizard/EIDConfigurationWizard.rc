@@ -2,8 +2,8 @@
 #include "EIDConfigurationWizard.h"
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION 0,2,1,0
-PRODUCTVERSION 0,2,1,0
+FILEVERSION 0,3,0,2
+PRODUCTVERSION 0,3,0,2
 FILEOS 0x00000004
 FILETYPE 0x00000002
 BEGIN
@@ -13,11 +13,11 @@ BEGIN
     BEGIN
       VALUE "CompanyName", "eidauthenticate.sourceforge.net\0"
       VALUE "FileDescription", "Configuration Wizard\0"
-      VALUE "FileVersion", "0.3.0.0\0"
+      VALUE "FileVersion", "0.3.0.2\0"
       VALUE "InternalName", "EIDConfigurationWizard.exe\0"
       VALUE "OriginalFilename", "EIDConfigurationWizard.exe\0"
       VALUE "ProductName", "EID Configuration Wizard\0"
-      VALUE "ProductVersion", "0.3.0.0\0"
+      VALUE "ProductVersion", "0.3.0.2\0"
     END
   END
   BLOCK "VarFileInfo"
@@ -141,5 +141,8 @@ BEGIN
   IDS_04TRUSTENABLENOEKU "Don't check EKU"
   IDS_RENAME "Your session has to be closed to rename your user account. Do you want to proceed ?"
   IDS_RENAMECONF "Your account has been renamed to ""%s""."
+  IDS_04SIGNATUREONLYOK "The key associated to the certificate can be used"
+  IDS_04SIGNATUREONLYNOK "The certificate is associated with a ""signature only"" key"
+  IDS_04CHANGESIGNATUREPOLICY "Change the windows policy"
 END
 

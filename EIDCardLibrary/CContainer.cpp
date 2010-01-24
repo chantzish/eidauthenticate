@@ -109,7 +109,7 @@ PTSTR CContainer::GetUserName()
 		}
 		// remove any weird characters
 		// (else we can not match an existing username because it is not accepted as valid username by windows)
-		for (DWORD i = 0; i<dwSize; i++)
+		/*for (DWORD i = 0; i<dwSize; i++)
 		{
 			TCHAR cChar = _szUserName[i];
 			if (cChar < 13 && cChar >0)
@@ -167,7 +167,7 @@ PTSTR CContainer::GetUserName()
 			{
 				_szUserName[0] = 'a';
 			}
-		}
+		}*/
 		fReturn = TRUE;
 
 	}

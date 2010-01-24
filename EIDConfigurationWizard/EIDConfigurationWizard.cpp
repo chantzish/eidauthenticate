@@ -86,6 +86,14 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 			ChangeForceSmartCardLogonPolicy(FALSE);
 			return 0;
 		} 
+		else if (_tcscmp(pszCommandLine[0],TEXT("ENABLESIGNATUREONLY")) == 0)
+		{
+			DWORD dwValue = 1;
+			RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+				TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\SmartCardCredentialProvider"),
+				TEXT("AllowSignatureOnlyKeys"), REG_DWORD, &dwValue,sizeof(dwValue));
+			return 0;
+		}
 		else if (_tcscmp(pszCommandLine[0],TEXT("ENABLENOEKU")) == 0)
 		{
 			DWORD dwValue = 1;
