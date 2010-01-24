@@ -5,6 +5,7 @@
 #include "global.h"
 #include "eidconfigurationwizard.h"
 #include "../EIDCardLibrary/CContainer.h"
+#include "../EIDCardLibrary/GPO.h"
 #include "../EIDCardLibrary/CertificateValidation.h"
 #include "../EIDCardLibrary/StoredCredentialManagement.h"
 #include "CContainerHolder.h"
@@ -15,8 +16,9 @@
 #define CHECK_INFO 3
 
 //#define CHECK_USERNAME 0
-#define CHECK_TRUST 0
-#define CHECK_CRYPTO 1
+#define CHECK_SIGNATUREONLY 0
+#define CHECK_TRUST 1
+#define CHECK_CRYPTO 2
 
 
 #define ERRORTOTEXT(ERROR) case ERROR: LoadString( g_hinst,IDS_##ERROR, szName, dwSize);                 break;
@@ -67,7 +69,7 @@ void CContainerHolderTest::Release()
 
 DWORD CContainerHolderTest::GetIconIndex()
 {
-	if (_IsTrusted)// && _HasCurrentUserName)
+	if (_IsTrusted && !HasSignatureUsageOnly())
 	{
 		return 1;
 	}
@@ -76,6 +78,12 @@ DWORD CContainerHolderTest::GetIconIndex()
 		return 0;
 	}
 }
+
+BOOL CContainerHolderTest::HasSignatureUsageOnly()
+{
+	return !(_pContainer->GetKeySpec() == AT_KEYEXCHANGE || GetPolicyValue(AllowSignatureOnlyKeys));
+}
+
 BOOL CContainerHolderTest::IsTrusted()
 {
 	BOOL fReturn = FALSE;
@@ -90,14 +98,15 @@ BOOL CContainerHolderTest::IsTrusted()
 }
 BOOL CContainerHolderTest::SupportEncryption()
 {
-	BOOL fReturn = FALSE;
+	/*BOOL fReturn = FALSE;
 	PCCERT_CONTEXT pCertContext = _pContainer->GetCertificate();
 	if (pCertContext)
 	{
 		fReturn = CanEncryptPassword(NULL,0,pCertContext);
 		CertFreeCertificateContext(pCertContext);
 	}
-	return fReturn;
+	return fReturn;*/
+	return _pContainer->GetKeySpec() == AT_KEYEXCHANGE;
 }
 /*
 BOOL CContainerHolderTest::HasCurrentUserName()
@@ -115,19 +124,19 @@ CContainer* CContainerHolderTest::GetContainer()
 
 int CContainerHolderTest::GetCheckCount()
 {
-	return 2;//3;
+	return 3;
 }
 int CContainerHolderTest::GetImage(DWORD dwCheckNum)
 {
 	
 	switch(dwCheckNum)
 	{
-	/*case CHECK_USERNAME: 
-		if (_HasCurrentUserName)
+	case CHECK_SIGNATUREONLY: 
+		if (!HasSignatureUsageOnly())
 			return CHECK_SUCCESS;
 		else
 			return CHECK_FAILED;
-		break;*/
+		break;
 	case CHECK_TRUST: 
 		if (_IsTrusted)
 			return CHECK_SUCCESS;
@@ -151,12 +160,12 @@ PTSTR CContainerHolderTest::GetDescription(DWORD dwCheckNum)
 	szDescription[0] = 0;
 	switch(dwCheckNum)
 	{
-	/*case CHECK_USERNAME: 
-		if (_HasCurrentUserName)
-			LoadString(g_hinst,IDS_04USERNAMEOK,szDescription, dwWords);
+	case CHECK_SIGNATUREONLY: 
+		if (!HasSignatureUsageOnly())
+			LoadString(g_hinst,IDS_04SIGNATUREONLYOK,szDescription, dwWords);
 		else
-			LoadString(g_hinst,IDS_04USERNAMENOK,szDescription, dwWords);
-		break;*/
+			LoadString(g_hinst,IDS_04SIGNATUREONLYNOK,szDescription, dwWords);
+		break;
 	case CHECK_TRUST: 
 		if (_IsTrusted)
 			LoadString(g_hinst,IDS_04TRUSTOK,szDescription, dwWords);
@@ -186,12 +195,12 @@ PTSTR CContainerHolderTest::GetSolveDescription(DWORD dwCheckNum)
 	szDescription[0] = 0;
 	switch(dwCheckNum)
 	{
-	/*case CHECK_USERNAME: 
-		if (!_HasCurrentUserName)
+	case CHECK_SIGNATUREONLY: 
+		if (HasSignatureUsageOnly())
 		{
-			LoadString(g_hinst,IDS_04USERNAMERENAME,szDescription, dwWords);
+			LoadString(g_hinst,IDS_04CHANGESIGNATUREPOLICY,szDescription, dwWords);
 		}
-		break;*/
+		break;
 	case CHECK_TRUST: 
 		if (!_IsTrusted)
 		{
@@ -216,31 +225,26 @@ BOOL CContainerHolderTest::Solve(DWORD dwCheckNum)
 	DWORD dwError = 0;
 	switch(dwCheckNum)
 	{
-	/*case CHECK_USERNAME:
-		//WinExec("control /name Microsoft.UserAccounts /page pageRenameMyAccount", SW_NORMAL);
+	case CHECK_SIGNATUREONLY:
 		{
-			
-			
-				
 			if (IsElevated())
 			{
-				RenameAccount(_pContainer->GetUserName());
+				DWORD dwValue = 1;
+				RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+					TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\SmartCardCredentialProvider"),
+					TEXT("AllowSignatureOnlyKeys"), REG_DWORD, &dwValue,sizeof(dwValue));
 			}
 			else
 			{
 				SHELLEXECUTEINFO shExecInfo;
 				TCHAR szName[1024];
-				TCHAR szParameter[50] = TEXT("RENAMEUSER ");
 				GetModuleFileName(GetModuleHandle(NULL),szName, ARRAYSIZE(szName));
-				_tcscat_s(szParameter, ARRAYSIZE(szParameter), _pContainer->GetUserName());
-
 				shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
-
 				shExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
 				shExecInfo.hwnd = NULL;
 				shExecInfo.lpVerb = TEXT("runas");
 				shExecInfo.lpFile = szName;
-				shExecInfo.lpParameters = szParameter;
+				shExecInfo.lpParameters = TEXT("ENABLESIGNATUREONLY");
 				shExecInfo.lpDirectory = NULL;
 				shExecInfo.nShow = SW_NORMAL;
 				shExecInfo.hInstApp = NULL;
@@ -263,7 +267,7 @@ BOOL CContainerHolderTest::Solve(DWORD dwCheckNum)
 			}
 		}
 		fReturn = TRUE;
-		break;*/
+		break;
 	case CHECK_TRUST:
 		switch (_dwTrustError)
 		{

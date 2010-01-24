@@ -4,6 +4,7 @@
 
   !include "MUI2.nsh"
   !include "X64.nsh"
+  !include "WinVer.nsh"
 
 
 ;--------------------------------
@@ -115,6 +116,18 @@ SectionEnd
 
 
 Function .onInit
+  ${If} ${RunningX64}
+  ${Else}
+    MessageBox MB_OK "This installer is designed for 64bits only"
+    Abort
+  ${EndIf}
+
+  ${If} ${AtMostWinXP}
+    MessageBox MB_OK "This installer is designed for Windows Vista or older"
+    Abort
+  ${EndIf}
+
+
   ${DisableX64FSRedirection}
   IfFileExists "$SYSDIR\EIDAuthenticationPackage.dll" CheckInstallNotOk CheckInstallEnd
   CheckInstallNotOk:

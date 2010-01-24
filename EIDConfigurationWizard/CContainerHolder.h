@@ -10,7 +10,7 @@ public:
 	DWORD GetIconIndex();
 	BOOL IsTrusted();
 	BOOL SupportEncryption();
-
+	BOOL HasSignatureUsageOnly();
 	//BOOL HasCurrentUserName();
 
 	HRESULT SetUsageScenario(__in CREDENTIAL_PROVIDER_USAGE_SCENARIO cpus,__in DWORD dwFlags){return S_OK;}

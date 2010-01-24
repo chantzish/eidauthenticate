@@ -37,7 +37,7 @@ BOOL WizardFinishButton(PTSTR szPassword)
 	CContainerHolderTest* MyTest = pCredentialList->GetContainerHolderAt(dwCurrentCredential);
 	CContainer* container = MyTest->GetContainer();
 	PCCERT_CONTEXT pCertContext = container->GetCertificate();
-	fReturn = LsaEIDCreateStoredCredential(szUserName, szPassword, pCertContext);
+	fReturn = LsaEIDCreateStoredCredential(szUserName, szPassword, pCertContext, container->GetKeySpec() == AT_KEYEXCHANGE);
 	if (!fReturn)
 	{
 		dwError = GetLastError();

@@ -4,8 +4,8 @@
 IDB_TILE_IMAGE BITMAP DISCARDABLE "SmartcardCredentialProvider.bmp"
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION 0,2,1,0
-PRODUCTVERSION 0,2,1,0
+FILEVERSION 0,3,0,2
+PRODUCTVERSION 0,3,0,2
 FILEOS 0x00000004
 FILETYPE 0x00000002
 BEGIN
@@ -15,11 +15,11 @@ BEGIN
     BEGIN
       VALUE "CompanyName", "eidauthenticate.sourceforge.net\0"
       VALUE "FileDescription", "Credential Provider\0"
-      VALUE "FileVersion", "0.3.0.0\0"
+      VALUE "FileVersion", "0.3.0.2\0"
       VALUE "InternalName", "EIDCredentialProvider.dll\0"
       VALUE "OriginalFilename", "EIDCredentialProvider.dll\0"
       VALUE "ProductName", "EID Credential Provider\0"
-      VALUE "ProductVersion", "0.3.0.0\0"
+      VALUE "ProductVersion", "0.3.0.2\0"
     END
   END
   BLOCK "VarFileInfo"

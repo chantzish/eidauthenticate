@@ -3,6 +3,8 @@
 ;Include Modern UI
 
   !include "MUI2.nsh"
+  !include "X64.nsh"
+  !include "WinVer.nsh"
 
 ;--------------------------------
 ;General
@@ -117,6 +119,17 @@ Section "Uninstall"
 SectionEnd
 
 Function .onInit
+
+  ${If} ${RunningX64}
+    MessageBox MB_OK "This installer is designed for 32bits only"
+    Abort
+  ${EndIf}
+
+  ${If} ${AtMostWinXP}
+    MessageBox MB_OK "This installer is designed for Windows Vista or older"
+    Abort
+  ${EndIf}
+
 IfFileExists "$PROGRAMFILES\Belgium Identity Card\beid35libCpp.dll" CheckOk CheckEnd
 CheckOk:
   ; This is what is done by sections.nsh SelectSection macro

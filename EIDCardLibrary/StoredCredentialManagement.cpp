@@ -94,30 +94,33 @@ BOOL CStoredCredentialManager::GetUsernameFromCertContext(__in PCCERT_CONTEXT pC
 			// for each credential
 			if (RetrievePrivateData(pUserInfo[dwI].usri3_user_id, &pPrivateData))
 			{
-				if (memcmp(pPrivateData->Data + pPrivateData->dwCertificatOffset, pContext->pbCertEncoded, pContext->cbCertEncoded) == 0)
+				if (pPrivateData->dwCertificatSize == pContext->cbCertEncoded)
 				{
-					// found
-					*pdwRid = pUserInfo[dwI].usri3_user_id;
-					PWSTR Username = pUserInfo[dwI].usri3_name;
-					*pszUsername = (PWSTR) EIDAlloc((DWORD)(wcslen(Username) +1) * sizeof(WCHAR));
-					
-					if (*pszUsername)
+					if (memcmp(pPrivateData->Data + pPrivateData->dwCertificatOffset, pContext->pbCertEncoded, pContext->cbCertEncoded) == 0)
 					{
-						wcscpy_s(*pszUsername, wcslen(Username) +1, Username);
-						EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Found %d %s",*pdwRid, *pszUsername);
-						fReturn = TRUE;
+						// found
+						*pdwRid = pUserInfo[dwI].usri3_user_id;
+						PWSTR Username = pUserInfo[dwI].usri3_name;
+						*pszUsername = (PWSTR) EIDAlloc((DWORD)(wcslen(Username) +1) * sizeof(WCHAR));
+						
+						if (*pszUsername)
+						{
+							wcscpy_s(*pszUsername, wcslen(Username) +1, Username);
+							EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Found %d %s",*pdwRid, *pszUsername);
+							fReturn = TRUE;
+						}
+						else
+						{
+							dwError = GetLastError();
+							EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CertCreateCertificateContext 0x%08x",dwError);
+						}
+						EIDFree(pPrivateData);
+						break;
 					}
 					else
 					{
-						dwError = GetLastError();
-						EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CertCreateCertificateContext 0x%08x",dwError);
+						EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"%d don't match", pUserInfo[dwI].usri3_user_id);
 					}
-					EIDFree(pPrivateData);
-					break;
-				}
-				else
-				{
-					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"%d don't match", pUserInfo[dwI].usri3_user_id);
 				}
 				EIDFree(pPrivateData);
 			}
@@ -792,7 +795,7 @@ NTSTATUS CompletePrimaryCredential(__in PLSA_UNICODE_STRING AuthenticatingAuthor
 	return STATUS_SUCCESS;	
 }
 
-
+/*
 BOOL CanEncryptPassword(__in_opt HCRYPTPROV hProv, __in_opt DWORD dwKeySpec,  __in_opt PCCERT_CONTEXT pCertContext)
 {
 	HCRYPTKEY hKey = NULL;
@@ -846,7 +849,7 @@ BOOL CanEncryptPassword(__in_opt HCRYPTPROV hProv, __in_opt DWORD dwKeySpec,  __
 	SetLastError(dwError);
 	return fEncryptPassword;
 }
-
+*/
 BOOL CStoredCredentialManager::GetResponseFromChallenge(__in PBYTE pChallenge, __in DWORD dwChallengeSize,__in DWORD dwChallengeType, __in PCCERT_CONTEXT pCertContext, __in PWSTR Pin, __out PBYTE *pSymetricKey, __out DWORD *usSize)
 {
 	switch(dwChallengeType)
@@ -1060,7 +1063,7 @@ BOOL CStoredCredentialManager::GetResponseFromSignatureChallenge(__in PBYTE pbCh
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CryptSignHash1", GetLastError());
 				__leave;
 			}
-			*ppResponse = (PBYTE) malloc(*pdwResponseSize);
+			*ppResponse = (PBYTE) EIDAlloc(*pdwResponseSize);
 			if (!*ppResponse)
 			{
 				dwError = GetLastError();
@@ -1081,7 +1084,7 @@ BOOL CStoredCredentialManager::GetResponseFromSignatureChallenge(__in PBYTE pbCh
 		if (pbPin)
 		{
 			SecureZeroMemory(pbPin , dwPinLen);
-			free(pbPin);
+			EIDFree(pbPin);
 		}
 		if (pKeyProvInfo)
 			EIDFree(pKeyProvInfo);

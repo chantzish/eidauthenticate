@@ -107,7 +107,7 @@ BOOL CContainerHolderFactory<T>::ConnectNotificationGeneric(__in LPCTSTR szReade
 	_stprintf_s(szMainContainerName,(ulNameLen + 6), _T("\\\\.\\%s\\"), szReaderName);
 	
 	// if policy 
-	if (GetPolicyValue(AllowSignatureOnlyKeys))
+	if (GetPolicyValue(AllowSignatureOnlyKeys) || _cpus == CPUS_INVALID)
 	{
 		dwKeyNumMax = 2;
 	}

@@ -412,7 +412,6 @@ extern "C"
 	) 
 	{
 		UNREFERENCED_PARAMETER(AuthenticationInformationLength);
-		
 		NTSTATUS Status;
 		DWORD dwLen = MAX_COMPUTERNAME_LENGTH +1;
 		WCHAR ComputerName[MAX_COMPUTERNAME_LENGTH + 1];
@@ -446,7 +445,6 @@ extern "C"
 				return STATUS_BAD_VALIDATION_CLASS;
 			}
 
-			
 			if (GetComputerName(ComputerName, &dwLen))
 			{
 				*MachineName = LsaInitializeUnicodeStringFromWideString(ComputerName);
