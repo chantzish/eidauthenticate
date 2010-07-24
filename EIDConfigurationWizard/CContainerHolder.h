@@ -1,4 +1,9 @@
 
+#define CHECK_SIGNATUREONLY 0
+#define CHECK_TRUST 1
+#define CHECK_CRYPTO 2
+#define CHECK_MAX 3
+
 class CContainerHolderTest
 {
 public:

@@ -334,13 +334,13 @@ MgScCardAuthenticatePin(
         //
         // Call the card module
         //
-
-        CHECK_DWORD(pInternal->CardData.pfnCardAuthenticatePin(
-            &pInternal->CardData,
-            pwszUserId,
-            (PBYTE) szPin,
-            cbPin - 1,
-            pcAttemptsRemaining));
+		status = pInternal->CardData.pfnCardAuthenticatePin(
+					&pInternal->CardData,
+					pwszUserId,
+					(PBYTE) szPin,
+					cbPin - 1,
+					pcAttemptsRemaining);
+        CHECK_DWORD(status);
     }
     __finally
     {

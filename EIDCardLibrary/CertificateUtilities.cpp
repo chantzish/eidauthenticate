@@ -24,7 +24,6 @@
 #include "CertificateUtilities.h"
 #include "Tracing.h"
 
-
 #pragma comment (lib,"Scarddlg")
 #pragma comment (lib,"Rpcrt4")
 
@@ -349,7 +348,6 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			_stprintf_s(szProviderName,1024,_T("%s"),MS_ENHANCED_PROV);
 		}
 
-			
 		dwFlag=CRYPT_NEWKEYSET;
 		switch(pCertificateInfo->dwSaveon)
 		{
@@ -381,6 +379,8 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			case UI_CERTIFICATE_INFO_SAVEON_FILE: // file
 				dwFlag |= CRYPT_EXPORTABLE;
 		}
+		// Key Size
+		dwFlag |= pCertificateInfo->dwKeySizeInBits * 0x10000;
 		if (!CryptGenKey(hCryptProvNewCertificate, pCertificateInfo->dwKeyType, dwFlag, &hKey))
 		{
 			dwError = GetLastError();
@@ -507,7 +507,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 		   	// Increase extension count   
 			CertInfo.cExtension++; 
 		}
- 
+
 		//////////////////////////////////////////////////
 
 		if (pCertificateInfo->bIsSelfSigned)
@@ -670,6 +670,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 				//MessageBox(0,_T("need admin privilege ?"),_T("test"),0);
 				__leave;
 			}
+
 			// sign certificate
 			if(!CryptSignAndEncodeCertificate(
 				  hCryptProvRootCertificate,                     // Crypto provider
@@ -888,6 +889,8 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 	}
 	__finally
 	{
+		if (SubjectKeyIdentifier) EIDFree(SubjectKeyIdentifier);
+		if (pbKeyIdentifier) EIDFree(pbKeyIdentifier);
 		if (pNewCertificateContext) CertFreeCertificateContext(pNewCertificateContext);
 		if (CertInfo.rgExtension) EIDFree(CertInfo.rgExtension);
 		if (pbKeyUsage) EIDFree(pbKeyUsage);

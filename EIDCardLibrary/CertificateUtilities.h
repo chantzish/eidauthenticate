@@ -38,6 +38,7 @@ typedef struct _UI_CERTIFICATE_INFO
 	LPTSTR szCard;
 	LPTSTR szReader;
 	DWORD dwKeyType;
+	DWORD dwKeySizeInBits;
 	BOOL bIsSelfSigned;
 	BOOL bHasSmartCardAuthentication;
 	BOOL bHasServerAuthentication;
@@ -46,6 +47,7 @@ typedef struct _UI_CERTIFICATE_INFO
 	BOOL bIsCA;
 	SYSTEMTIME StartTime;
 	SYSTEMTIME EndTime;
+	
 	// used to return new certificate context if needed
 	// need to free it if returned
 	BOOL fReturnCerticateContext;

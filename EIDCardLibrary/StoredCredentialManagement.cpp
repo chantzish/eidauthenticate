@@ -465,7 +465,7 @@ BOOL CStoredCredentialManager::CreateCredential(__in DWORD dwRid, __in PCCERT_CO
 		if (hProv)
 		{
 			CryptReleaseContext(hProv, 0);
-			CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,CRYPT_DELETE_KEYSET);
+			CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,CRYPT_DELETEKEYSET);
 		}
 	}
 	SetLastError(dwError);
@@ -571,7 +571,7 @@ BOOL CStoredCredentialManager::GetChallenge(__in DWORD dwRid, __out PBYTE* ppCha
 		if (hProv)
 		{
 			CryptReleaseContext(hProv, 0);
-			CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,CRYPT_DELETE_KEYSET);
+			CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,CRYPT_DELETEKEYSET);
 		}
 	}
 	SetLastError(dwError);
@@ -628,7 +628,7 @@ BOOL CStoredCredentialManager::GetSignatureChallenge(__out PBYTE* ppChallenge, _
 		if (hProv)
 		{
 			CryptReleaseContext(hProv, 0);
-			CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,CRYPT_DELETE_KEYSET);
+			CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,CRYPT_DELETEKEYSET);
 		}
 	}
 	SetLastError(dwError);
@@ -881,7 +881,7 @@ BOOL CStoredCredentialManager::GetResponseFromCryptedChallenge(__in PBYTE pChall
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
 	__try{
 		// acquire context on private key
-		if (!CryptAcquireCertificatePrivateKey(pCertContext,0,NULL,&hProv,&dwKeySpec,&fCallerFreeProv))
+		if (!CryptAcquireCertificatePrivateKey(pCertContext,CRYPT_ACQUIRE_SILENT_FLAG,NULL,&hProv,&dwKeySpec,&fCallerFreeProv))
 		{
 			dwError = GetLastError();
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CryptAcquireCertificatePrivateKey", GetLastError());
@@ -1122,6 +1122,7 @@ BOOL CStoredCredentialManager::GenerateSymetricKeyAndEncryptIt(__in HCRYPTPROV h
 	__try
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
+		*pSymetricKey = NULL;
 		*phKey = NULL;
 		dwSize = sizeof(DWORD);
 		DWORD dwBlockLen;
@@ -1146,11 +1147,19 @@ BOOL CStoredCredentialManager::GenerateSymetricKeyAndEncryptIt(__in HCRYPTPROV h
 			__leave;
 		}
 		// save
-		dwSize = sizeof(DWORD);
+		/*dwSize = sizeof(DWORD);
 		if (!CryptGetKeyParam(*phKey, KP_BLOCKLEN, (PBYTE) &dwBlockLen, &dwSize, 0))
 		{
 			dwError = GetLastError();
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CryptGetKeyParam", GetLastError());
+			__leave;
+		}*/
+		dwBlockLen = 0;
+		fStatus = CryptEncrypt(hKey, hHash,TRUE,0,NULL,&dwBlockLen, 0);
+		if(!fStatus)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptEncrypt 0x%08x",GetLastError());
 			__leave;
 		}
 		*pSymetricKey = (PBYTE) EIDAlloc(dwBlockLen);
@@ -1179,10 +1188,14 @@ BOOL CStoredCredentialManager::GenerateSymetricKeyAndEncryptIt(__in HCRYPTPROV h
 		if (!fReturn)
 		{
 			if (*pSymetricKey)
+			{
 				EIDFree(*pSymetricKey);
+				*pSymetricKey = NULL;
+			}
 			if (*phKey)
 			{
 				CryptDestroyKey(*phKey);
+				*phKey = NULL;
 			}
 		}
 		if (hHash)
@@ -1209,8 +1222,11 @@ BOOL CStoredCredentialManager::EncryptPasswordAndSaveIt(__in HCRYPTKEY hKey, __i
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CryptGetKeyParam", GetLastError());
 			__leave;
 		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"dwBlockLen = %d",dwBlockLen);
 		// block size = 256             100 => 1     256 => 1      257  => 2
 		dwRoundNumber = ((DWORD)(dwPasswordSize/dwBlockLen)) + ((dwPasswordSize%dwBlockLen) ? 1 : 0);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"dwRoundNumber = %d",dwRoundNumber);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"dwPasswordSize = %d",dwPasswordSize);
 		*pEncryptedPassword = (PBYTE) EIDAlloc(dwRoundNumber * dwBlockLen);
 		if (!*pEncryptedPassword)
 		{
@@ -1231,7 +1247,7 @@ BOOL CStoredCredentialManager::EncryptPasswordAndSaveIt(__in HCRYPTKEY hKey, __i
 			if(!fStatus)
 			{
 				dwError = GetLastError();
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptEncrypt 0x%08x",GetLastError());
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptEncrypt 0x%08x round = %d",GetLastError(), dwI);
 				__leave;
 			}
 		}
@@ -1245,7 +1261,10 @@ BOOL CStoredCredentialManager::EncryptPasswordAndSaveIt(__in HCRYPTKEY hKey, __i
 		if (!fReturn)
 		{
 			if (*pEncryptedPassword)
+			{
 				EIDFree(*pEncryptedPassword);
+				*pEncryptedPassword = NULL;
+			}
 		}
 	}
 	SetLastError(dwError);
@@ -1372,7 +1391,10 @@ BOOL CStoredCredentialManager::GetPasswordFromCryptedChallengeResponse(__in DWOR
 		if (!fReturn)
 		{
 			if (*pszPassword) 
+			{
 				EIDFree(*pszPassword);
+				*pszPassword = NULL;
+			}
 		}
 		if (pEidPrivateData)
 		{
@@ -1383,7 +1405,7 @@ BOOL CStoredCredentialManager::GetPasswordFromCryptedChallengeResponse(__in DWOR
 		if (hProv)
 		{
 			CryptReleaseContext(hProv, 0);
-			CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,CRYPT_DELETE_KEYSET);
+			CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,CRYPT_DELETEKEYSET);
 		}
 	}
 	SetLastError(dwError);
@@ -1524,7 +1546,10 @@ BOOL CStoredCredentialManager::GetPasswordFromSignatureChallengeResponse(__in DW
 			if (pszPassword)
 			{
 				if (*pszPassword) 
+				{
 					EIDFree(*pszPassword);
+					*pszPassword = NULL;
+				}
 			}
 		}
 		if (pEidPrivateData)
@@ -1542,7 +1567,7 @@ BOOL CStoredCredentialManager::GetPasswordFromSignatureChallengeResponse(__in DW
 		if (hProv)
 		{
 			CryptReleaseContext(hProv, 0);
-			CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,CRYPT_DELETE_KEYSET);
+			CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,CRYPT_DELETEKEYSET);
 		}
 	}
 	return fReturn;
@@ -1647,7 +1672,7 @@ BOOL CStoredCredentialManager::VerifySignatureChallengeResponse(__in DWORD dwRid
 		if (hProv)
 		{
 			CryptReleaseContext(hProv, 0);
-			CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,CRYPT_DELETE_KEYSET);
+			CryptAcquireContext(&hProv,CREDENTIAL_CONTAINER,CREDENTIALPROVIDER,PROV_RSA_AES,CRYPT_DELETEKEYSET);
 		}
 	}
 	return fReturn;

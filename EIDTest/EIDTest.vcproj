@@ -493,10 +493,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\CWinBioNotifierTest.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\EIDAuthenticationPackageTest.cpp"
 				>
 			</File>
@@ -620,10 +616,6 @@
 			</File>
 			<File
 				RelativePath=".\CSmartCardNotifierTest.h"
-				>
-			</File>
-			<File
-				RelativePath=".\CWinBioNotifierTest.h"
 				>
 			</File>
 			<File

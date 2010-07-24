@@ -101,6 +101,8 @@
 #define IDC_STC4 22
 #define IDC_DTP2 26
 #define IDC_STC5 27
+#define IDC_STC7 28
+#define IDC_KEYSIZE 29
 #define IDD_PIN 1100
 #define IDC_PIN 1101
 #define IDC_STC6 1102

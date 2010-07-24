@@ -82,7 +82,11 @@ PVOID EIDAllocEx(PCSTR szFile, DWORD dwLine, PCSTR szFunction,DWORD dwSize)
 	}
 	else
 	{
+#ifdef _DEBUG	
+		memory = _malloc_dbg(dwSize,_NORMAL_BLOCK, szFile, dwLine);
+#else
 		memory = malloc(dwSize);
+#endif		
 	}
 	//if (TraceAllocation)
 	//{
@@ -105,7 +109,11 @@ VOID EIDFreeEx(PCSTR szFile, DWORD dwLine, PCSTR szFunction,PVOID buffer)
 	}
 	else
 	{
+#ifdef _DEBUG	
 		free(buffer);
+#else
+		_free_dbg(buffer, _NORMAL_BLOCK);
+#endif
 	}
 }
 

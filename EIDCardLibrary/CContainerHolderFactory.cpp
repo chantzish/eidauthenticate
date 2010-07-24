@@ -182,6 +182,31 @@ BOOL CContainerHolderFactory<T>::ConnectNotificationGeneric(__in LPCTSTR szReade
 		dwContainerNameLen = 1024;
 		EIDFree(szWideContainerName);
 	}
+	if (dwFlags == CRYPT_FIRST)
+	{
+		// the default container can be enumerated but PP_ENUMCONTAINERS doesn't work
+		for (DWORD i = 0; i < dwKeyNumMax; i++)
+		{
+			if (CryptGetUserKey(HCryptProv,
+					pKeySpecs[i],
+					&hKey) )
+			{
+				BYTE Data[4096];
+				DWORD DataSize = 4096;
+				if (CryptGetKeyParam(hKey,
+						KP_CERTIFICATE,
+						Data,
+						&DataSize,
+						0))
+				{
+					CreateItemFromCertificateBlob(szReaderName,szCardName,szProviderName,
+						szMainContainerName, pKeySpecs[i],ActivityCount, Data, DataSize);
+				}
+				CryptDestroyKey(hKey);
+				hKey = NULL;
+			}
+		}
+	}
 	CryptReleaseContext(HCryptProv,0);
 	EIDFree(szMainContainerName);
 	return TRUE;
