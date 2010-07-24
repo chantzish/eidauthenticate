@@ -2,8 +2,8 @@
 #include "EIDConfigurationWizard.h"
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION 0,3,0,2
-PRODUCTVERSION 0,3,0,2
+FILEVERSION 0,3,0,3
+PRODUCTVERSION 0,3,0,3
 FILEOS 0x00000004
 FILETYPE 0x00000002
 BEGIN
@@ -13,11 +13,11 @@ BEGIN
     BEGIN
       VALUE "CompanyName", "eidauthenticate.sourceforge.net\0"
       VALUE "FileDescription", "Configuration Wizard\0"
-      VALUE "FileVersion", "0.3.0.2\0"
+      VALUE "FileVersion", "0.3.0.3\0"
       VALUE "InternalName", "EIDConfigurationWizard.exe\0"
       VALUE "OriginalFilename", "EIDConfigurationWizard.exe\0"
       VALUE "ProductName", "EID Configuration Wizard\0"
-      VALUE "ProductVersion", "0.3.0.2\0"
+      VALUE "ProductVersion", "0.3.0.3\0"
     END
   END
   BLOCK "VarFileInfo"
@@ -120,7 +120,7 @@ BEGIN
   IDS_05DESACTIVATEFORCE "<a id=""idDesActForce"">Deactivate the force smart card logon policy</a>"
   IDS_04TESTUSERNAME "Username"
   IDS_04TESTTRUST "Trust"
-  IDS_04TESTCRYPTO "Crypto"
+  IDS_04TESTCRYPTO "Encryption"
   IDS_CERT_TRUST_NO_ERROR "No error found for this certificate or chain."
   IDS_CERT_TRUST_IS_NOT_TIME_VALID "This certificate or one of the certificates in the certificate chain is not time-valid."
   IDS_CERT_TRUST_IS_NOT_TIME_NESTED "Certificates in the chain are not properly time-nested."
@@ -144,5 +144,6 @@ BEGIN
   IDS_04SIGNATUREONLYOK "The key associated to the certificate can be used"
   IDS_04SIGNATUREONLYNOK "The certificate is associated with a ""signature only"" key"
   IDS_04CHANGESIGNATUREPOLICY "Change the windows policy"
+  IDS_04TESTSIGNATURE "Crypto"
 END
 

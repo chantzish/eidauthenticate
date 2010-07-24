@@ -19,7 +19,7 @@
 
 #include "EIDTest.h"
 #include "CSmartCardNotifierTest.h"
-#include "CWinBioNotifierTest.h"
+//#include "CWinBioNotifierTest.h"
 #include "CompleteTokenTest.h"
 #include "CompleteProfileTest.h"
 #include "GPOTest.h"
@@ -192,10 +192,10 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			Menu_STOPWAITTHREAD();
 			break;
 		case IDM_WINBIOSTARTWAITTHREAD:
-			Menu_WINBIOSTARTWAITTHREAD();
+			//Menu_WINBIOSTARTWAITTHREAD();
 			break;
 		case IDM_WINBIOSTOPWAITTHREAD:
-			Menu_WINBIOSTOPWAITTHREAD();
+			//Menu_WINBIOSTOPWAITTHREAD();
 			break;
 	// test authentification package
 		case IDM_AP_TOKEN:

@@ -16,9 +16,7 @@
 #define CHECK_INFO 3
 
 //#define CHECK_USERNAME 0
-#define CHECK_SIGNATUREONLY 0
-#define CHECK_TRUST 1
-#define CHECK_CRYPTO 2
+
 
 
 #define ERRORTOTEXT(ERROR) case ERROR: LoadString( g_hinst,IDS_##ERROR, szName, dwSize);                 break;
@@ -124,7 +122,7 @@ CContainer* CContainerHolderTest::GetContainer()
 
 int CContainerHolderTest::GetCheckCount()
 {
-	return 3;
+	return CHECK_MAX;
 }
 int CContainerHolderTest::GetImage(DWORD dwCheckNum)
 {
