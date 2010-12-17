@@ -611,17 +611,37 @@ HRESULT CEIDCredential::GetSerialization(
 							// serialized credential.
 							*pcpgsr = CPGSR_RETURN_CREDENTIAL_FINISHED;
 						}
+						else
+						{
+							EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"RetrieveNegotiateAuthPackage not SUCCEEDED hr=0x%08x",hr);
+						}
+					}
+					else
+					{
+						EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EIDUnlockLogonPack not SUCCEEDED hr=0x%08x",hr);
 					}
 				}
+				else
+				{
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pCspInfo NULL");
+				}
             }
-
+			else
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EIDUnlockLogonInit not SUCCEEDED hr=0x%08x",hr);
+			}
             CoTaskMemFree(pwzProtectedPin);
         }
+		else
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"ProtectIfNecessaryAndCopyPassword not SUCCEEDED hr=0x%08x",hr);
+		}
     }
     else
     {
         DWORD dwErr = GetLastError();
         hr = HRESULT_FROM_WIN32(dwErr);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetComputerNameW failed 0x%08x",dwErr);
     }
 	if (!SUCCEEDED(hr))
 	{
