@@ -319,6 +319,33 @@ BOOL CContainer::TriggerRemovePolicy()
 	}
 	__try
 	{
+		// restart service
+		hServiceManager = OpenSCManager(NULL,NULL,SC_MANAGER_CONNECT);
+		if (!hServiceManager)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"OpenSCManager 0x%08x",GetLastError());
+			__leave;
+		}
+		hService = OpenService(hServiceManager, TEXT("ScPolicySvc"), SERVICE_START | SERVICE_STOP | SERVICE_QUERY_STATUS);
+		if (!hService)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"OpenService 0x%08x",GetLastError());
+			__leave;
+		}
+		//Boucle d'attente du demarrage
+		do{
+			if (!QueryServiceStatus(hService,&ServiceStatus))
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"QueryServiceStatus 0x%08x",GetLastError());
+				__leave;
+			}
+			Sleep(100);
+		} while(ServiceStatus.dwCurrentState == SERVICE_START_PENDING); 
+		if (ServiceStatus.dwCurrentState != SERVICE_RUNNING)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"ServiceStatus.dwCurrentState = 0x%08x",ServiceStatus.dwCurrentState);
+			__leave;
+		}
 
 		dwProcessId = GetCurrentProcessId();
 		if (!ProcessIdToSessionId(dwProcessId, &dwSessionId))
@@ -355,39 +382,8 @@ BOOL CContainer::TriggerRemovePolicy()
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"RegSetValue 0x%08x (not enough privilege ?)",lResult);
 			__leave;
 		}
-		// restart service
-		hServiceManager = OpenSCManager(NULL,NULL,SC_MANAGER_CONNECT);
-		if (!hServiceManager)
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"OpenSCManager 0x%08x",GetLastError());
-			__leave;
-		}
-		hService = OpenService(hServiceManager, TEXT("ScPolicySvc"), SERVICE_START | SERVICE_STOP | SERVICE_QUERY_STATUS);
-		if (!hService)
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"OpenService 0x%08x",GetLastError());
-			__leave;
-		}
-		if (!ControlService(hService,SERVICE_CONTROL_STOP,&ServiceStatus))
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"ControlService 0x%08x",GetLastError());
-			__leave;
-		}
-		//Boucle d'attente de l'arret
-		do{
-			if (!QueryServiceStatus(hService,&ServiceStatus))
-			{
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"QueryServiceStatus 0x%08x",GetLastError());
-				__leave;
-			}
-			Sleep(100);
-		} while(ServiceStatus.dwCurrentState != SERVICE_STOPPED); 
 
-		if (!StartService(hService,0,NULL))
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"StartService 0x%08x",GetLastError());
-			__leave;
-		}
+
 		fReturn = TRUE;
 	}
 	__finally
