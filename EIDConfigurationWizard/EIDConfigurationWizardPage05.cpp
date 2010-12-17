@@ -30,9 +30,6 @@ BOOL WizardFinishButton(PTSTR szPassword)
 {
 	BOOL fReturn = FALSE;
 	DWORD dwError = 0;
-	TCHAR szUserName[256];
-	DWORD dwSize = ARRAYSIZE(szUserName);
-	GetUserName(szUserName, &dwSize);
 	
 	CContainerHolderTest* MyTest = pCredentialList->GetContainerHolderAt(dwCurrentCredential);
 	CContainer* container = MyTest->GetContainer();

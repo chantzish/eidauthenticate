@@ -97,10 +97,7 @@ BOOL CreateSmartCardCertificate(PCCERT_CONTEXT pCertificate, PWSTR szReader, PWS
 {
 	BOOL fReturn;
 	UI_CERTIFICATE_INFO CertificateInfo;
-	TCHAR szUserName[256];
 	TCHAR szSubject[256];
-	DWORD dwSize = ARRAYSIZE(szUserName);
-	GetUserName(szUserName, &dwSize);
 	_stprintf_s(szSubject,ARRAYSIZE(szSubject),TEXT("CN=%s"),szUserName);
 	memset(&CertificateInfo, 0, sizeof(CertificateInfo));
 	CertificateInfo.dwSaveon = UI_CERTIFICATE_INFO_SAVEON_SMARTCARD;

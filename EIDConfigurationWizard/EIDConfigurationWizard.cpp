@@ -39,6 +39,8 @@ WCHAR szReader[256];
 DWORD dwReaderSize = ARRAYSIZE(szReader);
 WCHAR szCard[256];
 DWORD dwCardSize = ARRAYSIZE(szCard);
+WCHAR szUserName[256];
+DWORD dwUserNameSize = ARRAYSIZE(szUserName);
 
 int APIENTRY _tWinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
@@ -59,12 +61,19 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	int iNumArgs;
 	LPWSTR *pszCommandLine =  CommandLineToArgvW(lpCmdLine,&iNumArgs);
 
+	DWORD dwSize = dwUserNameSize;
+	GetUserName(szUserName,&dwSize);
+
 	if (iNumArgs >= 1)
 	{
 		
-		if (_tcscmp(pszCommandLine[0],TEXT("NEW")) == 0)
+		if (_tcscmp(pszCommandLine[0],TEXT("NEW_USERNAME")) == 0)
 		{
 			fGotoNewScreen = TRUE;
+			if (iNumArgs > 1)
+			{
+				_tcscpy_s(szUserName,dwUserNameSize, pszCommandLine[1]);
+			}
 		}
 		else if (_tcscmp(pszCommandLine[0],TEXT("ACTIVATEREMOVEPOLICY")) == 0)
 		{
