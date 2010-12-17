@@ -53,6 +53,10 @@ INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 				// elevate
 				SHELLEXECUTEINFO shExecInfo;
 				TCHAR szName[1024];
+				TCHAR szParameter[1024] = TEXT("NEW_USERNAME ");
+				DWORD dwSize = ARRAYSIZE(szParameter) - (DWORD) _tcsclen(szParameter);
+				GetUserName(szParameter + ARRAYSIZE(szParameter) - dwSize, &dwSize);
+
 				GetModuleFileName(GetModuleHandle(NULL),szName, ARRAYSIZE(szName));
 				shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
 
@@ -60,7 +64,7 @@ INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 				shExecInfo.hwnd = NULL;
 				shExecInfo.lpVerb = TEXT("runas");
 				shExecInfo.lpFile = szName;
-				shExecInfo.lpParameters = TEXT("NEW");
+				shExecInfo.lpParameters = szParameter;
 				shExecInfo.lpDirectory = NULL;
 				shExecInfo.nShow = SW_NORMAL;
 				shExecInfo.hInstApp = NULL;

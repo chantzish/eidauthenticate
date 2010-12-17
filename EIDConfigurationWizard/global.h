@@ -9,6 +9,8 @@ extern WCHAR szReader[];
 extern DWORD dwReaderSize;
 extern WCHAR szCard[];
 extern DWORD dwCardSize;
+extern WCHAR szUserName[];
+extern DWORD dwUserNameSize;
 
 VOID CenterWindow(HWND hWnd);
 BOOL IsElevated();
