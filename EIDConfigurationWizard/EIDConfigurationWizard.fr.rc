@@ -16,8 +16,8 @@ FONT 9,"Segoe UI",0,0,0
 LANGUAGE 12,1
 STYLE WS_POPUP|WS_VISIBLE|WS_CAPTION|WS_SYSMENU|DS_MODALFRAME|DS_SETFONT
 BEGIN
-  CONTROL "Utiliser une carte à puce préconfigurée",IDC_02EXISTING,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_COMMANDLINK,21,21,216,33
-  CONTROL "Définir un nouveau jeu d'informations d'authentification",IDC_02NEW,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_COMMANDLINK,21,69,216,33
+  CONTROL "Utiliser une carte à puce préconfigurée",IDC_02EXISTING,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_COMMANDLINK,21,21,216,36
+  CONTROL "Définir un nouveau jeu d'informations d'authentification",IDC_02NEW,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_COMMANDLINK,21,69,216,45
 END
 
 IDD_05PASSWORD DIALOGEX 0,0,273,209
@@ -37,16 +37,16 @@ BEGIN
   CONTROL "Veuillez saisir votre mot de passe",IDC_STC5,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,0,84,272,20
 END
 
-IDD_03NEW DIALOGEX -1,-10,273,209
+IDD_03NEW DIALOGEX -1,-13,273,209
 FONT 9,"Segoe UI",0,0,0
 LANGUAGE 12,1
 STYLE WS_POPUP|WS_VISIBLE|WS_CAPTION|WS_SYSMENU|DS_MODALFRAME|DS_SETFONT
 BEGIN
-  CONTROL "Sélectionner un certificat racine",1007,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,0,0,272,20
-  CONTROL "&Utiliser ce certificat",IDC_03USETHIS,"Button",WS_CHILD|WS_VISIBLE|WS_GROUP|WS_TABSTOP|BS_AUTORADIOBUTTON,3,48,163,10
+  CONTROL "Sélectionner une authorité de confiance",1007,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,3,15,272,12
+  CONTROL "&Utiliser cette authorité",IDC_03USETHIS,"Button",WS_CHILD|WS_VISIBLE|WS_GROUP|WS_TABSTOP|BS_AUTORADIOBUTTON,3,48,163,10
   CONTROL "&Créer un certificat racine auto-signé",IDC_03_CREATE,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_AUTORADIOBUTTON,3,30,185,10
   CONTROL "&Importer un fichier p12 sur la carte à puce",IDC_03IMPORT,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_AUTORADIOBUTTON,3,138,185,10
-  CONTROL "&Détails du certificat :",1009,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,12,78,250,10
+  CONTROL "&Détails du certificat racine :",1009,"Static",WS_CHILD|WS_VISIBLE|WS_GROUP,12,78,250,10
   CONTROL "Certificat par défaut",IDC_03CERTIFICATEPANEL,"ListBox",WS_VISIBLE|WS_BORDER|WS_TABSTOP|LBS_NOSEL,9,90,175,45
   CONTROL "&Afficher le certificat",IDC_03SHOW,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP,192,87,81,12
   CONTROL "&Sélectionner un certificat",IDC_03SELECT,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP,192,105,81,12
@@ -123,5 +123,11 @@ BEGIN
   IDS_04TRUSTENABLENOEKU "Ne pas vérifier l'EKU"
   IDS_RENAME "Votre session doit être fermée pour poursuivre. Voulez-vous continuer ?"
   IDS_RENAMECONF "Votre compte a été renommé sous le nom ""%s""."
+  IDS_04SIGNATUREONLYOK "La clé associée au certificat peut être utilisé"
+  IDS_04SIGNATUREONLYNOK "Le certificat est associé à une clé ne pouvant être utilisée que pour signer des données"
+  IDS_04CHANGESIGNATUREPOLICY "Modifier la politique de Windows"
+  IDS_04TESTSIGNATURE "Crypto"
+  IDS_02EXISTINGNOTE "Choississez cette option si vous disposez d'une carte à puce déjà configurée"
+  IDS_02NEWNOTE "Choississez cette option si vous disposez d'une carte à puce vierge"
 END
 

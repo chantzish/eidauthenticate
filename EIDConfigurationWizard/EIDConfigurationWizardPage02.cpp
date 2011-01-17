@@ -23,6 +23,13 @@ INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 		{
 			Button_SetElevationRequiredState(GetDlgItem(hWnd,IDC_02NEW),TRUE);
 		}
+		{
+			TCHAR szNote[256] = TEXT("");
+			LoadString(g_hinst,IDS_02NEWNOTE, szNote, ARRAYSIZE(szNote));
+			Button_SetNote(GetDlgItem(hWnd,IDC_02NEW),szNote);
+			LoadString(g_hinst,IDS_02EXISTINGNOTE, szNote, ARRAYSIZE(szNote));
+			Button_SetNote(GetDlgItem(hWnd,IDC_02EXISTING),szNote);
+		}
 		break;
 	case WM_COMMAND:
 		wmId    = LOWORD(wParam);
