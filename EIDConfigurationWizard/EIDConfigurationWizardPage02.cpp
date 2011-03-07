@@ -114,6 +114,18 @@ INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 					PropSheet_SetWizButtons(hWnd, 0);
 				}
 				break;
+			case NM_CLICK:
+			case NM_RETURN:
+				{
+					PNMLINK pNMLink = (PNMLINK)lParam;
+					LITEM item = pNMLink->item;
+					if ((((LPNMHDR)lParam)->hwndFrom == GetDlgItem(hWnd,IDC_SYSLINKHELP)) && (item.iLink == 0))
+					{
+						ShellExecute(NULL, L"open", item.szUrl, NULL, NULL, SW_SHOW);
+					}
+					break;
+				}
+
 		}
     }
 	return FALSE;

@@ -18,6 +18,8 @@ STYLE WS_POPUP|WS_VISIBLE|WS_CAPTION|WS_SYSMENU|DS_MODALFRAME|DS_SETFONT
 BEGIN
   CONTROL "Utiliser une carte à puce préconfigurée",IDC_02EXISTING,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_COMMANDLINK,21,21,216,36
   CONTROL "Définir un nouveau jeu d'informations d'authentification",IDC_02NEW,"Button",WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_COMMANDLINK,21,69,216,45
+  CONTROL         "<a  HREF=""mailto:support@mysmartlogon.com?subject=Feedback"">Suggérer une amélioration</a>",IDC_SYSLINKHELP,
+                    "SysLink",WS_TABSTOP,25,185,223,8
 END
 
 IDD_05PASSWORD DIALOGEX 0,0,273,209
