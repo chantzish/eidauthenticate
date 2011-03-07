@@ -879,7 +879,8 @@ BOOL CStoredCredentialManager::GetResponseFromCryptedChallenge(__in PBYTE pChall
 	DWORD dwBlockLen;
 	DWORD dwError = 0;
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
-	__try{
+	__try
+	{
 		// acquire context on private key
 		if (!CryptAcquireCertificatePrivateKey(pCertContext,CRYPT_ACQUIRE_SILENT_FLAG,NULL,&hProv,&dwKeySpec,&fCallerFreeProv))
 		{
@@ -913,13 +914,14 @@ BOOL CStoredCredentialManager::GetResponseFromCryptedChallenge(__in PBYTE pChall
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CryptSetProvParam - correct PIN ?", GetLastError());
 			__leave;
 		}
-		dwSize = sizeof(DWORD);
+		/*dwSize = sizeof(DWORD);
 		if (!CryptGetKeyParam(hKey, KP_BLOCKLEN, (PBYTE) &dwBlockLen, &dwSize, 0))
 		{
 			dwError = GetLastError();
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CryptGetKeyParam", GetLastError());
 			__leave;
-		}
+		}*/
+		dwBlockLen = dwChallengeSize;
 		*pSymetricKey = (PBYTE) EIDAlloc(dwBlockLen);
 		if (!*pSymetricKey)
 		{

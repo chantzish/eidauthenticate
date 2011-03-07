@@ -1,8 +1,8 @@
 #include "resources.h"
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION 0,3,0,4
-PRODUCTVERSION 0,3,0,4
+FILEVERSION 0,3,0,5
+PRODUCTVERSION 0,3,0,5
 FILEOS 0x00000004
 FILETYPE 0x00000002
 BEGIN
@@ -10,13 +10,13 @@ BEGIN
   BEGIN
     BLOCK "040904B0"
     BEGIN
-      VALUE "CompanyName", "eidauthenticate.sourceforge.net\0"
+      VALUE "CompanyName", "www.mysmartlogon.com\0"
       VALUE "FileDescription", "Password Change Notification\0"
-      VALUE "FileVersion", "0.3.0.4\0"
+      VALUE "FileVersion", "0.3.0.5\0"
       VALUE "InternalName", "EIDPasswordChangeNotification.dll\0"
       VALUE "OriginalFilename", "EIDPasswordChangeNotification.dll\0"
       VALUE "ProductName", "EID Password Change Notification\0"
-      VALUE "ProductVersion", "0.3.0.4\0"
+      VALUE "ProductVersion", "0.3.0.5\0"
     END
   END
   BLOCK "VarFileInfo"
