@@ -3,7 +3,7 @@
 #include <credentialprovider.h>
 
 #include "global.h"
-#include "resource.h"
+#include "EIDConfigurationWizard.h"
 #include "../EIDCardLibrary/EIDCardLibrary.h"
 #include "../EIDCardLibrary/Package.h"
 #include "../EIDCardLibrary/Tracing.h"

@@ -33,7 +33,7 @@
 //#include <shlguid.h>
 #include "helpers.h"
 #include "dll.h"
-#include "resources.h"
+#include "resource.h"
 
 enum CMessageCredentialStatus
 {
