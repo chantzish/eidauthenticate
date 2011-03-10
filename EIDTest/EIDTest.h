@@ -116,3 +116,4 @@
 #define IDC_CSPOK 1205
 #define IDD_TRACE 1300
 #define IDC_TRACE 1301
+#define IDM_AP_EXCEPTION                177

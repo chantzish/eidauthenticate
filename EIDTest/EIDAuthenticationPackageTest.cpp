@@ -169,3 +169,17 @@ void menu_AP_Protect()
 }
 
 
+void Menu_AP_Exception()
+{
+	__try
+	{
+		int i = 1;
+		int j = 2;
+		i--;
+		j = j/i;
+	}
+	__except(EIDExceptionHandler(GetExceptionInformation()))
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"NT exception 0x%08x",GetExceptionCode());
+	}
+}

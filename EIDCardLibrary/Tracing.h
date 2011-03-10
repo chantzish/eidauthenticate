@@ -55,3 +55,5 @@ void EIDCardLibraryDumpMemoryEx(LPCSTR szFile, DWORD dwLine, LPCSTR szFunction, 
  */
 void MessageBoxWin32Ex(DWORD status, LPCSTR szFile, DWORD dwLine);
 #define MessageBoxWin32(status) MessageBoxWin32Ex (status, __FILE__,__LINE__);
+
+LONG EIDExceptionHandler( PEXCEPTION_POINTERS pExceptPtrs );

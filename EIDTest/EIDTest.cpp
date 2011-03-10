@@ -16,6 +16,7 @@
 #include <crtdbg.h>
 
 #include "stdafx.h"
+#include "resource.h"
 
 #include "EIDTest.h"
 #include "CSmartCardNotifierTest.h"
@@ -215,6 +216,9 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		case IDM_AP_GPO:
 			Menu_AP_GPO();
+			break;
+		case IDM_AP_EXCEPTION:
+			Menu_AP_Exception();
 			break;
 		case IDM_CRED_RP_TRACE:
 			menu_TRACE_REMOVE_POLICY();
