@@ -4,7 +4,7 @@
 #include <shellapi.h>
 
 #include "global.h"
-#include "resource.h"
+#include "EIDConfigurationWizard.h"
 #include "../EIDCardLibrary/CertificateUtilities.h"
 #include "../EIDCardLibrary/Tracing.h"
 

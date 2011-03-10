@@ -26,6 +26,7 @@
 //
 
 #include "CMessageCredential.h"
+#include "resource.h"
 #include <unknwn.h>
 #include "../EIDCardLibrary/guid.h"
 #include "../EIDCardLibrary/GPO.h"

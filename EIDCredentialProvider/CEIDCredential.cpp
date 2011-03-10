@@ -28,7 +28,7 @@
 
 
 #include "CEIDCredential.h"
-#include "resources.h"
+#include "resource.h"
 
 
 #include "../EIDCardLibrary/guid.h"

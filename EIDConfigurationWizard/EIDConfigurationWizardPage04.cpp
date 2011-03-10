@@ -3,7 +3,7 @@
 #include <commctrl.h>
 #include <Winuser.h>
 #include "global.h"
-#include "resource.h"
+#include "EIDConfigurationWizard.h"
 
 #include "../EIDCardLibrary/Tracing.h"
 #include "../EIDCardLibrary/GPO.h"

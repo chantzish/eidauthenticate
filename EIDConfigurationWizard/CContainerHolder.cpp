@@ -3,7 +3,7 @@
 #include <tchar.h>
 #include <credentialProvider.h>
 #include "global.h"
-#include "resource.h"
+#include "EIDConfigurationWizard.h"
 #include "../EIDCardLibrary/CContainer.h"
 #include "../EIDCardLibrary/GPO.h"
 #include "../EIDCardLibrary/CertificateValidation.h"
