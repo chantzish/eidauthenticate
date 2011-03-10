@@ -269,13 +269,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CContainerHolder.h" />
-    <ClInclude Include="EIDConfigurationWizard.fr.h" />
     <ClInclude Include="EIDConfigurationWizard.h" />
     <ClInclude Include="global.h" />
-    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="EIDConfigurationWizard.fr.rc" />
+    <ResourceCompile Include="EIDConfigurationWizard_fr.rc" />
     <ResourceCompile Include="EIDConfigurationWizard.rc" />
   </ItemGroup>
   <ItemGroup>

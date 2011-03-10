@@ -3,7 +3,7 @@
 #include <Cryptuiapi.h>
 #include <shobjidl.h>
 #include "global.h"
-#include "EIDConfigurationWizard.h"
+#include "resource.h"
 #include "../EIDCardLibrary/CertificateUtilities.h"
 #include "../EIDCardLibrary/Tracing.h"
 
