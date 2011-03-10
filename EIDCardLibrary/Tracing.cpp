@@ -22,14 +22,19 @@
 #include <crtdbg.h>
 
 #define _CRTDBG_MAPALLOC
+#include <Dbghelp.h>
 #include "EIDCardLibrary.h"
 #include "guid.h"
+
+#pragma comment(lib,"Dbghelp")
 
 #define WINEVENT_LEVEL_CRITICAL 1
 #define WINEVENT_LEVEL_ERROR    2
 #define WINEVENT_LEVEL_WARNING  3
 #define WINEVENT_LEVEL_INFO     4
 #define WINEVENT_LEVEL_VERBOSE  5
+
+#define EVENT_CONTROL_CODE_ENABLE_PROVIDER 1
 
 REGHANDLE hPub;
 BOOL bFirst = TRUE;
@@ -50,8 +55,7 @@ HMODULE hm = NULL;
 /**
  *  Tracing function.
  *  Extract data using :
- * C:\Windows\System32\LogFiles\WMI>tracerpt EIDCredentialProvider.etl.001 -o c:\us
- * ers\Adiant\Desktop\report.txt -of csv
+ * C:\Windows\System32\LogFiles\WMI>tracerpt EIDCredentialProvider.etl.001 -o c:\users\Adiant\Desktop\report.txt -of csv
  */
 
 /**
@@ -71,16 +75,30 @@ void MessageBoxWin32Ex(DWORD status, LPCSTR szFile, DWORD dwLine) {
 	LocalFree(Error);
 }
 
+BOOL IsTracingEnabled = FALSE;
+
+void NTAPI EnableCallback(
+  __in      LPCGUID SourceId,
+  __in      ULONG IsEnabled,
+  __in      UCHAR Level,
+  __in      ULONGLONG MatchAnyKeyword,
+  __in      ULONGLONG MatchAllKeywords,
+  __in_opt  PEVENT_FILTER_DESCRIPTOR FilterData,
+  __in_opt  PVOID CallbackContext
+)
+{
+	UNREFERENCED_PARAMETER(SourceId);
+	UNREFERENCED_PARAMETER(Level);
+	UNREFERENCED_PARAMETER(MatchAnyKeyword);
+	UNREFERENCED_PARAMETER(MatchAllKeywords);
+	UNREFERENCED_PARAMETER(FilterData);
+	UNREFERENCED_PARAMETER(CallbackContext);
+	IsTracingEnabled = (IsEnabled == EVENT_CONTROL_CODE_ENABLE_PROVIDER);
+}
+
 void EIDCardLibraryTracingRegister() {
 	bFirst = FALSE;
-	EventRegister(&CLSID_CEIDProvider,NULL,NULL,&hPub);
-#ifdef WRITE_KERNET_DEBUGGER
-	hm = GetModuleHandle(TEXT("ntdll.dll"));
-	f = GetProcAddress( hm, "DbgPrintEx" );
-	memcpy( &f_DbgPrintEx, &f, sizeof(f) ); 
-	f = GetProcAddress( hm, "vDbgPrintEx" );
-	memcpy( &f_vDbgPrintEx, &f, sizeof(f) ); 
-#endif
+	EventRegister(&CLSID_CEIDProvider,EnableCallback,NULL,&hPub);
 }
 
 void EIDCardLibraryTracingUnRegister() {
@@ -115,14 +133,65 @@ void EIDCardLibraryTraceEx(LPCSTR szFile, DWORD dwLine, LPCSTR szFunction, UCHAR
 	swprintf_s(Buffer2,356,L"%S(%d) : %S - %s\r\n",szFile,dwLine,szFunction,Buffer);
 	OutputDebugString(Buffer2);
 #endif
-#ifdef WRITE_KERNET_DEBUGGER
-	f_DbgPrintEx(1,dwLevel,"%s(%d) : %s - %S\r\n",szFile,dwLine,szFunction,Buffer);
-#endif
 	swprintf_s(Buffer2,356,L"%S(%d) : %s",szFunction,dwLine,Buffer);
 	EventWriteString(hPub,dwLevel,0,Buffer2);
 
 }
 
+
+	// common exception handler
+	LONG EIDExceptionHandler( PEXCEPTION_POINTERS pExceptPtrs )
+	{
+#ifdef _DEBUG
+		UNREFERENCED_PARAMETER(pExceptPtrs);
+		// crash on debug to allow kernel debugger to break were the exception was triggered 
+		return EXCEPTION_CONTINUE_SEARCH;
+#else
+		EIDCardLibraryTraceEx(__FILE__,__LINE__,__FUNCTION__,WINEVENT_LEVEL_WARNING,L"New Exception");
+		// may contain sensitive information - generate a dump only if the debugging is active
+		if (IsTracingEnabled)
+		{
+			HANDLE fileHandle = CreateFile (TEXT("c:\\EIDAuthenticateDump.dmp"), GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+			if (fileHandle == INVALID_HANDLE_VALUE)
+			{
+				if (GetLastError() == 0x5)
+				{
+					EIDCardLibraryTraceEx(__FILE__,__LINE__,__FUNCTION__,WINEVENT_LEVEL_WARNING,L"Unable to create minidump file c:\\EIDAuthenticate.dmp");
+					TCHAR szFileName[MAX_PATH];
+					GetTempPath(MAX_PATH, szFileName);
+					_tcscat_s(szFileName, MAX_PATH, TEXT("EIDAuthenticateDump.dmp"));
+					EIDCardLibraryTraceEx(__FILE__,__LINE__,__FUNCTION__,WINEVENT_LEVEL_WARNING,L"Trying to create dump file %s",szFileName);
+					fileHandle = CreateFile (szFileName, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+				}
+			}
+			if (fileHandle == INVALID_HANDLE_VALUE)
+			{
+				EIDCardLibraryTraceEx(__FILE__,__LINE__,__FUNCTION__,WINEVENT_LEVEL_WARNING,L"Unable to create minidump file 0x%08X", GetLastError());
+			}
+			else
+			{
+				_MINIDUMP_EXCEPTION_INFORMATION dumpExceptionInfo;
+				dumpExceptionInfo.ThreadId = GetCurrentThreadId();
+				dumpExceptionInfo.ExceptionPointers = pExceptPtrs;
+				dumpExceptionInfo.ClientPointers = FALSE;
+
+				BOOL fStatus = MiniDumpWriteDump(GetCurrentProcess(),
+									GetCurrentProcessId(),
+									fileHandle,MiniDumpWithFullMemory,(pExceptPtrs != 0) ? &dumpExceptionInfo: NULL,NULL,NULL);
+				if (!fStatus)
+				{
+					EIDCardLibraryTraceEx(__FILE__,__LINE__,__FUNCTION__,WINEVENT_LEVEL_WARNING,L"Unable to write minidump file 0x%08X", GetLastError());
+				}
+				else
+				{
+					EIDCardLibraryTraceEx(__FILE__,__LINE__,__FUNCTION__,WINEVENT_LEVEL_WARNING,L"minidump successfully created");
+				}
+				CloseHandle(fileHandle);
+			}
+		}
+		return EXCEPTION_EXECUTE_HANDLER;
+#endif
+	}
 
 void EIDCardLibraryDumpMemoryEx(LPCSTR szFile, DWORD dwLine, LPCSTR szFunction, PVOID memoryParam, DWORD memorysize)
 {

@@ -37,6 +37,7 @@
 #include <iphlpapi.h>
 #include <tchar.h>
 
+
 #include "../EIDCardLibrary/EIDCardLibrary.h"
 #include "../EIDCardLibrary/Tracing.h"
 #include "../EIDCardLibrary/CompleteToken.h"
@@ -44,7 +45,6 @@
 #include "../EIDCardLibrary/Package.h"
 #include "../EIDCardLibrary/CertificateValidation.h"
 #include "../EIDCardLibrary/StoredCredentialManagement.h"
-
 
 	
 extern "C"
@@ -129,8 +129,6 @@ extern "C"
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Destination OK '%wZ'",Destination);
 		return Destination;
 	}
-
-
 
 
 	NTSTATUS NTAPI LsaApInitializePackage(
@@ -330,11 +328,7 @@ extern "C"
 			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"return 0x%08X",status);
 			return status;
 		}
-			// disable warning because we want to trap ALL exception
-#pragma warning(push)
-#pragma warning(disable : 6320)
-	__except(EXCEPTION_EXECUTE_HANDLER)
-#pragma warning(pop)
+		__except(EIDExceptionHandler(GetExceptionInformation()))
 		{
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"NT exception 0x%08x",GetExceptionCode());
 			return STATUS_LOGON_FAILURE;
@@ -587,16 +581,7 @@ extern "C"
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Success !!");
 			return Status;
 		}
-// disable warning because we want to trap ALL exception
-#ifdef _DEBUG
-		__except(EXCEPTION_CONTINUE_SEARCH)
-			// crash on debug to allow kernel debugger to break were the exception was triggered
-#else
-#pragma warning(push)
-#pragma warning(disable : 6320)
-	__except(EXCEPTION_EXECUTE_HANDLER)
-#pragma warning(pop)
-#endif
+		__except(EIDExceptionHandler(GetExceptionInformation()))
 		{
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"NT exception 0x%08x",GetExceptionCode());
 			return STATUS_LOGON_FAILURE;
