@@ -106,10 +106,56 @@ VOID WINAPI ProcessEvents(PEVENT_TRACE pEvent)
   return;
 }
 
+void ExportOneTraceFile(PTSTR szTraceFile)
+{
+	ULONG rc;
+	EVENT_TRACE_LOGFILE trace;
+	memset(&trace,0, sizeof(EVENT_TRACE_LOGFILE));
+	trace.LoggerName = TEXT("EIDCredentialProvider"); 
+	//trace.LogFileMode = EVENT_TRACE_REAL_TIME_MODE;
+	trace.LogFileName = szTraceFile;
+	trace.EventCallback = (PEVENT_CALLBACK) (ProcessEvents);
+	handle = OpenTrace(&trace);
+	if ((TRACEHANDLE)INVALID_HANDLE_VALUE == handle)
+	{
+		// Handle error as appropriate for your application.
+	}
+	else
+	{
+		FILETIME now, start;
+		SYSTEMTIME sysNow, sysstart;
+		GetLocalTime(&sysNow);
+		SystemTimeToFileTime(&sysNow, &now);
+		memcpy(&sysstart, &sysNow, sizeof(SYSTEMTIME));
+		sysstart.wYear -= 1;
+		SystemTimeToFileTime(&sysstart, &start);
+		DWORD dwWritten;
+		TCHAR szBuffer[256];
+		_tcscpy_s(szBuffer,ARRAYSIZE(szBuffer),TEXT("================================================\r\n"));
+		WriteFile ( hFile, szBuffer, (DWORD)_tcslen(szBuffer) * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
+		WriteFile ( hFile, szTraceFile, (DWORD)_tcslen(szTraceFile) * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
+		_tcscpy_s(szBuffer,ARRAYSIZE(szBuffer),TEXT("\r\n"));
+		WriteFile ( hFile, szBuffer, (DWORD)_tcslen(szBuffer) * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
+		_tcscpy_s(szBuffer,ARRAYSIZE(szBuffer),TEXT("================================================\r\n"));
+		WriteFile ( hFile, szBuffer, (DWORD)_tcslen(szBuffer) * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
+		rc = ProcessTrace(&handle, 1, 0, 0);
+		if (rc != ERROR_SUCCESS && rc != ERROR_CANCELLED)
+		{
+			if (rc ==  0x00001069)
+			{
+			}
+			else
+			{
+			}
+		}
+		CloseTrace(handle);
+	}
+}
+
 void SaveLog(HWND hDlg)
 {
 	IFileSaveDialog *pSaveDialog;
-	EVENT_TRACE_LOGFILE trace;
+	
 	LPOLESTR pszPath = NULL;
     __try
 	{
@@ -149,51 +195,25 @@ void SaveLog(HWND hDlg)
 			__leave;
 		}
 	
-		ULONG rc;
-		memset(&trace,0, sizeof(EVENT_TRACE_LOGFILE));
-		trace.LoggerName = TEXT("EIDCredentialProvider"); 
-		//trace.LogFileMode = EVENT_TRACE_REAL_TIME_MODE;
-		trace.LogFileName = TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl");
-		trace.EventCallback = (PEVENT_CALLBACK) (ProcessEvents);
+		
 
 		hFile = CreateFile(pszPath, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL);
 		if (hFile == INVALID_HANDLE_VALUE)
 		{
 			__leave;
 		}
-		handle = OpenTrace(&trace);
-		if ((TRACEHANDLE)INVALID_HANDLE_VALUE == handle)
-		{
-			// Handle error as appropriate for your application.
-		}
-		else
-		{
-			FILETIME now, start;
-			SYSTEMTIME sysNow, sysstart;
-			GetLocalTime(&sysNow);
-			SystemTimeToFileTime(&sysNow, &now);
-			memcpy(&sysstart, &sysNow, sizeof(SYSTEMTIME));
-			sysstart.wYear -= 1;
-			SystemTimeToFileTime(&sysstart, &start);
-			rc = ProcessTrace(&handle, 1, &start, &now);
-			if (rc != ERROR_SUCCESS && rc != ERROR_CANCELLED)
-			{
-				if (rc ==  0x00001069)
-				{
-				}
-				else
-				{
-				}
-			}
-		}
+		ExportOneTraceFile(TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl"));
+		ExportOneTraceFile(TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl.001"));
+		ExportOneTraceFile(TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl.002"));
+		ExportOneTraceFile(TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl.003"));
+		ExportOneTraceFile(TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl.004"));
+		ExportOneTraceFile(TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl.005"));
+		ExportOneTraceFile(TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl.006"));
+		ExportOneTraceFile(TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl.007"));
+		ExportOneTraceFile(TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl.008"));
 	}
 	__finally
 	{
-		if (handle)
-		{
-			CloseTrace(handle);
-			handle = NULL;
-		}
 		if (pszPath)
 			CoTaskMemFree(pszPath);
 		if (hFile != INVALID_HANDLE_VALUE)
