@@ -2,7 +2,7 @@
 #include <tchar.h>
 #include <credentialprovider.h>
 
-#include "EIDConfigurationWizard.h"
+#include "resource.h"
 #include "global.h"
 
 #include "../EIDCardLibrary/EIDCardLibrary.h"

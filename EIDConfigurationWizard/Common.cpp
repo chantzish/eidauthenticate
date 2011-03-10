@@ -4,7 +4,7 @@
 
 #include "../EIDCardLibrary/GPO.h"
 #include "../EIDCardLibrary/Tracing.h"
-#include "EIDConfigurationWizard.h"
+#include "resource.h"
 
 extern HINSTANCE g_hinst;
 

@@ -9,7 +9,7 @@
 #include "../EIDCardLibrary/Package.h"
 
 #include "global.h"
-#include "EIDConfigurationWizard.h"
+#include "resource.h"
 
 #pragma comment(lib,"Credui")
 
