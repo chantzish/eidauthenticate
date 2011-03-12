@@ -435,34 +435,3 @@ void DisableLogging()
 	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
 	StopLogging();
 }
-
-void BEID_Patch()
-{
-	BYTE bATR[]		= {0x3b,0x98,0x13,0x40,0x0a,0xa5,0x03,0x01,0x01,0x01,0xad,0x13,0x11};
-	BYTE bATRMASK[] = {0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff};
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
-		TEXT("SOFTWARE\\Microsoft\\Cryptography\\Calais\\SmartCards\\Belgium Electronic ID card"), 
-		TEXT("Crypto Provider"), REG_SZ,TEXT("Belgium Identity Card CSP"),sizeof(TEXT("Belgium Identity Card CSP")));
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
-		TEXT("SOFTWARE\\Microsoft\\Cryptography\\Calais\\SmartCards\\Belgium Electronic ID card"), 
-		TEXT("ATR"), REG_BINARY,bATR,sizeof(bATR));
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
-		TEXT("SOFTWARE\\Microsoft\\Cryptography\\Calais\\SmartCards\\Belgium Electronic ID card"), 
-		TEXT("ATRMask"), REG_BINARY,bATRMASK,sizeof(bATRMASK));
-#ifdef  _M_X64
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
-		TEXT("SOFTWARE\\Wow6432Node\\Microsoft\\Cryptography\\Calais\\SmartCards\\Belgium Electronic ID card"), 
-		TEXT("Crypto Provider"), REG_SZ,TEXT("Belgium Identity Card CSP"),sizeof(TEXT("Belgium Identity Card CSP")));
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
-		TEXT("SOFTWARE\\Wow6432Node\\Microsoft\\Cryptography\\Calais\\SmartCards\\Belgium Electronic ID card"), 
-		TEXT("ATR"), REG_BINARY,bATR,sizeof(bATR));
-	RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
-		TEXT("SOFTWARE\\Wow6432Node\\Microsoft\\Cryptography\\Calais\\SmartCards\\Belgium Electronic ID card"), 
-		TEXT("ATRMask"), REG_BINARY,bATRMASK,sizeof(bATRMASK));
-#endif
-}
-
-void BEID_UnPatch()
-{
-	RegDeleteTree(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\Cryptography\\Calais\\SmartCards\\Belgium Electronic ID card"));
-}

@@ -12,7 +12,6 @@
 #include "../EIDCardLibrary/EIDCardLibrary.h"
 #include "../EIDCardLibrary/Tracing.h"
 #include "../EIDCardLibrary/CertificateUtilities.h"
-#include "../EIDCardLibrary/beid.h"
 #include "EIDTest.h"
 #include "EIDTestUIUtil.h"
 
@@ -143,174 +142,134 @@ PCCERT_CONTEXT SelectCerts(__in LPCWSTR szReaderName,__in LPCWSTR szCardName,
 			return NULL;
 		}
 
-		if (wcscmp(szCardName, WBEIDCardName) == 0)
+		size_t ulNameLen = _tcslen(szReaderName);
+		szMainContainerName = (LPWSTR) EIDAlloc((DWORD)(ulNameLen + 6) * sizeof(WCHAR));
+		if (!szMainContainerName)
 		{
-			
-			DWORD dwKeySpec;
-			LPWSTR szContainerName = NULL;
-			for (DWORD i = 0; i < 2; i++)
-			{
-				if (GetBEIDCertificateData(szReaderName, &szContainerName,&dwKeySpec, &pbCert, &dwCertLen, pKeySpecs[i]))
-				{
-					pCertContext = CertCreateCertificateContext(
-									X509_ASN_ENCODING|PKCS_7_ASN_ENCODING, 
-									pbCert,
-									dwCertLen);
-					if (pCertContext)
-					{
-						pContextArray[dwContextArrayLen] = pCertContext;
-						pContainerName[dwContextArrayLen] = (LPWSTR) EIDAlloc((DWORD)(wcslen(szContainerName)+1) * sizeof(WCHAR));
-						dwKeySpecs[i] = dwKeySpec;
-						memcpy((PVOID)pContainerName[dwContextArrayLen],szContainerName, (wcslen(szContainerName)+1) * sizeof(WCHAR));
-						dwContextArrayLen++;
-						CRYPT_KEY_PROV_INFO keyProvInfo;
-						keyProvInfo.pwszProvName = szOutProviderName;
-						keyProvInfo.dwKeySpec = dwKeySpec;
-						keyProvInfo.dwProvType = PROV_RSA_FULL;
-						keyProvInfo.pwszContainerName = szContainerName;
-						keyProvInfo.cProvParam = 0;
-						keyProvInfo.rgProvParam = NULL;
-						keyProvInfo.dwFlags = 0;
-						CertSetCertificateContextProperty(pCertContext, CERT_KEY_PROV_INFO_PROP_ID, 0, &keyProvInfo);
-						
-					}
-					
-					EIDFree(szContainerName);
-					EIDFree(pbCert);
-				}
-			}
+			return NULL;
 		}
-		else
+		swprintf_s(szMainContainerName,(ulNameLen + 6), L"\\\\.\\%s\\", szReaderName);
+
+		bStatus = CryptAcquireContext(&HMainCryptProv,
+					szMainContainerName,
+					szOutProviderName,
+					PROV_RSA_FULL,
+					CRYPT_SILENT);
+		if (!bStatus)
 		{
-			size_t ulNameLen = _tcslen(szReaderName);
-			szMainContainerName = (LPWSTR) EIDAlloc((DWORD)(ulNameLen + 6) * sizeof(WCHAR));
-			if (!szMainContainerName)
+			dwErr = GetLastError();
+			if (dwErr == NTE_BAD_KEYSET)
 			{
-				return NULL;
-			}
-			swprintf_s(szMainContainerName,(ulNameLen + 6), L"\\\\.\\%s\\", szReaderName);
-
-			bStatus = CryptAcquireContext(&HMainCryptProv,
-						szMainContainerName,
-						szOutProviderName,
-						PROV_RSA_FULL,
-						CRYPT_SILENT);
-			if (!bStatus)
-			{
-				dwErr = GetLastError();
-				if (dwErr == NTE_BAD_KEYSET)
+				bStatus = CryptAcquireContext(&HMainCryptProv,NULL,	szOutProviderName,	PROV_RSA_FULL,	CRYPT_SILENT);
+				if (!bStatus)
 				{
-					bStatus = CryptAcquireContext(&HMainCryptProv,NULL,	szOutProviderName,	PROV_RSA_FULL,	CRYPT_SILENT);
-					if (!bStatus)
+					dwErr = GetLastError();
+					if (dwErr == NTE_BAD_KEYSET)
 					{
-						dwErr = GetLastError();
-						if (dwErr == NTE_BAD_KEYSET)
-						{
-							MessageBox(NULL,L"No certificate on the card",L"",0);
-							__leave;
-						}
-						else
-						{
-							MessageBoxWin32(dwErr);
-							__leave;
-						}
+						MessageBox(NULL,L"No certificate on the card",L"",0);
+						__leave;
+					}
+					else
+					{
+						MessageBoxWin32(dwErr);
+						__leave;
 					}
 				}
-				else
-				{
-					MessageBoxWin32(dwErr);
-					__leave;
-				}
-				
 			}
-
-
-
-			/* Enumerate all the containers */
-			while (CryptGetProvParam(HMainCryptProv,
-						PP_ENUMCONTAINERS,
-						(LPBYTE) szContainerName,
-						&dwContainerNameLen,
-						dwFlags) &&
-					(dwContextArrayLen < 128)
-					)
+			else
 			{
+				MessageBoxWin32(dwErr);
+				__leave;
+			}
+				
+		}
 
-				// convert the container name to unicode
-				int wLen = MultiByteToWideChar(CP_ACP, 0, szContainerName, -1, NULL, 0);
-				LPWSTR szWideContainerName = (LPWSTR) EIDAlloc(wLen * sizeof(WCHAR));
-				MultiByteToWideChar(CP_ACP, 0, szContainerName, -1, szWideContainerName, wLen);
 
-				// Acquire a context on the current container
-				if (CryptAcquireContext(&hProv,
-						szWideContainerName,
-						szOutProviderName,
-						PROV_RSA_FULL,
-						0))
+
+		/* Enumerate all the containers */
+		while (CryptGetProvParam(HMainCryptProv,
+					PP_ENUMCONTAINERS,
+					(LPBYTE) szContainerName,
+					&dwContainerNameLen,
+					dwFlags) &&
+				(dwContextArrayLen < 128)
+				)
+		{
+
+			// convert the container name to unicode
+			int wLen = MultiByteToWideChar(CP_ACP, 0, szContainerName, -1, NULL, 0);
+			LPWSTR szWideContainerName = (LPWSTR) EIDAlloc(wLen * sizeof(WCHAR));
+			MultiByteToWideChar(CP_ACP, 0, szContainerName, -1, szWideContainerName, wLen);
+
+			// Acquire a context on the current container
+			if (CryptAcquireContext(&hProv,
+					szWideContainerName,
+					szOutProviderName,
+					PROV_RSA_FULL,
+					0))
+			{
+				// Loop over all the key specs
+				for (int i = 0; i < 2; i++)
 				{
-					// Loop over all the key specs
-					for (int i = 0; i < 2; i++)
+					if (CryptGetUserKey(hProv,
+							pKeySpecs[i],
+							&hKey) )
 					{
-						if (CryptGetUserKey(hProv,
-								pKeySpecs[i],
-								&hKey) )
+						if (CryptGetKeyParam(hKey,
+								KP_CERTIFICATE,
+								NULL,
+								&dwCertLen,
+								0))
 						{
-							if (CryptGetKeyParam(hKey,
-									KP_CERTIFICATE,
-									NULL,
-									&dwCertLen,
-									0))
+							pbCert = (LPBYTE) EIDAlloc(dwCertLen);
+							if (!pbCert)
 							{
-								pbCert = (LPBYTE) EIDAlloc(dwCertLen);
-								if (!pbCert)
-								{
-									dwErr = GetLastError();
-									__leave;
-								}
-								if (CryptGetKeyParam(hKey,
-											KP_CERTIFICATE,
-											pbCert,
-											&dwCertLen,
-											0))
-								{
-									pCertContext = CertCreateCertificateContext(
-													X509_ASN_ENCODING|PKCS_7_ASN_ENCODING, 
-													pbCert,
-													dwCertLen);
-									if (pCertContext)
-									{
-										pContextArray[dwContextArrayLen] = pCertContext;
-										pContainerName[dwContextArrayLen] = (LPWSTR) EIDAlloc(wLen * sizeof(WCHAR));
-										dwKeySpecs[dwContextArrayLen] = pKeySpecs[i];
-										memcpy((PVOID)pContainerName[dwContextArrayLen],szWideContainerName, wLen * sizeof(WCHAR));
-										dwContextArrayLen++;
-										CRYPT_KEY_PROV_INFO keyProvInfo;
-										keyProvInfo.pwszProvName = szOutProviderName;
-										keyProvInfo.dwKeySpec = pKeySpecs[i];
-										keyProvInfo.dwProvType = PROV_RSA_FULL;
-										keyProvInfo.pwszContainerName = szWideContainerName;
-										keyProvInfo.cProvParam = 0;
-										keyProvInfo.rgProvParam = NULL;
-										keyProvInfo.dwFlags = 0;
-										CertSetCertificateContextProperty(pCertContext, CERT_KEY_PROV_INFO_PROP_ID, 0, &keyProvInfo);
-									}
-								}
-								EIDFree(pbCert);
-								pbCert = NULL;
+								dwErr = GetLastError();
+								__leave;
 							}
-							CryptDestroyKey(hKey);
-							hKey = NULL;
+							if (CryptGetKeyParam(hKey,
+										KP_CERTIFICATE,
+										pbCert,
+										&dwCertLen,
+										0))
+							{
+								pCertContext = CertCreateCertificateContext(
+												X509_ASN_ENCODING|PKCS_7_ASN_ENCODING, 
+												pbCert,
+												dwCertLen);
+								if (pCertContext)
+								{
+									pContextArray[dwContextArrayLen] = pCertContext;
+									pContainerName[dwContextArrayLen] = (LPWSTR) EIDAlloc(wLen * sizeof(WCHAR));
+									dwKeySpecs[dwContextArrayLen] = pKeySpecs[i];
+									memcpy((PVOID)pContainerName[dwContextArrayLen],szWideContainerName, wLen * sizeof(WCHAR));
+									dwContextArrayLen++;
+									CRYPT_KEY_PROV_INFO keyProvInfo;
+									keyProvInfo.pwszProvName = szOutProviderName;
+									keyProvInfo.dwKeySpec = pKeySpecs[i];
+									keyProvInfo.dwProvType = PROV_RSA_FULL;
+									keyProvInfo.pwszContainerName = szWideContainerName;
+									keyProvInfo.cProvParam = 0;
+									keyProvInfo.rgProvParam = NULL;
+									keyProvInfo.dwFlags = 0;
+									CertSetCertificateContextProperty(pCertContext, CERT_KEY_PROV_INFO_PROP_ID, 0, &keyProvInfo);
+								}
+							}
+							EIDFree(pbCert);
+							pbCert = NULL;
 						}
+						CryptDestroyKey(hKey);
+						hKey = NULL;
 					}
-					CryptReleaseContext(hProv, 0);
-					hProv = NULL;
 				}
-				EIDFree(szWideContainerName);
-				
-				// prepare parameters for the next loop
-				dwContainerNameLen = sizeof(szContainerName);
-				dwFlags = 0;
+				CryptReleaseContext(hProv, 0);
+				hProv = NULL;
 			}
+			EIDFree(szWideContainerName);
+				
+			// prepare parameters for the next loop
+			dwContainerNameLen = sizeof(szContainerName);
+			dwFlags = 0;
 		}
 
 		if (dwFlags == CRYPT_FIRST) 

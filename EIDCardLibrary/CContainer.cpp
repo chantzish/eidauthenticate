@@ -25,7 +25,6 @@
 #include "CertificateValidation.h"
 #include "GPO.h"
 #include "package.h"
-#include "beid.h"
 
 #pragma comment(lib, "Cryptui.lib")
 
@@ -107,67 +106,6 @@ PTSTR CContainer::GetUserName()
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CertGetNameString error = %d",GetLastError());
 			__leave;
 		}
-		// remove any weird characters
-		// (else we can not match an existing username because it is not accepted as valid username by windows)
-		/*for (DWORD i = 0; i<dwSize; i++)
-		{
-			TCHAR cChar = _szUserName[i];
-			if (cChar < 13 && cChar >0)
-			{
-				_szUserName[i] = '_';
-			}
-			if (cChar == '\\' || cChar == ':' || cChar == '+' ||
-				cChar == '/' || cChar == ';' || cChar == '=' ||
-				cChar == '[' || cChar == '|' || cChar == ',' ||
-				cChar == ']' || cChar == '<' || cChar == '?' ||
-				cChar == '"' || cChar == '>' || cChar == '*')
-			{
-				_szUserName[i] = '_';
-			}
-
-		}
-			// check if it is a Belgian Eid card to drop the '(Authentication)'
-		dwSize = 0;
-		
-		if (!CertGetCertificateContextProperty(_pCertContext, CERT_KEY_PROV_INFO_PROP_ID, NULL, &dwSize))
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CertGetCertificateContextProperty", GetLastError());
-			__leave;
-		}
-		pKeyProvInfo = (PCRYPT_KEY_PROV_INFO) EIDAlloc(dwSize);
-		if (!pKeyProvInfo)
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by EIDAlloc", GetLastError());
-			__leave;
-		}
-		if (!CertGetCertificateContextProperty(_pCertContext, CERT_KEY_PROV_INFO_PROP_ID, (PBYTE) pKeyProvInfo, &dwSize))
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CertGetCertificateContextProperty", GetLastError());
-			__leave;
-		}
-		if (_tcscmp(pKeyProvInfo->pwszProvName, TBEIDCSP) == 0)
-		{
-			_szUserName[_tcslen(_szUserName) - 17] = '\0';
-		}
-		// truncate it to max 20 char
-		if (_tcsclen(_szUserName) >= 21) 
-			_szUserName[20]=0;
-		// remove terminating dot
-		for(int i = (int)_tcsclen(_szUserName)-1; i>= 0; i--)
-		{
-			if (_szUserName[i] == '.')
-			{
-				_szUserName[i] = '\0';
-			}
-			else
-			{
-				break;
-			}
-			if (i == 0)
-			{
-				_szUserName[0] = 'a';
-			}
-		}*/
 		fReturn = TRUE;
 
 	}

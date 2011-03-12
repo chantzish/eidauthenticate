@@ -211,7 +211,6 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="beid.cpp" />
     <ClCompile Include="CContainer.cpp" />
     <ClCompile Include="CContainerHolderFactory.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Analyze|Win32'">true</ExcludedFromBuild>
@@ -236,7 +235,6 @@
     <ClCompile Include="Tracing.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="beid.h" />
     <ClInclude Include="CContainer.h" />
     <ClInclude Include="CContainerHolderFactory.h" />
     <ClInclude Include="CertificateUtilities.h" />

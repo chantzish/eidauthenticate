@@ -20,7 +20,6 @@
 #include "EIDCardLibrary.h"
 #include "Tracing.h"
 #include "GPO.h"
-#include "beid.h"
 
 #pragma comment(lib,"Crypt32")
 
@@ -29,13 +28,6 @@ PCCERT_CONTEXT GetCertificateFromCspInfo(__in PEID_SMARTCARD_CSP_INFO pCspInfo)
 	// for TS Smart Card redirection
 	PCCERT_CONTEXT pCertContext = NULL;
 	EIDImpersonate();
-	if (_tcscmp(pCspInfo->bBuffer + pCspInfo->nCSPNameOffset,TBEIDCSP ) == 0)
-	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"GetBEIDCertificateFromCspInfo");
-		pCertContext = GetBEIDCertificateFromCspInfo(pCspInfo);
-		EIDRevertToSelf();
-		return pCertContext;
-	}
 	EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"GetCertificateFromCspInfo");
 	HCRYPTPROV hProv = NULL;
 	DWORD dwError = 0;
