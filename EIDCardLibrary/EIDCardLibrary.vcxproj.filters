@@ -11,9 +11,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="beid.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="CContainer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -61,9 +58,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="beid.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="CContainer.h">
       <Filter>Header Files</Filter>
     </ClInclude>

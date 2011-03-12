@@ -46,14 +46,4 @@ extern "C"
 	{
 		DisableLogging();
 	}
-
-	void NTAPI EIDPatch()
-	{
-		BEID_Patch();
-	}
-
-	void NTAPI EIDUnPatch()
-	{
-		BEID_UnPatch();
-	}
 }

@@ -133,7 +133,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(OutDir)EIDCardLibrary.lib;Winscard.lib;Crypt32.lib;Netapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs> beid35libCpp.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>%(DelayLoadDLLs)</DelayLoadDLLs>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
@@ -156,7 +156,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(OutDir)EIDCardLibrary.lib;Winscard.lib;Crypt32.lib;Netapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs> beid35libCpp.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>%(DelayLoadDLLs)</DelayLoadDLLs>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
     </Link>
@@ -176,7 +176,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(OutDir)EIDCardLibrary.lib;Winscard.lib;Crypt32.lib;Netapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs> beid35libCpp.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>%(DelayLoadDLLs)</DelayLoadDLLs>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
@@ -202,7 +202,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(OutDir)EIDCardLibrary.lib;Winscard.lib;Crypt32.lib;Netapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs> beid35libCpp.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>%(DelayLoadDLLs)</DelayLoadDLLs>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
@@ -223,7 +223,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(OutDir)EIDCardLibrary.lib;Winscard.lib;Crypt32.lib;Netapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs> beid35libCpp.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>%(DelayLoadDLLs)</DelayLoadDLLs>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
@@ -246,7 +246,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(OutDir)EIDCardLibrary.lib;Winscard.lib;Crypt32.lib;Netapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs> beid35libCpp.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>%(DelayLoadDLLs)</DelayLoadDLLs>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
     </Link>

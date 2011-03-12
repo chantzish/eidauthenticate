@@ -17,7 +17,6 @@
 
 #include "../EIDCardLibrary/CertificateValidation.h"
 #include "../EIDCardLibrary/CertificateUtilities.h"
-#include "../EIDCardLibrary/BEID.h"
 #include "../EIDCardLibrary/Package.h"
 #include "../EIDCardLibrary/Tracing.h"
 #include <lm.h>
@@ -65,14 +64,7 @@ HRESULT CContainerHolderFactory<T>::SetUsageScenario(
 template <typename T> 
 BOOL CContainerHolderFactory<T>::ConnectNotification(__in LPCTSTR szReaderName,__in LPCTSTR szCardName, __in USHORT ActivityCount)
 {
-	if (_tcscmp(szCardName, _TBEIDCardName) == 0)
-	{
-		return ConnectNotificationBeid(szReaderName,szCardName, ActivityCount);
-	}
-	else
-	{
-		return ConnectNotificationGeneric(szReaderName,szCardName, ActivityCount);
-	}
+	return ConnectNotificationGeneric(szReaderName,szCardName, ActivityCount);
 }
 
 // called to enumerate the credential built with a CContainer
@@ -212,34 +204,6 @@ BOOL CContainerHolderFactory<T>::ConnectNotificationGeneric(__in LPCTSTR szReade
 	return TRUE;
 }
 
-template <typename T> 
-BOOL CContainerHolderFactory<T>::ConnectNotificationBeid(__in LPCTSTR szReaderName,__in LPCTSTR szCardName, __in USHORT ActivityCount)
-{
-	PBYTE pbData = NULL;
-	DWORD dwSize;
-	TCHAR szProviderName[1024];
-	DWORD dwProviderNameLen = 1024;
-	LPTSTR szContainerName = NULL;
-	DWORD dwKeySpec = 0;
-	
-	// get provider name
-	if (!SchGetProviderNameFromCardName(szCardName, szProviderName, &dwProviderNameLen))
-	{
-		return FALSE;
-	}
-
-	if (GetBEIDCertificateData(szReaderName, &szContainerName,&dwKeySpec, &pbData,&dwSize))
-	{
-		CreateItemFromCertificateBlob(szReaderName,szCardName,szProviderName,
-									szContainerName, dwKeySpec,ActivityCount, pbData, dwSize);
-		if (szContainerName) 
-			EIDFree(szContainerName);
-		if (pbData)
-			EIDFree(pbData);
-	}
-
-	return TRUE;
-}
 
 template <typename T>
 BOOL CContainerHolderFactory<T>::CreateItemFromCertificateBlob(__in LPCTSTR szReaderName,__in LPCTSTR szCardName,

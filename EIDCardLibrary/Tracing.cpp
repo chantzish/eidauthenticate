@@ -46,12 +46,6 @@ WCHAR Section[100];
 // HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Debug Print Filter 
 // and add the following value "DEFAULT" : REG_DWORD : 0xFFFFFFFF and then reboot
 
-#ifdef WRITE_KERNET_DEBUGGER
-ULONG ( __stdcall *f_vDbgPrintEx)(IN ULONG ComponentId, IN ULONG Level,IN PCCH Format, IN va_list arglist) = 0;
-ULONG ( __cdecl *f_DbgPrintEx)(ULONG ComponentId, ULONG Level, PCHAR Format, ...) = 0; 
-FARPROC f;
-HMODULE hm = NULL;
-#endif
 /**
  *  Tracing function.
  *  Extract data using :
@@ -64,11 +58,7 @@ HMODULE hm = NULL;
 void MessageBoxWin32Ex(DWORD status, LPCSTR szFile, DWORD dwLine) {
 	LPVOID Error;
 	TCHAR szTitle[1024];
-#ifdef UNICODE
-	_stprintf_s(szTitle,ARRAYSIZE(szTitle),TEXT("%S(%d)"),szFile, dwLine);
-#else
-	_stprintf_s(szTitle,ARRAYSIZE(szTitle),TEXT("%s(%d)"),szFile, dwLine);
-#endif
+	_stprintf_s(szTitle,ARRAYSIZE(szTitle),TEXT("%hs(%d)"),szFile, dwLine);
 	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_FROM_SYSTEM,
 		NULL,status,0,(LPTSTR)&Error,0,NULL);
 	MessageBox(NULL,(LPCTSTR)Error,szTitle ,MB_ICONASTERISK);
