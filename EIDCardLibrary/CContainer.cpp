@@ -245,9 +245,6 @@ BOOL CContainer::TriggerRemovePolicy()
 	DWORD dwSize;
 	DWORD dwProcessId, dwSessionId;
 	TCHAR szValueKey[sizeof(DWORD)+1];
-	SC_HANDLE hService = NULL;
-	SC_HANDLE hServiceManager = NULL;
-	SERVICE_STATUS ServiceStatus;
 
 	EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"Enter");
 	if (!_ActivityCount)
@@ -257,34 +254,6 @@ BOOL CContainer::TriggerRemovePolicy()
 	}
 	__try
 	{
-		// restart service
-		hServiceManager = OpenSCManager(NULL,NULL,SC_MANAGER_CONNECT);
-		if (!hServiceManager)
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"OpenSCManager 0x%08x",GetLastError());
-			__leave;
-		}
-		hService = OpenService(hServiceManager, TEXT("ScPolicySvc"), SERVICE_START | SERVICE_STOP | SERVICE_QUERY_STATUS);
-		if (!hService)
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"OpenService 0x%08x",GetLastError());
-			__leave;
-		}
-		//Boucle d'attente du demarrage
-		do{
-			if (!QueryServiceStatus(hService,&ServiceStatus))
-			{
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"QueryServiceStatus 0x%08x",GetLastError());
-				__leave;
-			}
-			Sleep(100);
-		} while(ServiceStatus.dwCurrentState == SERVICE_START_PENDING); 
-		if (ServiceStatus.dwCurrentState != SERVICE_RUNNING)
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"ServiceStatus.dwCurrentState = 0x%08x",ServiceStatus.dwCurrentState);
-			__leave;
-		}
-
 		dwProcessId = GetCurrentProcessId();
 		if (!ProcessIdToSessionId(dwProcessId, &dwSessionId))
 		{
@@ -294,8 +263,21 @@ BOOL CContainer::TriggerRemovePolicy()
 		lResult = RegOpenKey(HKEY_LOCAL_MACHINE, REMOVALPOLICYKEY ,&hRemovePolicyKey);
 		if (lResult !=ERROR_SUCCESS)
 		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"RegOpenKey 0x%08x (service not running ?)",lResult);
-			__leave;
+			if (lResult == ERROR_FILE_NOT_FOUND)
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"REMOVALPOLICYKEY not found. Creating ...");
+				lResult = RegCreateKey(HKEY_LOCAL_MACHINE, REMOVALPOLICYKEY ,&hRemovePolicyKey);
+				if (lResult !=ERROR_SUCCESS)
+				{
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"RegCreateKey 0x%08x",lResult);
+					__leave;
+				}
+			}
+			else
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"RegOpenKey 0x%08x (service not running ?)",lResult);
+				__leave;
+			}
 		}
 		dwSize = (DWORD) (sizeof(USHORT) + sizeof(USHORT) + (_tcslen(_szReaderName) + 1) *sizeof(WCHAR));
 		pbBuffer = (PBYTE) EIDAlloc(dwSize);
@@ -320,16 +302,16 @@ BOOL CContainer::TriggerRemovePolicy()
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"RegSetValue 0x%08x (not enough privilege ?)",lResult);
 			__leave;
 		}
+		else
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"RegSetValue %s %d %d",_szReaderName, _ActivityCount, dwSessionId);
+		}
 
 
 		fReturn = TRUE;
 	}
 	__finally
 	{
-		if (hService)
-			CloseServiceHandle(hService);
-		if (hServiceManager)
-			CloseServiceHandle(hServiceManager);
 		if (pbBuffer)
 			EIDFree(pbBuffer);
 		if (hRemovePolicyKey)
