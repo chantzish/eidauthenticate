@@ -913,14 +913,14 @@ BOOL CStoredCredentialManager::GetResponseFromCryptedChallenge(__in PBYTE pChall
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CryptSetProvParam - correct PIN ?", GetLastError());
 			__leave;
 		}
-		/*dwSize = sizeof(DWORD);
+		dwSize = sizeof(DWORD);
 		if (!CryptGetKeyParam(hKey, KP_BLOCKLEN, (PBYTE) &dwBlockLen, &dwSize, 0))
 		{
 			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CryptGetKeyParam", GetLastError());
-			__leave;
-		}*/
-		dwBlockLen = dwChallengeSize;
+			dwBlockLen = 20000; 
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CryptGetKeyParam - using %d as KP_BLOCKLEN", GetLastError(), dwBlockLen);
+			dwError = 0;
+		}
 		*pSymetricKey = (PBYTE) EIDAlloc(dwBlockLen);
 		if (!*pSymetricKey)
 		{
