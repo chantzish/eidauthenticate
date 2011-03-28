@@ -7,6 +7,7 @@
 
 #include "../EIDCardLibrary/EIDCardLibrary.h"
 #include "../EIDCardLibrary/Package.h"
+#include "../EIDCardLibrary/Tracing.h"
 #include "../EIDCardLibrary/Registration.h"
 #include "../EIDCardLibrary/CertificateUtilities.h"
 #include "../EIDCardLibrary/CertificateValidation.h"
@@ -30,6 +31,8 @@ INT_PTR CALLBACK	WndProc_02ENABLE(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK	WndProc_03NEW(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK	WndProc_04CHECKS(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK	WndProc_05PASSWORD(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK	WndProc_06TESTRESULTOK(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK	WndProc_07TESTRESULTNOTOK(HWND, UINT, WPARAM, LPARAM);
 
 BOOL fHasAlreadySmartCardCredential = FALSE;
 BOOL fShowNewCertificatePanel;
@@ -95,6 +98,16 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 			ChangeForceSmartCardLogonPolicy(FALSE);
 			return 0;
 		} 
+		else if (_tcscmp(pszCommandLine[0],TEXT("DIALOGREMOVEPOLICY")) == 0)
+		{
+			DialogRemovePolicy();
+			return 0;
+		} 
+		else if (_tcscmp(pszCommandLine[0],TEXT("DIALOGFORCEPOLICY")) == 0)
+		{
+			DialogForceSmartCardLogonPolicy();
+			return 0;
+		} 
 		else if (_tcscmp(pszCommandLine[0],TEXT("ENABLESIGNATUREONLY")) == 0)
 		{
 			DWORD dwValue = 1;
@@ -130,14 +143,9 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 			EIDFree(pbCertificate);
 			return 0;
 		} 
-		else if (_tcscmp(pszCommandLine[0],TEXT("RENAMEUSER")) == 0)
-		{
-			RenameAccount(lpCmdLine + 11);
-			return 0;
-		}
 	}
 
-	HPROPSHEETPAGE ahpsp[5];
+	HPROPSHEETPAGE ahpsp[7];
 	TCHAR szTitle[256] = TEXT("");
 	fHasAlreadySmartCardCredential = TRUE;
 
@@ -176,7 +184,20 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	psp.pfnDlgProc = WndProc_05PASSWORD;
 	ahpsp[4] = CreatePropertySheetPage(&psp);
 
-	PROPSHEETHEADER psh = { sizeof(psh) };
+	LoadString(g_hinst,IDS_TITLE5, szTitle, ARRAYSIZE(szTitle));
+	psp.pszHeaderTitle = szTitle;
+	psp.pszTemplate = MAKEINTRESOURCE(IDD_06TESTRESULTOK);
+	psp.pfnDlgProc = WndProc_06TESTRESULTOK;
+	ahpsp[5] = CreatePropertySheetPage(&psp);
+
+	LoadString(g_hinst,IDS_TITLE5, szTitle, ARRAYSIZE(szTitle));
+	psp.pszHeaderTitle = szTitle;
+	psp.pszTemplate = MAKEINTRESOURCE(IDD_07TESTRESULTNOTOK);
+	psp.pfnDlgProc = WndProc_07TESTRESULTNOTOK;
+	ahpsp[6] = CreatePropertySheetPage(&psp);
+
+	PROPSHEETHEADER psh;
+	psh.dwSize = sizeof(psh);
 	psh.hInstance = hInstance;
 	psh.hwndParent = NULL;
 	psh.phpage = ahpsp;
@@ -219,7 +240,11 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 		// 02ENABLE
 		psh.nStartPage = 1;
 	}
-	PropertySheet(&psh);
+	INT_PTR rc = PropertySheet(&psh);
+	if (rc == -1)
+	{
+		MessageBoxWin32(GetLastError());
+	}
 	//_CrtDumpMemoryLeaks();
     return 0;
 

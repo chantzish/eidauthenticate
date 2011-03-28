@@ -99,30 +99,29 @@ BEGIN
                     "SysLink",0x1,240,78,30,9
 END
 
-
-#ifdef APSTUDIO_INVOKED
-/////////////////////////////////////////////////////////////////////////////
-//
-// TEXTINCLUDE
-//
-
-1 TEXTINCLUDE 
+IDD_06TESTRESULTOK DIALOGEX 0, 0, 273, 209
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+FONT 9, "Segoe UI", 0, 0, 0x0
 BEGIN
-    "resource.h\0"
+    LTEXT           "The test was successfull. You can now use your smartcard to logon.",IDC_TESTSUCCEFULL,6,6,262,32
+    CONTROL         "Remove Policy",IDC_05REMOVEPOLICYLINK,"SysLink",0x0,24,180,234,12
+    CONTROL         "Force Smart Card Logon Policy",IDC_05FORCEPOLICYLINK,"SysLink",0x0,24,195,237,12
+    ICON            "",IDC_05REMOVEPOLICYICON,6,177,18,17,SS_CENTERIMAGE
+    ICON            "",IDC_05FORCEPOLICYICON,6,192,18,17,SS_CENTERIMAGE
 END
 
-2 TEXTINCLUDE 
+IDD_07TESTRESULTNOTOK DIALOGEX 0, 0, 273, 209
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+FONT 9, "Segoe UI", 0, 0, 0x0
 BEGIN
-    "\0"
+    CONTROL         "Send a report to the support team",IDC_02EXISTING,
+                    "Button",BS_COMMANDLINK | WS_TABSTOP,21,96,216,39
+    LTEXT           "You can specify an email to get updates from our support team :",IDC_EMAILLBL,27,141,237,12
+    EDITTEXT        IDC_EDIT1,80,154,173,13,ES_AUTOHSCROLL
+    LTEXT           "Email (optional) :",IDC_EMAILSEND,26,155,53,11
+    LTEXT           "The test was unsuccessfull. You can run the test again or send a report to the support team.",IDC_STC6,27,6,228,44
 END
 
-3 TEXTINCLUDE 
-BEGIN
-    "\r\n"
-    "\0"
-END
-
-#endif    // APSTUDIO_INVOKED
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -249,7 +248,32 @@ END
 
 /////////////////////////////////////////////////////////////////////////////
 
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
 
+1 TEXTINCLUDE 
+BEGIN
+    "EIDConfigurationWizard.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#define APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "#include ""windows.h""\r\n"
+    "#undef APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
 
 #ifndef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////

@@ -1,10 +1,5 @@
-Working ? Not working ?
-
-Please give some feedback at vincent.letoux@gmail.com
-
-====================================================
 EID Authentication
-Copyright (C) 2009 Vincent Le Toux
+Copyright (C) 2009-2011 My Smart Logon
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public

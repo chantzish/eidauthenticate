@@ -246,7 +246,10 @@ void EIDConfigurationWizardDllRegister()
 		TEXT("CLSID\\{F5D846B4-14B0-11DE-B23C-27A355D89593}\\Shell\\Open\\Command"),
 		NULL,REG_EXPAND_SZ, TEXT("%SystemRoot%\\system32\\EIDConfigurationWizard.exe"),
 			sizeof(TEXT("%SystemRoot%\\system32\\EIDConfigurationWizard.exe")));
-
+	RegSetKeyValue(	HKEY_CLASSES_ROOT, 
+		TEXT("CLSID\\{F5D846B4-14B0-11DE-B23C-27A355D89593}"),
+		TEXT("System.Software.TasksFileUrl"),REG_SZ, TEXT("%SystemRoot%\\system32\\EIDConfigurationWizard.exe,-68"),sizeof(TEXT("%SystemRoot%\\system32\\EIDConfigurationWizard.exe,-68")));
+	
 
 }
 

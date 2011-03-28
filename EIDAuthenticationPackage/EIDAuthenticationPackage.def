@@ -13,3 +13,6 @@ LsaApLogonTerminated
 LsaApLogonUserEx2
 SpLsaModeInitialize
 SpUserModeInitialize
+; MSI functions
+Commit
+Uninstall

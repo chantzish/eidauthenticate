@@ -1,9 +1,20 @@
 // Microsoft Visual C++ generated resource script.
 //
-#include <windows.h>
-#include "EIDTest.h"
+#include "resource.h"
 /////////////////////////////////////////////////////////////////////////////
 // Neutre resources
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#define APSTUDIO_HIDDEN_SYMBOLS
+#include "windows.h"
+#undef APSTUDIO_HIDDEN_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEU)
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
@@ -87,6 +98,10 @@ BEGIN
         MENUITEM "Password Filter UnRegister",  IDM_UNREG_PF
         MENUITEM "Wizard Register",             IDM_REG_WIZ
         MENUITEM "Wizard UnRegister",           IDM_UNREG_WIZ
+    END
+    POPUP "Online Database"
+    BEGIN
+        MENUITEM "Test OK",                     40001
     END
     POPUP "Logon Scenarios"
     BEGIN

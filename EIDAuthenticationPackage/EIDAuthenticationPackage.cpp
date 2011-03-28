@@ -130,7 +130,6 @@ extern "C"
 		return Destination;
 	}
 
-
 	NTSTATUS NTAPI LsaApInitializePackage(
 	  __in      ULONG AuthenticationPackageId,
 	  __in      PLSA_DISPATCH_TABLE LsaDispatchTable,
