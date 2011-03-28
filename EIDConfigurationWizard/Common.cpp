@@ -60,29 +60,21 @@ BOOL IsElevated()
 	return fReturn;
 }
 
-BOOL ChangeRemovePolicyElevated(BOOL fActivate)
+BOOL ChangeRemovePolicyElevated(DWORD dwActivate)
 {
-	TCHAR szValueActivated[2]=TEXT("1");
-	TCHAR szValueDesactivated[2]=TEXT("0");
-	TCHAR *szValue;
+	TCHAR szValue[2];
 	LONG lReturn;
 	DWORD dwError = 0;
 	SC_HANDLE hService = NULL;
 	SC_HANDLE hServiceManager = NULL;
 	SERVICE_STATUS ServiceStatus;
-	if (fActivate)
-	{
-		szValue = szValueActivated;
-	}
-	else
-	{
-		szValue = szValueDesactivated;
-	}
+	
+	_stprintf_s(szValue, ARRAYSIZE(szValue), TEXT("%d"),dwActivate);
 	__try
 	{
 		lReturn = RegSetKeyValue(HKEY_LOCAL_MACHINE, 
 			TEXT("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon"),
-			TEXT("scremoveoption"), REG_SZ, szValue,sizeof(TCHAR)*ARRAYSIZE(szValueActivated));
+			TEXT("scremoveoption"), REG_SZ, szValue,sizeof(TCHAR)*ARRAYSIZE(szValue));
 		if ( lReturn != ERROR_SUCCESS)
 		{
 			dwError = lReturn;
@@ -100,7 +92,7 @@ BOOL ChangeRemovePolicyElevated(BOOL fActivate)
 			dwError = GetLastError();
 			__leave;
 		}
-		if (fActivate)
+		if (dwActivate)
 		{	
 			// start service
 			if (!ChangeServiceConfig(hService, SERVICE_NO_CHANGE, SERVICE_AUTO_START, SERVICE_NO_CHANGE, NULL, NULL, NULL, NULL, NULL, NULL, NULL))
@@ -268,42 +260,116 @@ BOOL ChangeForceSmartCardLogonPolicy(BOOL fActivate)
 	return fReturn;
 }
 
-BOOL RenameAccount(PTSTR szNewUsername)
+DWORD GetRemovePolicyValue()
+{
+	HKEY key;
+	
+	TCHAR szValue[2]=TEXT("0");
+	DWORD size = sizeof(szValue);
+	DWORD type=REG_SZ;	
+	DWORD dwValue = 0;
+	if (RegOpenKeyEx(HKEY_LOCAL_MACHINE,
+		TEXT("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon"),
+		NULL, KEY_READ, &key)==ERROR_SUCCESS){
+		if (RegQueryValueEx(key,TEXT("scremoveoption"),NULL, &type,(LPBYTE) szValue, &size)==ERROR_SUCCESS)
+		{
+			dwValue = _tstoi(szValue);
+		}
+		RegCloseKey(key);
+	}
+	return dwValue;
+}
+
+INT_PTR CALLBACK WndProc_ForcePolicy(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+
+BOOL DialogForceSmartCardLogonPolicy()
 {
 	BOOL fReturn = FALSE;
-	DWORD dwError;
+	DWORD dwError = 0;
+	if (IsElevated())
+	{
+		DialogBox(g_hinst, MAKEINTRESOURCE(IDD_DIALOGFORCEPOLICY), NULL, WndProc_ForcePolicy);
+	}
+	else
+	{
+	// elevate
+		SHELLEXECUTEINFO shExecInfo;
+		TCHAR szName[1024];
+		GetModuleFileName(GetModuleHandle(NULL),szName, ARRAYSIZE(szName));
+		shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
 
-	TCHAR szOldUsername[21];
-	DWORD dwSize = ARRAYSIZE(szOldUsername);
-	GetUserName(szOldUsername, &dwSize);
-	
-	TCHAR szMessage[200];
-	TCHAR szBuffer[200];
-	LoadString(g_hinst,IDS_RENAME,szMessage, ARRAYSIZE(szMessage));
-	if (IDOK != MessageBox(NULL,szMessage,L"",MB_OKCANCEL|MB_DEFBUTTON1))
-	{
-		return TRUE;
-	}
+		shExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
+		shExecInfo.hwnd = NULL;
+		shExecInfo.lpVerb = TEXT("runas");
+		shExecInfo.lpFile = szName;
+		shExecInfo.lpParameters = TEXT("DIALOGFORCEPOLICY");
+		shExecInfo.lpDirectory = NULL;
+		shExecInfo.nShow = SW_NORMAL;
+		shExecInfo.hInstApp = NULL;
 
-	// full name
-	USER_INFO_1011 userInfo11;
-	userInfo11.usri1011_full_name = szNewUsername;
-	dwError = NetUserSetInfo( NULL, szOldUsername,  1011, (LPBYTE)&userInfo11,NULL);
-	if (dwError)
-	{
-		MessageBoxWin32(dwError);
-		return FALSE;
+		if (!ShellExecuteEx(&shExecInfo))
+		{
+			dwError = GetLastError();
+		}
+		else
+		{
+			if (WaitForSingleObject(shExecInfo.hProcess, INFINITE) == WAIT_OBJECT_0)
+			{
+				fReturn = TRUE;
+			}
+			else
+			{
+				dwError = GetLastError();
+			}
+		}
 	}
-	USER_INFO_0 userInfo0;
-	userInfo0.usri0_name = szNewUsername;
-	dwError = NetUserSetInfo( NULL, szOldUsername,  0, (LPBYTE)&userInfo0,NULL);
-	if (dwError)
+	SetLastError(dwError);
+	return fReturn;
+}
+
+INT_PTR CALLBACK	WndProc_RemovePolicy(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+
+BOOL DialogRemovePolicy()
+{
+	BOOL fReturn = FALSE;
+	DWORD dwError = 0;
+	if (IsElevated())
 	{
-		MessageBoxWin32(dwError);
-		return FALSE;
+		DialogBox(g_hinst, MAKEINTRESOURCE(IDD_DIALOGREMOVEPOLICY), NULL, WndProc_RemovePolicy);
 	}
-	LoadString(g_hinst,IDS_RENAMECONF,szBuffer, ARRAYSIZE(szBuffer));
-	_stprintf_s(szMessage,ARRAYSIZE(szMessage),szBuffer,szNewUsername);
-	MessageBox(NULL,szMessage,L"",0);
-	return ExitWindowsEx(EWX_LOGOFF,SHTDN_REASON_MAJOR_APPLICATION|SHTDN_REASON_MINOR_MAINTENANCE);
+	else
+	{
+	// elevate
+		SHELLEXECUTEINFO shExecInfo;
+		TCHAR szName[1024];
+		GetModuleFileName(GetModuleHandle(NULL),szName, ARRAYSIZE(szName));
+		shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
+
+		shExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
+		shExecInfo.hwnd = NULL;
+		shExecInfo.lpVerb = TEXT("runas");
+		shExecInfo.lpFile = szName;
+		shExecInfo.lpParameters = TEXT("DIALOGREMOVEPOLICY");
+		shExecInfo.lpDirectory = NULL;
+		shExecInfo.nShow = SW_NORMAL;
+		shExecInfo.hInstApp = NULL;
+
+		if (!ShellExecuteEx(&shExecInfo))
+		{
+			dwError = GetLastError();
+		}
+		else
+		{
+			if (WaitForSingleObject(shExecInfo.hProcess, INFINITE) == WAIT_OBJECT_0)
+			{
+				fReturn = TRUE;
+			}
+			else
+			{
+				dwError = GetLastError();
+			}
+		}
+	}
+	SetLastError(dwError);
+	return fReturn;
 }

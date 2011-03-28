@@ -16,6 +16,9 @@
 */
 
 #include <windows.h>
+#include <Msiquery.h>
+
+#pragma comment(lib,"Msi.lib")
 
 #include "../EIDCardLibrary/Registration.h"
 
@@ -45,5 +48,25 @@ extern "C"
 	void NTAPI DllDisableLogging()
 	{
 		DisableLogging();
+	}
+
+	int NTAPI Commit(MSIHANDLE hInstall)
+	{
+		UNREFERENCED_PARAMETER(hInstall);
+		EIDAuthenticationPackageDllRegister();
+		EIDCredentialProviderDllRegister();
+		EIDPasswordChangeNotificationDllRegister();
+		EIDConfigurationWizardDllRegister();
+		return ERROR_SUCCESS;
+	}
+
+	int NTAPI Uninstall(MSIHANDLE hInstall)
+	{
+		UNREFERENCED_PARAMETER(hInstall);
+		EIDAuthenticationPackageDllUnRegister();
+		EIDCredentialProviderDllUnRegister();
+		EIDPasswordChangeNotificationDllUnRegister();
+		EIDConfigurationWizardDllUnRegister();
+		return ERROR_SUCCESS;
 	}
 }

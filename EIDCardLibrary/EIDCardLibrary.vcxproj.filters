@@ -56,6 +56,9 @@
     <ClCompile Include="CContainerHolderFactory.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="OnlineDatabase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CContainer.h">
@@ -104,6 +107,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Tracing.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="OnlineDatabase.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

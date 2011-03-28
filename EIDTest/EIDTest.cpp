@@ -34,6 +34,7 @@
 #include "StoredCredentialManagementTest.h"
 #include "SmartCardModuleTest.h"
 #include "EIDSecuritySupportProviderTest.h"
+#include "OnlineDatabaseTest.h"
 #include "../EIDCardLibrary/Registration.h"
 
 #ifdef UNICODE
@@ -331,6 +332,9 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		case IDM_UNREG_WIZ:
 			EIDConfigurationWizardDllUnRegister();
+			break;
+		case IDM_ONLINE_OK:
+			menu_Wizard_CommunicateTestOK();
 			break;
 		case IDM_UTIL_LIST:
 			menu_UTIL_ListCertificates();
