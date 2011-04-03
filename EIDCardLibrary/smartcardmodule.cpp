@@ -1,3 +1,5 @@
+#include <ntstatus.h>
+#define WIN32_NO_STATUS 1
 #include <windows.h>
 #include <tchar.h>
 #pragma warning(push)
@@ -8,7 +10,7 @@
 // cardmoh.h can be found in "Microsoft CNG Development Kit"
 #include <cardmod.h>
 #include "Tracing.h"
-
+#include "EIDCardLibrary.h"
 //
 // Internal context structure for interfacing with a card module
 //
@@ -512,4 +514,119 @@ MgScCardWriteFile(
         dwFlags,
         pbData,
         cbData);
+}
+
+BOOL CheckPINandGetRemainingAttempts(PTSTR szReader, PTSTR szCard, PTSTR szPin, PDWORD pdwAttempts)
+{
+	MGSC_CONTEXT pContext = {0};
+	SCARDCONTEXT hSCardContext = NULL;
+	SCARDHANDLE hSCardHandle = NULL;
+	BYTE bAtr[32];
+	DWORD cbAtr = ARRAYSIZE(bAtr);
+	LONG lReturn;
+	DWORD dwSize, dwState, dwProtocol;
+	DWORD dwError = 0;
+	TCHAR szReaderTemp[256];
+	BOOL fReturn = FALSE;
+	__try
+	{
+		if (pdwAttempts == NULL)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pdwAttempts = NULL");
+			__leave;
+		}
+		*pdwAttempts = 0xFFFFFFFF;
+		lReturn = SCardEstablishContext(SCARD_SCOPE_USER,
+								NULL,
+								NULL,
+								&hSCardContext );
+		if ( SCARD_S_SUCCESS != lReturn )
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SCardEstablishContext 0x%08X",lReturn);
+			dwError = lReturn;
+			__leave;
+		}
+		lReturn = SCardConnect(hSCardContext,szReader,SCARD_SHARE_SHARED,SCARD_PROTOCOL_T1|SCARD_PROTOCOL_T0, &hSCardHandle, &dwProtocol);
+		if ( SCARD_S_SUCCESS != lReturn )
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SCardConnect 0x%08X",lReturn);
+			dwError = lReturn;
+			__leave;
+		}
+		dwSize = ARRAYSIZE(szReaderTemp);
+		lReturn = SCardStatus(hSCardHandle, szReaderTemp, &dwSize, &dwState, &dwProtocol, bAtr,&cbAtr);
+		if ( SCARD_S_SUCCESS != lReturn )
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SCardStatus 0x%08X",lReturn);
+			dwError = lReturn;
+			__leave;
+		}
+		lReturn = SCardBeginTransaction(hSCardHandle);
+		if ( SCARD_S_SUCCESS != lReturn )
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SCardBeginTransaction 0x%08X",lReturn);
+			dwError = lReturn;
+			__leave;
+		}
+		dwError = MgScCardAcquireContext(&pContext,hSCardContext,hSCardHandle,szCard,bAtr,cbAtr,0);
+		if ( dwError )
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"MgScCardAcquireContext 0x%08X",lReturn);
+			__leave;
+		}
+		dwError = MgScCardAuthenticatePin(&pContext,wszCARD_USER_USER,szPin,pdwAttempts);
+		if ( dwError )
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"MgScCardAuthenticatePin 0x%08X *pdwAttempts=%d",lReturn, *pdwAttempts);
+			__leave;
+		}
+		fReturn = TRUE;
+	}
+	__finally
+	{
+		if (pContext.pvContext)
+			MgScCardDeleteContext(&pContext);
+		if (hSCardHandle)
+		{
+			SCardEndTransaction(hSCardHandle,SCARD_LEAVE_CARD);
+			SCardDisconnect(hSCardHandle,0);
+		}
+		if (hSCardContext)
+			SCardReleaseContext(hSCardContext);
+	}
+	SetLastError(dwError);
+	return fReturn;
+}
+
+NTSTATUS CheckPINandGetRemainingAttemptsIfPossible(PEID_SMARTCARD_CSP_INFO pCspInfo, PTSTR szPin, NTSTATUS *pSubStatus)
+{
+	DWORD dwAttempts;
+	LPTSTR szCSPName = pCspInfo->bBuffer + pCspInfo->nCSPNameOffset;
+	LPTSTR szCardName = pCspInfo->bBuffer + pCspInfo->nCardNameOffset;
+	LPTSTR szReaderName = pCspInfo->bBuffer + pCspInfo->nReaderNameOffset;
+	// do the test only if it is a mini driver
+	if (_tcscmp(TEXT("Microsoft Base Smart Card Crypto Provider"), szCSPName) != 0)
+	{
+		return 0;
+	}
+	BOOL fReturn = CheckPINandGetRemainingAttempts(szReaderName, szCardName, szPin, &dwAttempts);
+	DWORD dwError = GetLastError();
+	if (fReturn)
+	{
+		return STATUS_SUCCESS;
+	}
+	else if (dwError == SCARD_W_WRONG_CHV)
+	{
+		*pSubStatus = dwAttempts;
+		return STATUS_SMARTCARD_WRONG_PIN;
+	}
+	else if (dwError == SCARD_W_CHV_BLOCKED)
+	{
+		return STATUS_SMARTCARD_CARD_BLOCKED;
+	}
+	else
+	{
+		// ignore this test
+		return STATUS_SUCCESS;
+	}
 }

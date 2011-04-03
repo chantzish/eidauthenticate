@@ -130,56 +130,68 @@ void EIDCardLibraryTraceEx(LPCSTR szFile, DWORD dwLine, LPCSTR szFunction, UCHAR
 
 
 	// common exception handler
-	LONG EIDExceptionHandler( PEXCEPTION_POINTERS pExceptPtrs )
+	LONG EIDExceptionHandlerDebug( PEXCEPTION_POINTERS pExceptPtrs, BOOL fMustCrash )
 	{
-#ifdef _DEBUG
-		UNREFERENCED_PARAMETER(pExceptPtrs);
-		// crash on debug to allow kernel debugger to break were the exception was triggered 
-		return EXCEPTION_CONTINUE_SEARCH;
-#else
 		EIDCardLibraryTraceEx(__FILE__,__LINE__,__FUNCTION__,WINEVENT_LEVEL_WARNING,L"New Exception");
-		// may contain sensitive information - generate a dump only if the debugging is active
-		if (IsTracingEnabled)
+		if (fMustCrash)
 		{
-			HANDLE fileHandle = CreateFile (TEXT("c:\\EIDAuthenticateDump.dmp"), GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-			if (fileHandle == INVALID_HANDLE_VALUE)
+			// crash on debug to allow kernel debugger to break were the exception was triggered 
+			return EXCEPTION_CONTINUE_SEARCH;
+		}
+		else
+		{
+			// may contain sensitive information - generate a dump only if the debugging is active
+			if (IsTracingEnabled)
 			{
-				if (GetLastError() == 0x5)
+				HANDLE fileHandle = CreateFile (TEXT("c:\\EIDAuthenticateDump.dmp"), GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+				if (fileHandle == INVALID_HANDLE_VALUE)
 				{
-					EIDCardLibraryTraceEx(__FILE__,__LINE__,__FUNCTION__,WINEVENT_LEVEL_WARNING,L"Unable to create minidump file c:\\EIDAuthenticate.dmp");
-					TCHAR szFileName[MAX_PATH];
-					GetTempPath(MAX_PATH, szFileName);
-					_tcscat_s(szFileName, MAX_PATH, TEXT("EIDAuthenticateDump.dmp"));
-					EIDCardLibraryTraceEx(__FILE__,__LINE__,__FUNCTION__,WINEVENT_LEVEL_WARNING,L"Trying to create dump file %s",szFileName);
-					fileHandle = CreateFile (szFileName, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+					if (GetLastError() == 0x5)
+					{
+						EIDCardLibraryTraceEx(__FILE__,__LINE__,__FUNCTION__,WINEVENT_LEVEL_WARNING,L"Unable to create minidump file c:\\EIDAuthenticate.dmp");
+						TCHAR szFileName[MAX_PATH];
+						GetTempPath(MAX_PATH, szFileName);
+						_tcscat_s(szFileName, MAX_PATH, TEXT("EIDAuthenticateDump.dmp"));
+						EIDCardLibraryTraceEx(__FILE__,__LINE__,__FUNCTION__,WINEVENT_LEVEL_WARNING,L"Trying to create dump file %s",szFileName);
+						fileHandle = CreateFile (szFileName, GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+					}
 				}
-			}
-			if (fileHandle == INVALID_HANDLE_VALUE)
-			{
-				EIDCardLibraryTraceEx(__FILE__,__LINE__,__FUNCTION__,WINEVENT_LEVEL_WARNING,L"Unable to create minidump file 0x%08X", GetLastError());
-			}
-			else
-			{
-				_MINIDUMP_EXCEPTION_INFORMATION dumpExceptionInfo;
-				dumpExceptionInfo.ThreadId = GetCurrentThreadId();
-				dumpExceptionInfo.ExceptionPointers = pExceptPtrs;
-				dumpExceptionInfo.ClientPointers = FALSE;
-
-				BOOL fStatus = MiniDumpWriteDump(GetCurrentProcess(),
-									GetCurrentProcessId(),
-									fileHandle,MiniDumpWithFullMemory,(pExceptPtrs != 0) ? &dumpExceptionInfo: NULL,NULL,NULL);
-				if (!fStatus)
+				if (fileHandle == INVALID_HANDLE_VALUE)
 				{
-					EIDCardLibraryTraceEx(__FILE__,__LINE__,__FUNCTION__,WINEVENT_LEVEL_WARNING,L"Unable to write minidump file 0x%08X", GetLastError());
+					EIDCardLibraryTraceEx(__FILE__,__LINE__,__FUNCTION__,WINEVENT_LEVEL_WARNING,L"Unable to create minidump file 0x%08X", GetLastError());
 				}
 				else
 				{
-					EIDCardLibraryTraceEx(__FILE__,__LINE__,__FUNCTION__,WINEVENT_LEVEL_WARNING,L"minidump successfully created");
+					_MINIDUMP_EXCEPTION_INFORMATION dumpExceptionInfo;
+					dumpExceptionInfo.ThreadId = GetCurrentThreadId();
+					dumpExceptionInfo.ExceptionPointers = pExceptPtrs;
+					dumpExceptionInfo.ClientPointers = FALSE;
+
+					BOOL fStatus = MiniDumpWriteDump(GetCurrentProcess(),
+										GetCurrentProcessId(),
+										fileHandle,MiniDumpWithFullMemory,(pExceptPtrs != 0) ? &dumpExceptionInfo: NULL,NULL,NULL);
+					if (!fStatus)
+					{
+						EIDCardLibraryTraceEx(__FILE__,__LINE__,__FUNCTION__,WINEVENT_LEVEL_WARNING,L"Unable to write minidump file 0x%08X", GetLastError());
+					}
+					else
+					{
+						EIDCardLibraryTraceEx(__FILE__,__LINE__,__FUNCTION__,WINEVENT_LEVEL_WARNING,L"minidump successfully created");
+					}
+					CloseHandle(fileHandle);
 				}
-				CloseHandle(fileHandle);
 			}
+			return EXCEPTION_EXECUTE_HANDLER;
 		}
-		return EXCEPTION_EXECUTE_HANDLER;
+	}
+
+	// to allow this code to be tested in debug mode using EIDTest.exe
+	LONG EIDExceptionHandler( PEXCEPTION_POINTERS pExceptPtrs )
+	{
+#ifdef _DEBUG
+		return EIDExceptionHandlerDebug(pExceptPtrs, TRUE);
+#else
+		return EIDExceptionHandlerDebug(pExceptPtrs, FALSE);
 #endif
 	}
 

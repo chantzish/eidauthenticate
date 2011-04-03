@@ -26,7 +26,6 @@
 //
 
 
-
 #include "CEIDCredential.h"
 #include "resource.h"
 
@@ -709,14 +708,29 @@ HRESULT CEIDCredential::ReportResult(
 	{
 	    // get message from system table
 		PWSTR Error = NULL;
-		DWORD dwLen = 2048;
-		Error = (PWSTR) CoTaskMemAlloc(dwLen);
-		if (Error)
+		if (ntsStatus == STATUS_SMARTCARD_WRONG_PIN && ntsSubstatus != 0xFFFFFFFF)
 		{
-			FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM,NULL,LsaNtStatusToWinError(ntsStatus),0,(PWSTR)Error,dwLen,NULL);
+			HINSTANCE Handle = LoadLibrary(TEXT("SmartcardCredentialProvider.dll"));
+			WCHAR Message[256] = L"%d retries";
+			WCHAR MessageFormatted[256];
+			if (Handle)
+			{
+				LoadStringW(Handle, 4001, Message, ARRAYSIZE(Message));
+				FreeLibrary(Handle);
+			}
+			swprintf_s(MessageFormatted,ARRAYSIZE(MessageFormatted), Message, ntsSubstatus);
+			SHStrDupW(MessageFormatted, ppwszOptionalStatusText);
 		}
-		*ppwszOptionalStatusText = Error;
-
+		else
+		{
+			DWORD dwLen = 2048;
+			Error = (PWSTR) CoTaskMemAlloc(dwLen);
+			if (Error)
+			{
+				FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM,NULL,LsaNtStatusToWinError(ntsStatus),0,(PWSTR)Error,dwLen,NULL);
+			}
+			*ppwszOptionalStatusText = Error;
+		}
 	}
     // If we failed the logon, try to erase the Pin field.
     if (!SUCCEEDED(HRESULT_FROM_NT(ntsStatus)))
