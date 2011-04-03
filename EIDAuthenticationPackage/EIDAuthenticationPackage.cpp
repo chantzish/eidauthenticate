@@ -45,6 +45,7 @@
 #include "../EIDCardLibrary/Package.h"
 #include "../EIDCardLibrary/CertificateValidation.h"
 #include "../EIDCardLibrary/StoredCredentialManagement.h"
+#include "../EIDCardLibrary/SmartCardModule.h"
 
 	
 extern "C"
@@ -471,6 +472,15 @@ extern "C"
 			// impersonate the client to beneficiate from the smart card redirection
 			// if enabled on terminal session
 			
+			// check the PIN if using the base smart card provider to get the remaining pin attempts
+			// put the result in SubStatus
+			Status = CheckPINandGetRemainingAttemptsIfPossible(pSmartCardCspInfo, pPin, SubStatus);
+			if (Status != STATUS_SUCCESS)
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CheckPINandGetRemainingAttemptsIfPossible 0x%08X", Status);
+				return Status;
+			}
+
 			pCertContext = GetCertificateFromCspInfo(pSmartCardCspInfo);
 			if (!pCertContext) {
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Unable to create certificate from logon info");
@@ -521,11 +531,19 @@ extern "C"
 				DWORD dwError = GetLastError();
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"RetrieveStoredCredential failed %d", dwError);
 				MyLsaDispatchTable->FreeLsaHeap(MyTokenInformation);
-				if (dwError == 0x80090015)
+				switch(dwError)
 				{
-					return STATUS_SMARTCARD_NO_KEYSET;
+					case 0x80090015:
+						return STATUS_SMARTCARD_NO_KEYSET;
+					case SCARD_W_WRONG_CHV:
+						*SubStatus = 0xFFFFFFFF;
+						return STATUS_SMARTCARD_WRONG_PIN;
+					case SCARD_W_CHV_BLOCKED:
+						return STATUS_SMARTCARD_CARD_BLOCKED;
+					default:
+						return STATUS_LOGON_FAILURE;
 				}
-				return STATUS_SMARTCARD_WRONG_PIN;
+				
 			}
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"RetrieveStoredCredential OK");
 

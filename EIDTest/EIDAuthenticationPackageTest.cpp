@@ -178,8 +178,10 @@ void Menu_AP_Exception()
 		i--;
 		j = j/i;
 	}
-	__except(EIDExceptionHandler(GetExceptionInformation()))
+	__except(EIDExceptionHandlerDebug(GetExceptionInformation(),FALSE))
 	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"NT exception 0x%08x",GetExceptionCode());
+		DWORD dwException = GetExceptionCode();
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"NT exception 0x%08x",dwException);
+		MessageBox(NULL,TEXT("Exception trapped"),TEXT(""),0);
 	}
 }
