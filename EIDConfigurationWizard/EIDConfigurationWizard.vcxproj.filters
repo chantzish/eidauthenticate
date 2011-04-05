@@ -72,7 +72,6 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="html1.htm" />
     <None Include="taskfileurl.xml">
       <Filter>Resource Files</Filter>
     </None>

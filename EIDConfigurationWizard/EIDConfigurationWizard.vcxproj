@@ -118,6 +118,7 @@
     <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|x64'">AllRules.ruleset</CodeAnalysisRuleSet>
     <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
     <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
+    <RunCodeAnalysis Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</RunCodeAnalysis>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -162,6 +163,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
     </Link>
+    <PostBuildEvent>
+      <Command>"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign /f $(SolutionDir)\CodeSigning\test.pfx /p test /t http://tsa.starfieldtech.com "$(TargetPath)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -287,9 +291,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="html1.htm">
-      <DeploymentContent>true</DeploymentContent>
-    </None>
     <None Include="taskfileurl.xml" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -217,10 +217,12 @@ FONT 9, "Segoe UI", 0, 0, 0x0
 BEGIN
     CONTROL         "Send a report to the support team",IDC_02EXISTING,
                     "Button",BS_COMMANDLINK | WS_TABSTOP,21,96,216,39
-    LTEXT           "You can specify an email to get updates from our support team :",IDC_EMAILLBL,27,141,237,12
-    EDITTEXT        IDC_EDIT1,80,154,173,13,ES_AUTOHSCROLL
-    LTEXT           "Email (optional) :",IDC_EMAILSEND,26,155,53,11
-    LTEXT           "The test was unsuccessfull. You can run the test again or send a report to the support team.",IDC_STC6,27,6,228,44
+    LTEXT           "You can specify an email to get updates from our support team :",IDC_EMAILLBL,21,141,237,12
+    EDITTEXT        IDC_EDIT1,76,154,118,13,ES_AUTOHSCROLL
+    LTEXT           "Email (optional) :",IDC_EMAILSEND,21,155,53,11
+    LTEXT           "The test was unsuccessfull. You can run the test again or send a report to the support team.",IDC_STC6,21,6,228,22
+    LTEXT           "Error description",IDC_WIZARDERROR,21,41,233,33
+    LTEXT           "Detail :",IDC_STATIC,21,27,105,9
 END
 
 IDD_DIALOGREMOVEPOLICY DIALOGEX 0, 0, 292, 235
@@ -292,6 +294,7 @@ END
 STRINGTABLE
 BEGIN
     IDS_03CERTVIEWTITLE     "Info"
+    IDS_WRONGPIN_RETRIES    "A wrong PIN was presented to the card : %d retries left"
     IDS_05CREDINFOCAPTION   "Test"
     IDS_05CREDINFOCONFIRMTITLE "result"
     IDS_05CREDINFOCONFIRMMESSAGE "Credential Valid"
@@ -325,6 +328,8 @@ BEGIN
     IDS_02NEWNOTE           "Choose this option if you are using a blank smart card"
     IDS_TITLE5              "Test result"
     IDS_CHECKDRIVERONLINE   "EIDAuthenticate detected that the smart card you provided (ATR: %s) don't have a driver. Would you like to check our online database for solutions ?"
+    IDS_TURNREMOVALPOLICY   "Turn the removal policy on or off"
+    IDS_TURNFORCEPOLICY     "Turn the force smart card policy on or off"
 END
 
 STRINGTABLE

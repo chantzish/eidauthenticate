@@ -200,6 +200,7 @@ extern "C"
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Not autorized");
 					break;
 				}
+				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Has Autorization for rid = 0x%x", pBuffer->dwRid);
 				pPointer = (PBYTE) pBuffer->szPassword - (ULONG) ClientBufferBase + (ULONG) pBuffer;
 				pBuffer->szPassword = (PWSTR) pPointer;
 				pPointer = (PBYTE) pBuffer->pbCertificate - (ULONG) ClientBufferBase + (ULONG) pBuffer;
@@ -211,6 +212,7 @@ extern "C"
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CertCreateCertificateContext 0x%08x", pBuffer->dwError);
 					break;
 				}
+				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Certificate created in memory");
 				fStatus = CStoredCredentialManager::Instance()->CreateCredential(pBuffer->dwRid,pCertContext,pBuffer->szPassword, 0, pBuffer->fEncryptPassword);
 				if (!fStatus)
 				{
@@ -234,6 +236,7 @@ extern "C"
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Not autorized");
 					break;
 				}
+				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Has Autorization for rid = 0x%x", pBuffer->dwRid);
 				fStatus = CStoredCredentialManager::Instance()->RemoveStoredCredential(pBuffer->dwRid);
 				if (!fStatus)
 				{
@@ -256,6 +259,7 @@ extern "C"
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Not autorized");
 					break;
 				}
+				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Has Autorization for rid = 0x%x", pBuffer->dwRid);
 				fStatus = CStoredCredentialManager::Instance()->HasStoredCredential(pBuffer->dwRid);
 				if (!fStatus)
 				{
@@ -278,6 +282,7 @@ extern "C"
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Not autorized");
 					break;
 				}
+				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Has Autorization for rid = 0x%x", pBuffer->dwRid);
 				fStatus = CStoredCredentialManager::Instance()->RemoveAllStoredCredential();
 				if (!fStatus)
 				{
@@ -299,7 +304,7 @@ extern "C"
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CertCreateCertificateContext 0x%08x", pBuffer->dwError);
 					break;
 				}
-
+				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Certificate created in memory");
 				fStatus = CStoredCredentialManager::Instance()->GetUsernameFromCertContext(pCertContext, &szUsername, &pBuffer->dwRid);
 				if (!fStatus)
 				{
@@ -307,10 +312,10 @@ extern "C"
 				}
 				else
 				{
-					
 					EIDFree(szUsername);
 					status = STATUS_SUCCESS;
 				}
+				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"copy back");
 				// copy error back to original buffer
 				MyLsaDispatchTable->CopyToClientBuffer(ClientRequest, sizeof(DWORD), ((PBYTE)&(pBuffer->dwRid))  + (ULONG) ClientBufferBase - (ULONG) pBuffer, &(pBuffer->dwRid));
 				break;
@@ -318,6 +323,7 @@ extern "C"
 			default:
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Invalid message %d",pBuffer->MessageType);
 			}
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Done in LSA memory - preparing response");
 			// copy error back to original buffer
 			statusError= MyLsaDispatchTable->CopyToClientBuffer(ClientRequest, sizeof(DWORD), ((PBYTE)&(pBuffer->dwError))  + (ULONG) ClientBufferBase - (ULONG) pBuffer, &(pBuffer->dwError));
 			if (STATUS_SUCCESS != statusError )
@@ -523,7 +529,7 @@ extern "C"
 			*SubStatus = STATUS_SUCCESS;
 
 
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"RID = %d", dwRid);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"RID = 0x%x", dwRid);
 			PWSTR szPassword = NULL;
 			
 			if (!manager->GetPassword(dwRid,pCertContext, pPin, &szPassword))
