@@ -86,7 +86,7 @@ extern "C"
 			initializeExportedFunctionsTable(&MyExportedFunctions);
 			*ppTables = &MyExportedFunctions;
 			*pcTables = MyExportedFunctionsCount;
-			SECURITY_PACKAGE_OPTIONS Options;
+			/*SECURITY_PACKAGE_OPTIONS Options;
 			Options.Size = sizeof(SECURITY_PACKAGE_OPTIONS);
 			Options.Flags = 0;
 			Options.Type = SECPKG_OPTIONS_TYPE_SSPI;
@@ -95,7 +95,7 @@ extern "C"
 			if (Status != SEC_E_OK) 
 			{
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"AddSecurityPackage = 0x%08x",Status);
-			}
+			}*/
 			Status = STATUS_SUCCESS;
 		}
 		__finally

@@ -33,7 +33,7 @@
 #define IDS_03CONTAINERFILES            30
 #define IDS_03ALLFILES                  31
 #define IDS_03CERTVIEWTITLE             32
-#define IDS_05CREDINFOMESSAGE           33
+#define IDS_WRONGPIN_RETRIES            33
 #define IDS_05CREDINFOCAPTION           34
 #define IDS_05CREDINFOCONFIRMTITLE      35
 #define IDS_05CREDINFOCONFIRMMESSAGE    36
@@ -63,7 +63,9 @@
 #define IDD_06TESTRESULTOK              60
 #define IDS_CHECKDRIVERONLINE           61
 #define IDD_07TESTRESULTNOTOK           62
+#define IDS_TURNREMOVALPOLICY           62
 #define IDD_05PASSWORD                  63
+#define IDS_TURNFORCEPOLICY             63
 #define IDD_04CHECKS                    64
 #define IDD_03NEW                       65
 #define IDD_02ENABLE                    66
@@ -117,6 +119,7 @@
 #define IDC_DISABLE                     145
 #define IDC_FORCEDISABLE                145
 #define IDC_FORCEENABLE                 146
+#define IDC_WIZARDERROR                 147
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -125,7 +128,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        72
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         147
+#define _APS_NEXT_CONTROL_VALUE         148
 #define _APS_NEXT_SYMED_VALUE           241
 #endif
 #endif

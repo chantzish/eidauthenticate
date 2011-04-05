@@ -176,6 +176,7 @@ BOOL CContainerHolderFactory<T>::ConnectNotificationGeneric(__in LPCTSTR szReade
 	}
 	if (dwFlags == CRYPT_FIRST)
 	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptGetProvParam 0x%08x - creating containers manually",GetLastError());
 		// the default container can be enumerated but PP_ENUMCONTAINERS doesn't work
 		for (DWORD i = 0; i < dwKeyNumMax; i++)
 		{
@@ -289,6 +290,10 @@ BOOL CContainerHolderFactory<T>::CreateItemFromCertificateBlob(__in LPCTSTR szRe
 		}
 		if (fAdd)
 		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Creating container szReaderName='%s' szCardName='%s' szProviderName='%s'",
+					szReaderName,szCardName,szProviderName);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Creating container szWideContainerName='%s' KeySpec=%d ActivityCount=%d",
+					szWideContainerName, KeySpec, ActivityCount);
 			this->Lock();
 			T* ContainerHolder = new T(pContainer);
 			ContainerHolder->SetUsageScenario(_cpus, _dwFlags);

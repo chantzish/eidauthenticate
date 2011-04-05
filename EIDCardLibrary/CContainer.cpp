@@ -131,7 +131,7 @@ DWORD CContainer::GetRid()
 	if (_dwRid == 0)
 	{
 		_dwRid = LsaEIDGetRIDFromStoredCredential(_pCertContext);
-		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"_dwRid set to %x",_dwRid);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"_dwRid set to 0x%x",_dwRid);
 	}
 	return _dwRid;
 }

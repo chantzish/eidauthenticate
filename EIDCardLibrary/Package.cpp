@@ -836,7 +836,7 @@ DWORD LsaEIDGetRIDFromStoredCredential(__in PCCERT_CONTEXT pContext)
 			if (status == STATUS_SUCCESS)
 			{
 				dwRid = pBuffer->dwRid;
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Rid = %x",dwRid);
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Rid = 0x%x",dwRid);
 			}
 			else
 			{

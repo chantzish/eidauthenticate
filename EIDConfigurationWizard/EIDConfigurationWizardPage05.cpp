@@ -26,6 +26,8 @@ extern BOOL InitListViewListIcon(HWND hWndListView);
 
 extern BOOL fHasDeselected;
 
+DWORD dwWizardError = 0;
+
 BOOL WizardFinishButton(PTSTR szPassword)
 {
 	BOOL fReturn = FALSE;
@@ -71,7 +73,7 @@ BOOL TestLogon(HWND hMainWnd)
 	TCHAR szMessage[256] = TEXT("");
 	TCHAR szCaption[256] = TEXT("");
 	LoadString(g_hinst, IDS_05CREDINFOCAPTION, szCaption, ARRAYSIZE(szCaption));
-	LoadString(g_hinst, IDS_05CREDINFOMESSAGE, szMessage, ARRAYSIZE(szMessage));
+	//LoadString(g_hinst, IDS_05CREDINFOMESSAGE, szMessage, ARRAYSIZE(szMessage));
 	credUiInfo.pszCaptionText = szCaption;
 	credUiInfo.pszMessageText = szMessage;
 	credUiInfo.cbSize = sizeof(credUiInfo);
@@ -189,7 +191,8 @@ INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPAR
 					if (!TestLogon(hWnd))
 					{
 						// handle if the credential test is cancelled
-						if (GetLastError() == ERROR_CANCELLED)
+						dwWizardError = GetLastError();
+						if (dwWizardError == ERROR_CANCELLED)
 						{
 							SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
 							return TRUE;

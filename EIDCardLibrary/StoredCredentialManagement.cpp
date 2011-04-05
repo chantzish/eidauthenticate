@@ -1824,13 +1824,20 @@ BOOL CStoredCredentialManager::RetrievePrivateData(__in DWORD dwRid, __out PEID_
     lusSecretName.Length = (USHORT) wcslen(szLsaKeyName)* sizeof(WCHAR);
     lusSecretName.MaximumLength = lusSecretName.Length;
     
-	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Reading %x", dwRid);
+	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Reading dwRid = 0x%x", dwRid);
     ntsResult = LsaRetrievePrivateData(LsaPolicyHandle,&lusSecretName,&pData);
 	
     LsaClose(LsaPolicyHandle);
     if( STATUS_SUCCESS != ntsResult )
     {
-        EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by LsaRetrievePrivateData", ntsResult);
+        if (0xc0000034 == ntsResult)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Private info not found for dwRid = 0x%x", dwRid);
+		}
+		else
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by LsaRetrievePrivateData", ntsResult);
+		}
 		SetLastError(LsaNtStatusToWinError(ntsResult));
         return FALSE;
     } 
