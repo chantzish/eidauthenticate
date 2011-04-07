@@ -880,6 +880,13 @@ BOOL CStoredCredentialManager::GetResponseFromCryptedChallenge(__in PBYTE pChall
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
 	__try
 	{
+		if (!pSymetricKey)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pSymetricKey NULL");
+			dwError = ERROR_INVALID_PARAMETER;
+			__leave;
+		}
+		*pSymetricKey = NULL;
 		// acquire context on private key
 		if (!CryptAcquireCertificatePrivateKey(pCertContext,CRYPT_ACQUIRE_SILENT_FLAG,NULL,&hProv,&dwKeySpec,&fCallerFreeProv))
 		{
