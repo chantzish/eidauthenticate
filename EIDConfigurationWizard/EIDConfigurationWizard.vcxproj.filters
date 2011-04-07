@@ -70,6 +70,9 @@
     <ResourceCompile Include="EIDConfigurationWizard_fr.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+    <ResourceCompile Include="EIDConfigurationWizard_ru.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="taskfileurl.xml">
