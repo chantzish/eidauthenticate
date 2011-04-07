@@ -283,6 +283,7 @@
   <ItemGroup>
     <ResourceCompile Include="EIDConfigurationWizard_fr.rc" />
     <ResourceCompile Include="EIDConfigurationWizard.rc" />
+    <ResourceCompile Include="EIDConfigurationWizard_ru.rc" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\EIDCardLibrary\EIDCardLibrary.vcxproj">
