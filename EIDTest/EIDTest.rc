@@ -17,7 +17,7 @@
 #undef APSTUDIO_READONLY_SYMBOLS
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEU)
-LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+LANGUAGE LANG_NEUTRAL, SUBLANG_DEFAULT
 #pragma code_page(1252)
 
 /////////////////////////////////////////////////////////////////////////////
