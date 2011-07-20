@@ -9,6 +9,14 @@
 #include "../EIDCardLibrary/Tracing.h"
 #include "../EIDCardLibrary/OnlineDatabase.h"
 
+#if WINVER < 0x600
+#define BCM_SETSHIELD            (BCM_FIRST + 0x000C)
+#define Button_SetElevationRequiredState(hwnd, fRequired) \
+    (LRESULT)SNDMSG((hwnd), BCM_SETSHIELD, 0, (LPARAM)fRequired)
+#define BCM_SETNOTE              (BCM_FIRST + 0x0009)
+#define Button_SetNote(hwnd, psz) \
+    (BOOL)SNDMSG((hwnd), BCM_SETNOTE, 0, (LPARAM)(psz))
+#endif
 void CheckIfCardHasADriver(HWND hWnd)
 {
 	LONG             lReturn = 0;
@@ -83,7 +91,7 @@ void CheckIfCardHasADriver(HWND hWnd)
 					_stprintf_s(szMessage, ARRAYSIZE(szMessage), szMessageFormat, szATR);
 					if (IDOK == MessageBox(hWnd,szMessage,L"",MB_OKCANCEL|MB_DEFBUTTON1))
 					{
-						TryToFindACSP(szATR);
+						//TryToFindACSP(szATR);
 
 						// else http://test.catalog.update.microsoft.com/v7/site/Home.aspx
 					}
@@ -154,7 +162,7 @@ INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 					LONG lReturn = GetLastError();
 					if (lReturn != SCARD_W_CANCELLED_BY_USER)
 					{
-						MessageBoxWin32(lReturn);
+						MessageBoxWin32Ex(lReturn, hWnd);
 					}
 					else
 					{
@@ -199,7 +207,7 @@ INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 				LONG lReturn = GetLastError();
 				if (lReturn != SCARD_W_CANCELLED_BY_USER)
 				{
-					MessageBoxWin32(lReturn);
+					MessageBoxWin32Ex(lReturn,hWnd);
 				}
 				else
 				{

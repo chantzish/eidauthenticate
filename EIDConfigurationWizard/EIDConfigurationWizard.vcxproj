@@ -140,6 +140,10 @@
       <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Midl>
@@ -164,7 +168,8 @@
       <SubSystem>Windows</SubSystem>
     </Link>
     <PostBuildEvent>
-      <Command>"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign /f $(SolutionDir)\CodeSigning\test.pfx /p test /t http://tsa.starfieldtech.com "$(TargetPath)"</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -189,6 +194,9 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
+    <PostBuildEvent>
+      <Command>"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign /f $(SolutionDir)\CodeSigning\test.pfx /p test /t http://tsa.starfieldtech.com "$(TargetPath)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Midl>
@@ -214,6 +222,9 @@
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
     </Link>
+    <PostBuildEvent>
+      <Command>"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign /f $(SolutionDir)\CodeSigning\test.pfx /p test /t http://tsa.starfieldtech.com "$(TargetPath)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Analyze|Win32'">
     <ClCompile>
@@ -236,6 +247,9 @@
       <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
+    <PostBuildEvent>
+      <Command>"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign /f $(SolutionDir)\CodeSigning\test.pfx /p test /t http://tsa.starfieldtech.com "$(TargetPath)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Analyze|x64'">
     <Midl>
@@ -260,10 +274,14 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
     </Link>
+    <PostBuildEvent>
+      <Command>"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign /f $(SolutionDir)\CodeSigning\test.pfx /p test /t http://tsa.starfieldtech.com "$(TargetPath)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CContainerHolder.cpp" />
     <ClCompile Include="Common.cpp" />
+    <ClCompile Include="DebugReport.cpp" />
     <ClCompile Include="EIDConfigurationWizard.cpp" />
     <ClCompile Include="EIDConfigurationWizardPage01.cpp" />
     <ClCompile Include="EIDConfigurationWizardPage02.cpp" />
@@ -281,9 +299,13 @@
     <ClInclude Include="global.h" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="EIDConfigurationWizard_fr.rc" />
+    <ResourceCompile Include="EIDConfigurationWizard_fr.rc">
+      <Culture Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">0x040c</Culture>
+    </ResourceCompile>
     <ResourceCompile Include="EIDConfigurationWizard.rc" />
-    <ResourceCompile Include="EIDConfigurationWizard_ru.rc" />
+    <ResourceCompile Include="EIDConfigurationWizard_ru.rc">
+      <Culture Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">0x0019</Culture>
+    </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\EIDCardLibrary\EIDCardLibrary.vcxproj">

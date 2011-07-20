@@ -45,6 +45,22 @@ DWORD dwCardSize = ARRAYSIZE(szCard);
 WCHAR szUserName[256];
 DWORD dwUserNameSize = ARRAYSIZE(szUserName);
 
+#if WINVER < 0x600
+// this function doesn't exists on xp, only since Vista.
+// already implemented in EIDCardLibrary
+// let the linker grab it
+LONG WINAPI RegSetKeyValueXP(
+  __in      HKEY hKey,
+  __in_opt  LPCTSTR lpSubKey,
+  __in_opt  LPCTSTR lpValueName,
+  __in      DWORD dwType,
+  __in_opt  LPCVOID lpData,
+  __in      DWORD cbData
+);
+#define PSH_AEROWIZARD 0x00004000
+#define RegSetKeyValue RegSetKeyValueXP
+#endif
+
 int APIENTRY _tWinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
                      LPTSTR    lpCmdLine,
@@ -143,6 +159,15 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 			EIDFree(pbCertificate);
 			return 0;
 		} 
+		else if (_tcscmp(pszCommandLine[0],TEXT("DEBUGREPORT")) == 0)
+		{
+			if (iNumArgs < 2)
+			{
+				return 0;
+			}
+			CreateDebugReport(pszCommandLine[1]);
+			return 0;
+		}
 	}
 
 	HPROPSHEETPAGE ahpsp[7];

@@ -17,6 +17,20 @@
 
 //#define CHECK_USERNAME 0
 
+#if WINVER < 0x600
+// this function doesn't exists on xp, only since Vista.
+// already implemented in EIDCardLibrary
+// let the linker grab it
+LONG WINAPI RegSetKeyValueXP(
+  __in      HKEY hKey,
+  __in_opt  LPCTSTR lpSubKey,
+  __in_opt  LPCTSTR lpValueName,
+  __in      DWORD dwType,
+  __in_opt  LPCVOID lpData,
+  __in      DWORD cbData
+);
+#define RegSetKeyValue RegSetKeyValueXP
+#endif
 
 
 #define ERRORTOTEXT(ERROR) case ERROR: LoadString( g_hinst,IDS_##ERROR, szName, dwSize);                 break;

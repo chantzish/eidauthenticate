@@ -6,12 +6,9 @@
 #include "../EIDCardLibrary/CContainer.h"
 #include "../EIDCardLibrary/CContainerHolderFactory.h"
 #include "../EIDCardLibrary/StoredCredentialManagement.h"
-#include "../EIDCardLibrary/Package.h"
 
 #include "global.h"
 #include "EIDConfigurationWizard.h"
-
-#pragma comment(lib,"Credui")
 
 #include "CContainerHolder.h"
 
@@ -46,79 +43,7 @@ BOOL WizardFinishButton(PTSTR szPassword)
 	return fReturn;
 }
 
-BOOL TestLogon(HWND hMainWnd)
-{
-	BOOL save = false;
-	DWORD authPackage = 0;
-	LPVOID authBuffer;
-	ULONG authBufferSize = 0;
-	CREDUI_INFO credUiInfo;
-	BOOL fReturn = FALSE;
-	DWORD dwError = 0;
-
-	LSA_HANDLE hLsa;
-	LSA_STRING Origin = { (USHORT)strlen("MYTEST"), (USHORT)sizeof("MYTEST"), "MYTEST" };
-	QUOTA_LIMITS Quota = {0};
-	TOKEN_SOURCE Source = { "TEST", { 0, 101 } };
-	MSV1_0_INTERACTIVE_PROFILE *Profile;
-	ULONG ProfileLen;
-	LUID Luid;
-	NTSTATUS err,stat;
-	HANDLE Token;
-	DWORD dwFlag = CREDUIWIN_AUTHPACKAGE_ONLY | CREDUIWIN_ENUMERATE_CURRENT_USER;
-	RetrieveNegotiateAuthPackage(&authPackage);
-	
-	CoInitializeEx(NULL,COINIT_APARTMENTTHREADED); 
-	TCHAR szTitle[256] = TEXT("");
-	TCHAR szMessage[256] = TEXT("");
-	TCHAR szCaption[256] = TEXT("");
-	LoadString(g_hinst, IDS_05CREDINFOCAPTION, szCaption, ARRAYSIZE(szCaption));
-	//LoadString(g_hinst, IDS_05CREDINFOMESSAGE, szMessage, ARRAYSIZE(szMessage));
-	credUiInfo.pszCaptionText = szCaption;
-	credUiInfo.pszMessageText = szMessage;
-	credUiInfo.cbSize = sizeof(credUiInfo);
-	credUiInfo.hbmBanner = NULL;
-	credUiInfo.hwndParent = hMainWnd;
-
-	DWORD result = CredUIPromptForWindowsCredentials(&(credUiInfo), 0, &(authPackage), 
-    NULL, 0, &authBuffer, &authBufferSize, &(save), dwFlag);
-	if (result == ERROR_SUCCESS)
-	{
-		err = LsaConnectUntrusted(&hLsa);
-		/* Find the setuid package and call it */
-		err = LsaLogonUser(hLsa, &Origin, (SECURITY_LOGON_TYPE)  Interactive , authPackage, authBuffer,authBufferSize,NULL, &Source, (PVOID*)&Profile, &ProfileLen, &Luid, &Token, &Quota, &stat);
-		DWORD dwSize = sizeof(MSV1_0_INTERACTIVE_PROFILE);
-		LsaDeregisterLogonProcess(hLsa);
-		if (err)
-		{
-			dwError = LsaNtStatusToWinError(err);
-		}
-		else
-		{
-			/*LoadString(g_hinst, IDS_05CREDINFOCONFIRMTITLE, szTitle, ARRAYSIZE(szTitle));
-			LoadString(g_hinst, IDS_05CREDINFOCONFIRMMESSAGE, szMessage, ARRAYSIZE(szMessage));
-			MessageBox(hMainWnd,szMessage,szTitle,0);*/
-			fReturn = TRUE;
-			
-			LsaFreeReturnBuffer(Profile);
-			CloseHandle(Token);
-			
-		}
-		CoTaskMemFree(authBuffer);
-	}
-	else //if (result == ERROR_CANCELLED)
-	{
-		//fReturn = TRUE;
-		dwError = result;
-	}
-	//else
-	//{
-	//	//MessageBoxWin32(GetLastError());
-	//}
-	//CredUIConfirmCredentials(NULL,FALSE);
-	SetLastError(dwError);
-	return fReturn;
-}
+BOOL TestLogon(HWND hMainWnd);
 
 
 #define WM_MYMESSAGE WM_USER + 10
@@ -182,8 +107,10 @@ INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPAR
 				GetWindowText(GetDlgItem(hWnd,IDC_05PASSWORD),szPassword,ARRAYSIZE(szPassword));
 				if (!WizardFinishButton(szPassword))
 				{
-					MessageBoxWin32(GetLastError());
+					// go to the error page
+					dwWizardError = GetLastError();
 					SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
+					PropSheet_SetCurSel(hWnd, NULL,6);
 					return TRUE;
 				}
 				if (IsDlgButtonChecked(hWnd,IDC_05TEST))

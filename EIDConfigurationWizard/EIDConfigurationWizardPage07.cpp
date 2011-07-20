@@ -1,8 +1,10 @@
 #include <Windows.h>
+#include <Commctrl.h>
 
 #include "../EIDCardLibrary/CContainer.h"
 #include "../EIDCardLibrary/CContainerHolderFactory.h"
 #include "CContainerHolder.h"
+#include "global.h"
 #include "EIDConfigurationWizard.h"
 
 // from previous step
@@ -21,10 +23,18 @@ void SetErrorMessage(HWND hWnd)
 
 INT_PTR CALLBACK	WndProc_07TESTRESULTNOTOK(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+	int wmId;
+	int wmEvent;
+	LPNMHDR pnmh = (LPNMHDR)lParam;
 	switch(message)
 	{
+		case WM_INITDIALOG:
+			if (!IsElevated())
+			{
+				Button_SetElevationRequiredState(GetDlgItem(hWnd,IDC_07SENDREPORT),TRUE);
+			}
+			break;
 		case WM_NOTIFY :
-			LPNMHDR pnmh = (LPNMHDR)lParam;
 			switch(pnmh->code)
 			{
 				case PSN_SETACTIVE:
@@ -43,6 +53,26 @@ INT_PTR CALLBACK	WndProc_07TESTRESULTNOTOK(HWND hWnd, UINT message, WPARAM wPara
 					}
 					break;
 			}
+			break;
+		case WM_COMMAND:
+			wmId    = LOWORD(wParam);
+			wmEvent = HIWORD(wParam);
+			// Analyse les sélections de menu :
+			switch (wmId)
+			{	
+				case IDC_07SENDREPORT:
+					{
+						TCHAR szEmail[256];
+						GetWindowText(GetDlgItem(hWnd,IDC_07EMAIL),szEmail,ARRAYSIZE(szEmail));
+						if (!SendReport(dwWizardError, szEmail))
+						{
+							MessageBoxWin32(GetLastError());
+						}
+					}
+					break;
+			}
+			break;
+		
 	}
 	return FALSE;
 }

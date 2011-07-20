@@ -1,26 +1,15 @@
-// translating by Ivan Pashko(pashko.ivan@gmail.com)
 // Microsoft Visual C++ generated resource script.
 //
 #include "EIDConfigurationWizard.h"
 
-#define APSTUDIO_READONLY_SYMBOLS
-/////////////////////////////////////////////////////////////////////////////
-//
-// Generated from the TEXTINCLUDE 2 resource.
-//
 #define APSTUDIO_HIDDEN_SYMBOLS
 #include "windows.h"
 #undef APSTUDIO_HIDDEN_SYMBOLS
-
 /////////////////////////////////////////////////////////////////////////////
-#undef APSTUDIO_READONLY_SYMBOLS
+// Russe (Russe) resources
 
-/////////////////////////////////////////////////////////////////////////////
-// Russian resources
-
-LANGUAGE LANG_RUSSIAN, SUBLANG_RUSSIAN_RUSSIA
+LANGUAGE LANG_RUSSIAN, SUBLANG_DEFAULT
 #pragma code_page(1251)
-
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -74,16 +63,20 @@ IDD_01MAIN DIALOGEX 0, 0, 273, 209
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 FONT 9, "Segoe UI", 0, 0, 0x0
 BEGIN
-    CONTROL         "Изменение учетных данных смарт-карты",IDC_01CHANGE,"Button",BS_COMMANDLINK | WS_TABSTOP,21,21,216,33
-    CONTROL         "Отключить авторизацию по смарт-карте",IDC_01DELETE,"Button",BS_COMMANDLINK | WS_TABSTOP,21,69,216,33
+    CONTROL         "Изменение учетных данных смарт-карты",IDC_01CHANGE,
+                    "Button",BS_COMMANDLINK | WS_TABSTOP,21,21,216,33
+    CONTROL         "Отключить авторизацию по смарт-карте",IDC_01DELETE,
+                    "Button",BS_COMMANDLINK | WS_TABSTOP,21,69,216,33
 END
 
 IDD_02ENABLE DIALOGEX 0, 0, 273, 209
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 FONT 9, "Segoe UI", 0, 0, 0x0
 BEGIN
-    CONTROL         "Использовать настроенную смарт-карту",IDC_02EXISTING,"Button",BS_COMMANDLINK | WS_TABSTOP,21,21,216,39
-    CONTROL         "Настройка нового набора учетных данных",IDC_02NEW,"Button",BS_COMMANDLINK | WS_TABSTOP,21,69,216,33
+    CONTROL         "Использовать настроенную смарт-карту",IDC_02EXISTING,
+                    "Button",BS_COMMANDLINK | WS_TABSTOP,21,21,216,39
+    CONTROL         "Настройка нового набора учетных данных",IDC_02NEW,
+                    "Button",BS_COMMANDLINK | WS_TABSTOP,21,69,216,33
     CONTROL         "<a  HREF=""mailto:support@mysmartlogon.com?subject=Feedback"">Give fedback</a> or <a  HREF=""mailto:support@mysmartlogon.com?subject=Translate"">help translate this wizard</a>",IDC_SYSLINKHELP,
                     "SysLink",WS_TABSTOP,25,185,223,8
 END
@@ -106,9 +99,9 @@ STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSME
 FONT 9, "Segoe UI", 0, 0, 0x0
 BEGIN
     LTEXT           "Это мастер создания сертификата смарт-карты на основе центра сертификации. Пожалуйста, выберите центр сертфикации:",1007,3,18,272,20
-    CONTROL         "&Использовать указанный центр сертификации",IDC_03USETHIS,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,6,57,163,10
-    CONTROL         "&Создать новый центр сертификации",IDC_03_CREATE,
-                    "Button",BS_AUTORADIOBUTTON | WS_TABSTOP,6,39,185,10
+    CONTROL         "&Использовать указанный центр сертификации",IDC_03USETHIS,
+                    "Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,6,57,163,10
+    CONTROL         "&Создать новый центр сертификации",IDC_03_CREATE,"Button",BS_AUTORADIOBUTTON | WS_TABSTOP,6,39,185,10
     CONTROL         "&Импортировать файл p12 на смарт-карту",IDC_03IMPORT,
                     "Button",BS_AUTORADIOBUTTON | WS_TABSTOP,3,138,185,10
     LTEXT           "&Центр сертификации:",1009,12,78,250,10
@@ -139,21 +132,16 @@ STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSME
 FONT 9, "Segoe UI", 0, 0, 0x0
 BEGIN
     LTEXT           "Тестовый запуск прошел успешно. Теперь Вы можете использовать Вашу смарт-карту для входа в систему.",IDC_STC7,6,6,262,32
-    CONTROL         "Удалить политику",IDC_05REMOVEPOLICYLINK,"SysLink",0x0,24,180,234,12
-    CONTROL         "Групповая политика смарт-карт",IDC_05FORCEPOLICYLINK,
-                    "SysLink",0x0,24,195,237,12
-    ICON            "",IDC_05REMOVEPOLICYICON,6,177,18,17,SS_CENTERIMAGE
-    ICON            "",IDC_05FORCEPOLICYICON,6,192,18,17,SS_CENTERIMAGE
 END
 
 IDD_07TESTRESULTNOTOK DIALOGEX 0, 0, 273, 209
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 FONT 9, "Segoe UI", 0, 0, 0x0
 BEGIN
-    CONTROL         "Отправить отчет в службу поддержки",IDC_02EXISTING,
+    CONTROL         "Отправить отчет в службу поддержки",IDC_07SENDREPORT,
                     "Button",BS_COMMANDLINK | WS_TABSTOP,21,96,216,39
     LTEXT           "Укажите адрес для получения обновлений от службы поддержки:",IDC_EMAILLBL,21,141,237,12
-    EDITTEXT        IDC_EDIT1,76,154,118,13,ES_AUTOHSCROLL
+    EDITTEXT        IDC_07EMAIL,76,154,118,13,ES_AUTOHSCROLL
     LTEXT           "Email(необяз.):",IDC_EMAILSEND,21,155,53,11
     LTEXT           "Тест не был пройден. Вы можете запустить тест еще раз или отправить отчет в службу поддержки.",IDC_STC6,21,6,228,22
     LTEXT           "Описание ошибки:",IDC_WIZARDERROR,21,41,233,33
@@ -173,7 +161,7 @@ BEGIN
     CONTROL         "Принудительнй выход из системы",IDC_LOGOFF,"Button",BS_AUTORADIOBUTTON,26,114,219,18
     CONTROL         "Отключение от сеанса удаленного рабочего стола",IDC_DISCONNECT,
                     "Button",BS_AUTORADIOBUTTON,25,148,236,14
-    LTEXT           "При извлечении смарт-карты сеанс завершается без выхода пользователя из системы.  Это позволяет пользователю вставить смарт-карту и возобновить сеанс позднее, без необходимости снова входить в систему. ", IDC_STATIC,25,164,226,36
+    LTEXT           "При извлечении смарт-карты сеанс завершается без выхода пользователя из системы.  Это позволяет пользователю вставить смарт-карту и возобновить сеанс позднее, без необходимости снова входить в систему. ",IDC_STATIC,25,164,226,36
     LTEXT           "При извлечении выполняется автоматический выход из системы. ",IDC_STATIC,26,133,227,11
     LTEXT           "При извлечении смарт-карты рабочая станция блокируется. ",IDC_STATIC,26,97,238,13
 END
@@ -192,6 +180,7 @@ BEGIN
     LTEXT           "Вход в систему только с использованием смарт-карты. ",IDC_STATIC,31,130,197,11
     LTEXT           "Включение этого параметра не рекомендовано. Вы не сможете войти в систему, если Вы потеряли Вашу смарт-карту или срок действия сертификата истек.",IDC_STATIC,7,25,273,35
 END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -284,7 +273,32 @@ BEGIN
     IDS_RENAMECONF          "Ваш аккаунт был переименован в ""%s""."
 END
 
+
+#ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "EIDConfigurationWizard.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#define APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "#include ""windows.h""\r\n"
+    "#undef APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+#endif    // APSTUDIO_INVOKED
 
 
 

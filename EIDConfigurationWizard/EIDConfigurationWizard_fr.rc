@@ -15,9 +15,9 @@
 #undef APSTUDIO_READONLY_SYMBOLS
 
 /////////////////////////////////////////////////////////////////////////////
-// Français (France) resources
+// Français resources
 
-LANGUAGE LANG_FRENCH, SUBLANG_FRENCH
+LANGUAGE LANG_FRENCH, SUBLANG_NEUTRAL
 #pragma code_page(1252)
 
 /////////////////////////////////////////////////////////////////////////////
@@ -105,7 +105,8 @@ FONT 9, "Segoe UI", 0, 0, 0x0
 BEGIN
     LTEXT           "The test was successfull. You can now use your smartcard to logon.",IDC_TESTSUCCEFULL,6,6,262,32
     CONTROL         "Remove Policy",IDC_05REMOVEPOLICYLINK,"SysLink",0x0,24,180,234,12
-    CONTROL         "Force Smart Card Logon Policy",IDC_05FORCEPOLICYLINK,"SysLink",0x0,24,195,237,12
+    CONTROL         "Force Smart Card Logon Policy",IDC_05FORCEPOLICYLINK,
+                    "SysLink",0x0,24,195,237,12
     ICON            "",IDC_05REMOVEPOLICYICON,6,177,18,17,SS_CENTERIMAGE
     ICON            "",IDC_05FORCEPOLICYICON,6,192,18,17,SS_CENTERIMAGE
 END
@@ -114,14 +115,14 @@ IDD_07TESTRESULTNOTOK DIALOGEX 0, 0, 273, 209
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 FONT 9, "Segoe UI", 0, 0, 0x0
 BEGIN
-    CONTROL         "Send a report to the support team",IDC_02EXISTING,
+    CONTROL         "Send a report to the support team",IDC_07SENDREPORT,
                     "Button",BS_COMMANDLINK | WS_TABSTOP,21,96,216,39
     LTEXT           "You can specify an email to get updates from our support team :",IDC_EMAILLBL,27,141,237,12
-    EDITTEXT        IDC_EDIT1,80,154,173,13,ES_AUTOHSCROLL
+    EDITTEXT        IDC_07EMAIL,80,154,173,13,ES_AUTOHSCROLL
+	LTEXT           "Error description",IDC_WIZARDERROR,21,41,233,33
     LTEXT           "Email (optional) :",IDC_EMAILSEND,26,155,53,11
     LTEXT           "The test was unsuccessfull. You can run the test again or send a report to the support team.",IDC_STC6,27,6,228,44
 END
-
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -151,102 +152,13 @@ BEGIN
     IDD_04CHECKS, DIALOG
     BEGIN
     END
+
+    IDD_07TESTRESULTNOTOK, DIALOG
+    BEGIN
+    END
 END
 #endif    // APSTUDIO_INVOKED
 
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// String Table
-//
-
-STRINGTABLE
-BEGIN
-    IDS_AREYOUSURE          "Etes-vous sûr ?"
-    IDS_EIDNOTAVAILABLE     "Authentication package non disponible"
-    IDS_TITLE0              "Gestion des information d'authentification"
-    IDS_TITLE1              "Configurer l'ouverture de session par carte à puce"
-END
-
-STRINGTABLE
-BEGIN
-    IDS_TITLE2              "Configurer une carte à puce"
-    IDS_TITLE3              "Vérifier le status d'une carte à puce"
-    IDS_TITLE4              "Entrer votre mot de passe"
-    IDS_CAPTION             "Configuration de l'ouverture de session par carte à puce"
-    IDS_03OBJECT            "Objet : %s"
-    IDS_03DELIVERED         "Deliveré : %s %s"
-    IDS_03EXPIRES           "Expire : %s %s"
-    IDS_03CONTAINERFILES    "Container Files"
-    IDS_03ALLFILES          "All Files"
-    IDS_03CERTVIEWTITLE     "Info"
-    IDS_05CREDINFOCAPTION   "Test"
-    IDS_05CREDINFOCONFIRMTITLE "Résultat"
-    IDS_05CREDINFOCONFIRMMESSAGE "Information d'authentification valide"
-    IDS_04USERNAMEOK        "Le nom d'utilisateur du certificat correspond au nom d'utilisateur courant"
-    IDS_04USERNAMENOK       "Le nom d'utilisateur du certificat ne correspond pas au nom d'utilisateur courant"
-END
-
-STRINGTABLE
-BEGIN
-    IDS_04TRUSTOK           "Le certificat est valide"
-    IDS_04TRUSTNOK          "Erreur"
-    IDS_04ENCRYPTIONOK      "La carte supporte d'encryption"
-    IDS_04ENCRYPTIONNOK     "La carte ne supporte pas l'encryption"
-    IDS_05ACTIVATEREMOVE    "<a id=""idActRemove"">Activer la stratégie de retrait</a>"
-    IDS_05DESACTIVATEREMOVE "<a id=""idDesActRemove"">Desactiver la stratégie de retrait</a>"
-    IDS_05ACTIVATEFORCE     "<a id=""idActForce"">Forcer l'authentification par carte à puce</a>"
-    IDS_05DESACTIVATEFORCE  "<a id=""idDesActForce"">Ne plus forcer l'authentification par carte à puce</a>"
-    IDS_04TESTUSERNAME      "Nom d'utilisateur"
-    IDS_04TESTTRUST         "Confiance"
-    IDS_04TESTCRYPTO        "Crypto"
-    IDS_CERT_TRUST_NO_ERROR "Aucune erreur trouvée pour le certificat"
-    IDS_CERT_TRUST_IS_NOT_TIME_VALID 
-                            "Un certificat requis n'est pas dans sa période de validité selon la vérification par rapport à l'horloge système en cours"
-    IDS_CERT_TRUST_IS_NOT_TIME_NESTED 
-                            "Les périodes de validité de la chaîne de certification ne se suivent pas correctement."
-    IDS_CERT_TRUST_IS_REVOKED "Le certificat ou la signature a été révoqué."
-    IDS_CERT_TRUST_IS_NOT_SIGNATURE_VALID 
-                            "The certificate or one of the certificates in the certificate chain does not have a valid signature."
-END
-
-STRINGTABLE
-BEGIN
-    IDS_CERT_TRUST_IS_NOT_VALID_FOR_USAGE 
-                            "Le certificat n'est pas valide pour l'usage requis."
-    IDS_CERT_TRUST_IS_UNTRUSTED_ROOT 
-                            "Une chaîne de certificat traitée se termine par un certificat racine qui n'est pas approuvé par le fournisseur d'approbation."
-    IDS_CERT_TRUST_REVOCATION_STATUS_UNKNOWN 
-                            "The revocation status of the certificate or one of the certificates in the certificate chain is unknown."
-    IDS_CERT_TRUST_IS_CYCLIC 
-                            "One of the certificates in the chain was issued by a certification authority that the original certificate had certified."
-    IDS_CERT_TRUST_IS_PARTIAL_CHAIN "The certificate chain is not complete."
-    IDS_CERT_TRUST_CTL_IS_NOT_TIME_VALID 
-                            "A CTL used to create this chain was not time-valid."
-    IDS_CERT_TRUST_CTL_IS_NOT_SIGNATURE_VALID 
-                            "A CTL used to create this chain did not have a valid signature."
-    IDS_CERT_TRUST_CTL_IS_NOT_VALID_FOR_USAGE 
-                            "A CTL used to create this chain is not valid for this usage."
-    IDS_CERT_TRUST_UNKOWN_ERROR "Unknown error"
-    IDS_NO_CERTIFICATE      "Il n'y a pas de certificat"
-    IDS_04USERNAMERENAME    "Renommer votre compte"
-    IDS_04TRUSTMAKETRUSTED  "Faire confiance au certificat"
-    IDS_04TRUSTENABLENOEKU  "Ne pas vérifier l'EKU"
-    IDS_RENAME              "Votre session doit être fermée pour poursuivre. Voulez-vous continuer ?"
-    IDS_RENAMECONF          "Votre compte a été renommé sous le nom ""%s""."
-    IDS_04SIGNATUREONLYOK   "La clé associée au certificat peut être utilisé"
-END
-
-STRINGTABLE
-BEGIN
-    IDS_04SIGNATUREONLYNOK  "Le certificat est associé à une clé ne pouvant être utilisée que pour signer des données"
-    IDS_04CHANGESIGNATUREPOLICY "Modifier la politique de Windows"
-    IDS_04TESTSIGNATURE     "Crypto"
-    IDS_02EXISTINGNOTE      "Choississez cette option si vous disposez d'une carte à puce déjà configurée"
-    IDS_02NEWNOTE           "Choississez cette option si vous disposez d'une carte à puce vierge"
-END
-
-/////////////////////////////////////////////////////////////////////////////
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
@@ -274,6 +186,97 @@ BEGIN
 END
 
 #endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE
+BEGIN
+    IDS_04SIGNATUREONLYOK   "La clé associée au certificat peut être utilisé"
+    IDS_04SIGNATUREONLYNOK  "Le certificat est associé à une clé ne pouvant être utilisée que pour signer des données"
+    IDS_04CHANGESIGNATUREPOLICY "Modifier la politique de Windows"
+    IDS_AREYOUSURE          "Etes-vous sûr ?"
+    IDS_EIDNOTAVAILABLE     "Authentication package non disponible"
+    IDS_TITLE0              "Gestion des information d'authentification"
+    IDS_TITLE1              "Configurer l'ouverture de session par carte à puce"
+    IDS_TITLE2              "Configurer une carte à puce"
+    IDS_TITLE3              "Vérifier le status d'une carte à puce"
+    IDS_TITLE4              "Entrer votre mot de passe"
+    IDS_CAPTION             "Configuration de l'ouverture de session par carte à puce"
+    IDS_03OBJECT            "Objet : %s"
+    IDS_03DELIVERED         "Deliveré : %s %s"
+    IDS_03EXPIRES           "Expire : %s %s"
+    IDS_03CONTAINERFILES    "Container Files"
+    IDS_03ALLFILES          "All Files"
+END
+
+STRINGTABLE
+BEGIN
+    IDS_03CERTVIEWTITLE     "Info"
+    IDS_05CREDINFOCAPTION   "Test"
+    IDS_05CREDINFOCONFIRMTITLE "Résultat"
+    IDS_05CREDINFOCONFIRMMESSAGE "Information d'authentification valide"
+    IDS_04USERNAMEOK        "Le nom d'utilisateur du certificat correspond au nom d'utilisateur courant"
+    IDS_04USERNAMENOK       "Le nom d'utilisateur du certificat ne correspond pas au nom d'utilisateur courant"
+    IDS_04TRUSTOK           "Le certificat est valide"
+    IDS_04TRUSTNOK          "Erreur"
+    IDS_04ENCRYPTIONOK      "La carte supporte d'encryption"
+    IDS_04ENCRYPTIONNOK     "La carte ne supporte pas l'encryption"
+    IDS_05ACTIVATEREMOVE    "<a id=""idActRemove"">Activer la stratégie de retrait</a>"
+    IDS_05DESACTIVATEREMOVE "<a id=""idDesActRemove"">Desactiver la stratégie de retrait</a>"
+    IDS_05ACTIVATEFORCE     "<a id=""idActForce"">Forcer l'authentification par carte à puce</a>"
+    IDS_05DESACTIVATEFORCE  "<a id=""idDesActForce"">Ne plus forcer l'authentification par carte à puce</a>"
+    IDS_04TESTUSERNAME      "Nom d'utilisateur"
+END
+
+STRINGTABLE
+BEGIN
+    IDS_04TESTTRUST         "Confiance"
+    IDS_04TESTCRYPTO        "Crypto"
+    IDS_CERT_TRUST_NO_ERROR "Aucune erreur trouvée pour le certificat"
+    IDS_CERT_TRUST_IS_NOT_TIME_VALID 
+                            "Un certificat requis n'est pas dans sa période de validité selon la vérification par rapport à l'horloge système en cours"
+    IDS_CERT_TRUST_IS_NOT_TIME_NESTED 
+                            "Les périodes de validité de la chaîne de certification ne se suivent pas correctement."
+    IDS_CERT_TRUST_IS_REVOKED "Le certificat ou la signature a été révoqué."
+    IDS_CERT_TRUST_IS_NOT_SIGNATURE_VALID 
+                            "The certificate or one of the certificates in the certificate chain does not have a valid signature."
+    IDS_04TRUSTENABLENOEKU  "Ne pas vérifier l'EKU"
+    IDS_04TESTSIGNATURE     "Crypto"
+    IDS_02EXISTINGNOTE      "Choississez cette option si vous disposez d'une carte à puce déjà configurée"
+    IDS_02NEWNOTE           "Choississez cette option si vous disposez d'une carte à puce vierge"
+END
+
+STRINGTABLE
+BEGIN
+    IDS_CERT_TRUST_IS_NOT_VALID_FOR_USAGE 
+                            "Le certificat n'est pas valide pour l'usage requis."
+    IDS_CERT_TRUST_IS_UNTRUSTED_ROOT 
+                            "Une chaîne de certificat traitée se termine par un certificat racine qui n'est pas approuvé par le fournisseur d'approbation."
+    IDS_CERT_TRUST_REVOCATION_STATUS_UNKNOWN 
+                            "The revocation status of the certificate or one of the certificates in the certificate chain is unknown."
+    IDS_CERT_TRUST_IS_CYCLIC 
+                            "One of the certificates in the chain was issued by a certification authority that the original certificate had certified."
+    IDS_CERT_TRUST_IS_PARTIAL_CHAIN "The certificate chain is not complete."
+    IDS_CERT_TRUST_CTL_IS_NOT_TIME_VALID 
+                            "A CTL used to create this chain was not time-valid."
+    IDS_CERT_TRUST_CTL_IS_NOT_SIGNATURE_VALID 
+                            "A CTL used to create this chain did not have a valid signature."
+    IDS_CERT_TRUST_CTL_IS_NOT_VALID_FOR_USAGE 
+                            "A CTL used to create this chain is not valid for this usage."
+    IDS_CERT_TRUST_UNKOWN_ERROR "Unknown error"
+    IDS_NO_CERTIFICATE      "Il n'y a pas de certificat"
+    IDS_04USERNAMERENAME    "Renommer votre compte"
+    IDS_04TRUSTMAKETRUSTED  "Faire confiance au certificat"
+    IDS_RENAME              "Votre session doit être fermée pour poursuivre. Voulez-vous continuer ?"
+    IDS_RENAMECONF          "Votre compte a été renommé sous le nom ""%s""."
+END
+/////////////////////////////////////////////////////////////////////////////
+
+
 
 #ifndef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
