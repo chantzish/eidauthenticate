@@ -7,9 +7,11 @@
 #include <wmistr.h>
 #include <evntrace.h>
 #include <Shobjidl.h>
+#include <Shlobj.h>
 #include "../EIDCardLibrary/Registration.h"
 
 #pragma comment(lib,"comctl32")
+#pragma comment(lib,"Shell32")
 
 #ifdef UNICODE
 #if defined _M_IX86
@@ -42,6 +44,33 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 }
 
 void SaveLog(HWND hDlg);
+void ShowHideLogButtons(HWND hDlg)
+{
+	if (IsLoggingEnabled())
+	{
+		EnableWindow(GetDlgItem(hDlg,IDC_ENABLELOG), FALSE);
+		EnableWindow(GetDlgItem(hDlg,IDC_DISABLELOG), TRUE);
+	}
+	else
+	{
+		EnableWindow(GetDlgItem(hDlg,IDC_ENABLELOG), TRUE);
+		EnableWindow(GetDlgItem(hDlg,IDC_DISABLELOG), FALSE);
+	}
+}
+
+void ShowHideCrashDumpButtons(HWND hDlg)
+{
+	if (IsCrashDumpEnabled())
+	{
+		EnableWindow(GetDlgItem(hDlg,IDC_ENABLECRASHDUMP), FALSE);
+		EnableWindow(GetDlgItem(hDlg,IDC_DISABLECRASHDUMP), TRUE);
+	}
+	else
+	{
+		EnableWindow(GetDlgItem(hDlg,IDC_ENABLECRASHDUMP), TRUE);
+		EnableWindow(GetDlgItem(hDlg,IDC_DISABLECRASHDUMP), FALSE);
+	}
+}
 // Gestionnaire de messages pour la boîte de dialogue À propos de.
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -53,6 +82,8 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
           break;
 
 		case WM_INITDIALOG:
+			ShowHideLogButtons(hDlg);
+			ShowHideCrashDumpButtons(hDlg);
 			return (INT_PTR)TRUE;
 
 		case WM_COMMAND:
@@ -60,12 +91,26 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 			{
 				case IDC_ENABLELOG:
 					EnableLogging();
+					ShowHideLogButtons(hDlg);
 					break;	
 				case IDC_DISABLELOG:
 					DisableLogging();
+					ShowHideLogButtons(hDlg);
 					break;
 				case IDC_SAVELOG:
 					SaveLog(hDlg);
+					break;
+				case IDC_ENABLECRASHDUMP:
+					{
+						TCHAR strPath[ MAX_PATH ];
+						SHGetSpecialFolderPath(hDlg,  strPath, CSIDL_DESKTOPDIRECTORY, FALSE );
+						EnableCrashDump(strPath);
+						ShowHideCrashDumpButtons(hDlg);
+					}
+					break;
+				case IDC_DISABLECRASHDUMP:
+					DisableCrashDump();
+					ShowHideCrashDumpButtons(hDlg);
 					break;
 			}
 			break;
@@ -73,7 +118,6 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 	return (INT_PTR)FALSE;
 }
 
-TRACEHANDLE handle = NULL;
 HANDLE hFile = NULL;
 
 VOID WINAPI ProcessEvents(PEVENT_TRACE pEvent)
@@ -108,6 +152,7 @@ VOID WINAPI ProcessEvents(PEVENT_TRACE pEvent)
 
 void ExportOneTraceFile(PTSTR szTraceFile)
 {
+	TRACEHANDLE handle = NULL;
 	ULONG rc;
 	EVENT_TRACE_LOGFILE trace;
 	memset(&trace,0, sizeof(EVENT_TRACE_LOGFILE));
