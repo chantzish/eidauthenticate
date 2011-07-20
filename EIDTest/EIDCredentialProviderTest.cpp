@@ -462,8 +462,9 @@ BOOL AuthenticateWithSSPI(PTSTR szPrincipal, PTSTR szPassword, PTSTR szSSP)
 				MessageBox(hMainWnd, negoinfo.PackageInfo->Name, TEXT("Security Package Used"),NULL);
 			}
 		}
-			
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"before  ImpersonateSecurityContext",err);
 		err = ImpersonateSecurityContext(pServerCtxHandleOut);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"after  ImpersonateSecurityContext",err);
 		if (err  != SEC_E_OK)
 		{
 			MessageBoxWin32(err);
@@ -474,7 +475,9 @@ BOOL AuthenticateWithSSPI(PTSTR szPrincipal, PTSTR szPassword, PTSTR szSSP)
 			DWORD cbUserName = ARRAYSIZE(szUserName);
 			GetUserName (szUserName, &cbUserName);
 			MessageBox(hMainWnd, szUserName, TEXT("Connected as"),NULL);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"before  RevertSecurityContext",err);
 			RevertSecurityContext (pServerCtxHandleOut);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"after  RevertSecurityContext",err);
 		}
 		// clean up
 		FreeCredentialsHandle(&hcredClient);
