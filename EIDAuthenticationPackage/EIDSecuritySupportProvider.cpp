@@ -29,6 +29,9 @@
 #include <Lm.h>
 #include <list>
 
+#include <Imagehlp.h>
+#pragma comment(lib,"imagehlp")
+
 #include "../EIDCardLibrary/EIDCardLibrary.h"
 #include "../EIDCardLibrary/Tracing.h"
 #include "../EIDCardLibrary/CredentialManagement.h"
@@ -55,6 +58,10 @@ extern "C"
 	// 0x2B,0x06,0x01,0x04,0x01,0x88,0xB8,0x01
 	UCHAR GssOid[] = {0x2B,0x06,0x01,0x04,0x01,0x88,0xB8,0x01};
 	DWORD GssOidLen = ARRAYSIZE(GssOid);
+	// guid for negoEx
+	// 6550d49b-a716-484e-8955-a8e666df45d1
+	UCHAR AUTHENTICATIONNAGOTIATEGUID[16] = 
+			{0x65,0x50,0xd4,0x9b,0xa7,0x16,0x48,0x4e,0x89,0x55,0xa8,0xe6,0x66,0xdf,0x45,0xd1};
 
 
 	TimeStamp Forever = {0x7fffffff,0xfffffff};
@@ -86,16 +93,6 @@ extern "C"
 			initializeExportedFunctionsTable(&MyExportedFunctions);
 			*ppTables = &MyExportedFunctions;
 			*pcTables = MyExportedFunctionsCount;
-			/*SECURITY_PACKAGE_OPTIONS Options;
-			Options.Size = sizeof(SECURITY_PACKAGE_OPTIONS);
-			Options.Flags = 0;
-			Options.Type = SECPKG_OPTIONS_TYPE_SSPI;
-			Options.SignatureSize = 0;
-			Status = AddSecurityPackage(AUTHENTICATIONPACKAGENAMET,&Options);
-			if (Status != SEC_E_OK) 
-			{
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"AddSecurityPackage = 0x%08x",Status);
-			}*/
 			Status = STATUS_SUCCESS;
 		}
 		__finally
@@ -147,6 +144,7 @@ extern "C"
 			SECPKG_FLAG_CLIENT_ONLY|
 			SECPKG_FLAG_IMPERSONATION|
 			SECPKG_FLAG_NEGOTIABLE| 
+			SECPKG_FLAG_NEGOTIABLE2 |
 			SECPKG_FLAG_ACCEPT_WIN32_NAME |
 			SECPKG_FLAG_GSS_COMPATIBLE |
 			0x00200000; //SECPKG_FLAG_NEGOTIABLE2
@@ -166,7 +164,6 @@ extern "C"
 		)
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter Class = %d",Class);
-		UNREFERENCED_PARAMETER(ppInformation);
 		NTSTATUS Status = SEC_E_UNSUPPORTED_FUNCTION;
 		switch(Class)
 		{
@@ -201,10 +198,17 @@ extern "C"
 				*ppInformation = (PSECPKG_EXTENDED_INFORMATION) EIDAlloc(sizeof(SECPKG_EXTENDED_INFORMATION));
 				(*ppInformation)->Class = SecpkgExtraOids;
 				(*ppInformation)->Info.ExtraOids.OidCount = 0; 
-				Status = STATUS_SUCCESS; 
+				Status = STATUS_SUCCESS;
+				break;
+			case SecpkgNego2Info:
+				*ppInformation = (PSECPKG_EXTENDED_INFORMATION) EIDAlloc(sizeof(SECPKG_EXTENDED_INFORMATION));
+				(*ppInformation)->Class = SecpkgNego2Info;
+				(*ppInformation)->Info.Nego2Info.PackageFlags = 0;
+				memcpy((*ppInformation)->Info.Nego2Info.AuthScheme,AUTHENTICATIONNAGOTIATEGUID,16);
+				Status = STATUS_SUCCESS;
 				break;
 		}
-		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave");
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave with Status = 0x%08X", Status);
 		return Status;
 	}
 
@@ -538,7 +542,6 @@ extern "C"
 				MyLsaDispatchTable->FreeLsaHeap(pAuthIdentityEx);
 		}
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Credential %p Status = 0x%08x",*pCredentialHandle, Status);
-
 		return Status;
 	}
 
@@ -669,6 +672,7 @@ extern "C"
 				return status;
 				break;
 			default:
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"STATUS_INVALID_PARAMETER_2");
 				return STATUS_INVALID_PARAMETER_2;
 		}
 	}
@@ -685,10 +689,10 @@ extern "C"
 		__in LSA_SEC_HANDLE                 phContext           // Context to delete
     )
 	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Handle %d",phContext);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"delete Context 0x%08X",phContext);
 		if (!CSecurityContext::Delete(phContext))
 		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Handle %d not found",phContext);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Context 0x%08X not found",phContext);
 			return(SEC_E_INVALID_HANDLE);
 		}
 		return(SEC_E_OK);
@@ -709,7 +713,8 @@ extern "C"
 		PSecPkgContext_Sizes ContextSizes;
 		PSecPkgContext_NamesW ContextNames;
 		PSecPkgContext_Lifespan ContextLifespan;
-		switch(ContextAttribute) {
+		switch(ContextAttribute) 
+		{
 			case SECPKG_ATTR_SIZES:
 				ContextSizes = (PSecPkgContext_Sizes) pBuffer;
 				ContextSizes->cbMaxSignature = 0;
@@ -739,10 +744,11 @@ extern "C"
 				ContextLifespan->tsExpiry = Forever;
 				break;
 			default:
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SEC_E_INVALID_TOKEN");
 				return(SEC_E_INVALID_TOKEN);
-			}
-
-			return(SEC_E_OK);
+		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"SEC_E_OK");
+		return(SEC_E_OK);
 	}
 
 
@@ -787,7 +793,7 @@ extern "C"
 					Status = SEC_E_UNKNOWN_CREDENTIALS;
 					__leave;
 				}
-				if ((pCredential->Use & SECPKG_CRED_INBOUND) == 0)
+				if ((pCredential->Use & SECPKG_CRED_OUTBOUND) == 0)
 				{
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Use = %d",pCredential->Use);
 					Status = SEC_E_UNKNOWN_CREDENTIALS;
@@ -829,7 +835,7 @@ extern "C"
 		__finally
 		{
 		}
-		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Status = 0x%08X",Status);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave with Status = 0x%08X",Status);
 		return Status;
 	}
 
@@ -900,19 +906,21 @@ extern "C"
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"UserNameToToken failed 0x%08X 0x%08X",Status, SubStatus);
 				__leave;
 			}
-						Status = MyLsaDispatchTable->ConvertAuthDataToToken(MyTokenInformation, TokenLength, SecurityImpersonation, &tokenSource,
+			Status = MyLsaDispatchTable->ConvertAuthDataToToken(MyTokenInformation, TokenLength, SecurityImpersonation, &tokenSource,
 							Network, &AuthorityName, phToken, &LogonId,&AccountName, &SubStatus);
 			if (Status != STATUS_SUCCESS) 
 			{
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CreateToken failed 0x%08X 0x%08X",Status, SubStatus);
 				__leave;
 			}
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Token = 0x%08X",*phToken);
 		}
 		__finally
 		{
 			if (pInfo)
 				NetApiBufferFree(pInfo);
 		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave with Status = 0x%08X",Status);
 		return Status;
 	}
 
@@ -956,7 +964,7 @@ extern "C"
 					Status = SEC_E_UNKNOWN_CREDENTIALS;
 					__leave;
 				}
-				if ((pCredential->Use & SECPKG_CRED_OUTBOUND) == 0)
+				if ((pCredential->Use & SECPKG_CRED_INBOUND) == 0)
 				{
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Use = %d",pCredential->Use);
 					Status = SEC_E_UNKNOWN_CREDENTIALS;
@@ -1008,8 +1016,15 @@ extern "C"
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"callbackMessage no memory");
 				__leave;
 			}
+			// duplicate the handle to the process space
 			callbackMessage->Caller = EIDSSPAccept;
-			callbackMessage->hToken = hToken;
+			Status = MyLsaDispatchTable->DuplicateHandle(hToken, &callbackMessage->hToken);
+			if (Status != STATUS_SUCCESS)
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"DuplicateHandle = 0x%08X",Status);
+				__leave;
+			}
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"token = 0x%08X",callbackMessage->hToken);
 			*MappedContext = TRUE;
 			ContextData->BufferType = SECBUFFER_DATA;
 			ContextData->cbBuffer = sizeof(EID_SSP_CALLBACK_MESSAGE);
@@ -1018,7 +1033,113 @@ extern "C"
 		}
 		__finally
 		{
+			if (Status != STATUS_SUCCESS)
+			{
+				if (callbackMessage)
+					EIDFree(callbackMessage);
+			}
 		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Status = 0x%08X",Status);
+		return Status;
+	}
+
+	NTSTATUS NTAPI SpSetContextAttributes (
+					__in LSA_SEC_HANDLE ContextHandle,
+					__in ULONG ContextAttribute,
+					__in PVOID Buffer,
+					__in ULONG BufferSize )
+	{
+		NTSTATUS Status = STATUS_NOT_IMPLEMENTED;
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Status = 0x%08X",Status);
+		return Status;
+	}
+
+	NTSTATUS NTAPI SpSetCredentialsAttributes(
+					__in LSA_SEC_HANDLE CredentialHandle,
+					__in ULONG CredentialAttribute,
+					__in PVOID Buffer,
+					__in ULONG BufferSize )
+	{
+		NTSTATUS Status = STATUS_NOT_IMPLEMENTED;
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Status = 0x%08X",Status);
+		return Status;
+	}
+
+	NTSTATUS NTAPI SpChangeAccountPassword(
+					__in PUNICODE_STRING      pDomainName,
+					__in PUNICODE_STRING      pAccountName,
+					__in PUNICODE_STRING      pOldPassword,
+					__in PUNICODE_STRING      pNewPassword,
+					__in BOOLEAN              Impersonating,
+					__inout PSecBufferDesc   pOutput
+					)
+	{
+		NTSTATUS Status = STATUS_NOT_IMPLEMENTED;
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Status = 0x%08X",Status);
+		return Status;
+	}
+
+	NTSTATUS NTAPI SpQueryMetaData(
+					__in_opt LSA_SEC_HANDLE CredentialHandle,
+					__in_opt PUNICODE_STRING TargetName,
+					__in ULONG ContextRequirements,
+					__out PULONG MetaDataLength,
+					__deref_out_bcount(*MetaDataLength) PUCHAR* MetaData,
+					__inout PLSA_SEC_HANDLE ContextHandle
+					)
+	{
+		NTSTATUS Status = STATUS_NOT_IMPLEMENTED;
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Status = 0x%08X",Status);
+		return Status;
+	}
+
+	NTSTATUS NTAPI SpExchangeMetaData(
+					__in_opt LSA_SEC_HANDLE CredentialHandle,
+					__in_opt PUNICODE_STRING TargetName,
+					__in ULONG ContextRequirements,
+					__in ULONG MetaDataLength,
+					__in_bcount(MetaDataLength) PUCHAR MetaData,
+					__inout PLSA_SEC_HANDLE ContextHandle
+					)
+	{
+		NTSTATUS Status = STATUS_NOT_IMPLEMENTED;
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Status = 0x%08X",Status);
+		return Status;
+	}
+
+	NTSTATUS NTAPI SpGetCredUIContext(
+				   __in LSA_SEC_HANDLE ContextHandle,
+				   __in GUID* CredType,
+				   __out PULONG FlatCredUIContextLength,
+				   __deref_out_bcount(*FlatCredUIContextLength)  PUCHAR* FlatCredUIContext
+				   )
+	  {
+		NTSTATUS Status = STATUS_NOT_IMPLEMENTED;
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Status = 0x%08X",Status);
+		return Status;
+	  }
+
+	NTSTATUS NTAPI SpUpdateCredentials(
+				  __in LSA_SEC_HANDLE ContextHandle,
+				  __in GUID* CredType,
+				  __in ULONG FlatCredUIContextLength,
+				  __in_bcount(FlatCredUIContextLength) PUCHAR FlatCredUIContext
+				  )
+	{
+		NTSTATUS Status = STATUS_NOT_IMPLEMENTED;
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Status = 0x%08X",Status);
+		return Status;
+	}
+
+	NTSTATUS NTAPI SpValidateTargetInfo (
+				__in_opt PLSA_CLIENT_REQUEST ClientRequest,
+				__in_bcount(SubmitBufferLength) PVOID ProtocolSubmitBuffer,
+				__in PVOID ClientBufferBase,
+				__in ULONG SubmitBufferLength,
+				__in PSECPKG_TARGETINFO TargetInfo
+				)
+	{
+		NTSTATUS Status = STATUS_NOT_IMPLEMENTED;
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Status = 0x%08X",Status);
 		return Status;
 	}
@@ -1049,8 +1170,13 @@ extern "C"
 		exportedFunctions->QueryContextAttributes = SpQueryContextAttributes;
 		exportedFunctions->AddCredentials = SpAddCredentials;
 		exportedFunctions->SetExtendedInformation = SpSetExtendedInformation;
-		exportedFunctions->SetContextAttributes = NULL; // only schanel implements this
-		exportedFunctions->SetCredentialsAttributes = NULL; // not documented
-		exportedFunctions->ChangeAccountPassword = NULL; // not documented
+		exportedFunctions->SetContextAttributes = SpSetContextAttributes; // only schanel implements this
+		exportedFunctions->SetCredentialsAttributes = SpSetCredentialsAttributes; // not documented
+		exportedFunctions->ChangeAccountPassword = SpChangeAccountPassword; // not documented
+		exportedFunctions->QueryMetaData = SpQueryMetaData;
+		exportedFunctions->ExchangeMetaData = SpExchangeMetaData;
+		exportedFunctions->GetCredUIContext = SpGetCredUIContext;
+		exportedFunctions->UpdateCredentials = SpUpdateCredentials;
+		exportedFunctions->ValidateTargetInfo = SpValidateTargetInfo;
 	}
 }

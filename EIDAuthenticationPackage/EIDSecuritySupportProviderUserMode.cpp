@@ -199,8 +199,9 @@ extern "C"
 		)
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
-		CUsermodeContext::GetImpersonationHandle(ContextHandle, ImpersonationToken);
-		return STATUS_NOT_IMPLEMENTED; 
+		NTSTATUS Status = CUsermodeContext::GetImpersonationHandle(ContextHandle, ImpersonationToken);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave Status = 0x%08X", Status);
+		return Status; 
 	}
 
 	/**  The SpQueryContextAttributes function retrieves the attributes of a security context.

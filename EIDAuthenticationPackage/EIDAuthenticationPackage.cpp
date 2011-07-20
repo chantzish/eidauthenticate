@@ -37,7 +37,6 @@
 #include <iphlpapi.h>
 #include <tchar.h>
 
-
 #include "../EIDCardLibrary/EIDCardLibrary.h"
 #include "../EIDCardLibrary/Tracing.h"
 #include "../EIDCardLibrary/CompleteToken.h"
@@ -148,7 +147,10 @@ extern "C"
 		MyLsaDispatchTable = (PLSA_SECPKG_FUNCTION_TABLE)LsaDispatchTable;
 
 		*AuthenticationPackageName = LsaInitializeString(AUTHENTICATIONPACKAGENAME);
+
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave");
+		// don't fail
+		Status = STATUS_SUCCESS;
 		return Status;
 	}
 
@@ -217,11 +219,9 @@ extern "C"
 				if (!fStatus)
 				{
 					pBuffer->dwError = GetLastError();
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08X",pBuffer->dwError);
 				}
-				else
-				{
-					status = STATUS_SUCCESS;
-				}
+				status = STATUS_SUCCESS;
 				CertFreeCertificateContext(pCertContext);
 				break;
 			case EIDCMRemoveStoredCredential:
@@ -241,11 +241,9 @@ extern "C"
 				if (!fStatus)
 				{
 					pBuffer->dwError = GetLastError();
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08X",pBuffer->dwError);
 				}
-				else
-				{
-					status = STATUS_SUCCESS;
-				}
+				status = STATUS_SUCCESS;
 				break;
 			case EIDCMHasStoredCredential:
 				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"EIDCMHasStoredCredential");
@@ -264,11 +262,13 @@ extern "C"
 				if (!fStatus)
 				{
 					pBuffer->dwError = GetLastError();
+					if (pBuffer->dwError == 0)
+					{
+						pBuffer->dwError = ERROR_NOT_FOUND;
+					}
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08X",pBuffer->dwError);
 				}
-				else
-				{
-					status = STATUS_SUCCESS;
-				}
+				status = STATUS_SUCCESS;
 				break;
 			case EIDCMRemoveAllStoredCredential:
 				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"EIDCMRemoveAllStoredCredential");
@@ -287,11 +287,9 @@ extern "C"
 				if (!fStatus)
 				{
 					pBuffer->dwError = GetLastError();
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08X",pBuffer->dwError);
 				}
-				else
-				{
-					status = STATUS_SUCCESS;
-				}
+				status = STATUS_SUCCESS;
 				break;
 			case EIDCMGetStoredCredentialRid:
 				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"EIDCMGetStoredCredentialRid");
@@ -309,6 +307,8 @@ extern "C"
 				if (!fStatus)
 				{
 					pBuffer->dwError = GetLastError();
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08X",pBuffer->dwError);
+					status = STATUS_SUCCESS;
 				}
 				else
 				{
@@ -389,9 +389,70 @@ extern "C"
 		return;
 	}
 
+	// these API aren't available in Windows XP
+	// so we have to load them manually
+	typedef BOOL (WINAPI *CredIsProtectedWFct)(
+			__in LPWSTR                 pszProtectedCredentials,
+			__out CRED_PROTECTION_TYPE* pProtectionType
+			);
+	typedef BOOL (WINAPI *CredUnprotectWFct) (
+			__in BOOL                                   fAsSelf,
+			__in_ecount(cchProtectedCredentials) LPWSTR pszProtectedCredentials,
+			__in DWORD                                  cchProtectedCredentials,
+			__out_ecount_opt(*pcchMaxChars) LPWSTR      pszCredentials,
+			__inout DWORD*                              pcchMaxChars
+			);
+	NTSTATUS TryToUnprotecThePin(PWSTR pwzPin, PWSTR pwzPinUncrypted, DWORD dPinUncrypted, PWSTR *pResultingPin)
+	{
+		CRED_PROTECTION_TYPE protectionType;
+		CredIsProtectedWFct CredIsProtectedW = NULL;
+		CredUnprotectWFct CredUnprotectW = NULL;
+		HMODULE hModule = NULL;
+		NTSTATUS Status = STATUS_SUCCESS;
+		__try
+		{
+			// default output : the PIN given to LSA (not crypted)
+			*pResultingPin = pwzPin;
+			// try to know if the PIN was crypted (Vista & later)
+			hModule = LoadLibrary(TEXT("Advapi32.dll"));
+			if (hModule == NULL)
+			{
+				__leave;
+			}
+			CredIsProtectedW = (CredIsProtectedWFct) GetProcAddress(hModule,"CredIsProtectedW");
+			CredUnprotectW = (CredUnprotectWFct) GetProcAddress(hModule,"CredUnprotectW");
+			if (CredIsProtectedW == NULL || CredUnprotectW == NULL)
+			{
+				// get here if on Windows XP
+				__leave;
+			}
+			// here on Vista & later
+			if(CredIsProtectedW(pwzPin, &protectionType))
+			{
+				if(CredUnprotected != protectionType)
+				{
+					if (!CredUnprotectW(FALSE,pwzPin,UNLEN,pwzPinUncrypted,&dPinUncrypted))
+					{
+						EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CredUnprotectW 0x%08x",GetLastError());
+						Status = STATUS_BAD_VALIDATION_CLASS;
+						__leave;
+					}
+					//EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"PIN = %s",pwzPinUncrypted);
+					// the PIN was crypted - use the uncrypted PIN
+					*pResultingPin = pwzPinUncrypted;
+				}
+			}
+		}
+		__finally
+		{
+			if (hModule != NULL)
+				FreeLibrary(hModule);
+		}
+		return Status;
+	}
+
 	/** Called when the authentication package has been specified in a call to LsaLogonUser.
 	This function authenticates a security principal's logon data.*/
-
 	NTSTATUS NTAPI LsaApLogonUserEx2(
 	  __in   PLSA_CLIENT_REQUEST ClientRequest,
 	  __in   SECURITY_LOGON_TYPE LogonType,
@@ -416,9 +477,8 @@ extern "C"
 		DWORD dwLen = MAX_COMPUTERNAME_LENGTH +1;
 		WCHAR ComputerName[MAX_COMPUTERNAME_LENGTH + 1];
 		DWORD TokenLength;
-		CRED_PROTECTION_TYPE protectionType;
-		WCHAR pwzPin[UNLEN];
-		WCHAR pwzPinUncrypted[UNLEN];
+		WCHAR pwzPin[UNLEN] = L"";
+		WCHAR pwzPinUncrypted[UNLEN] = L"";
 		DWORD dPinUncrypted = UNLEN;
 		LPWSTR pPin = pwzPin;
 		PCCERT_CONTEXT pCertContext = NULL;
@@ -462,18 +522,11 @@ extern "C"
 
 			memcpy_s(pwzPin,UNLEN*sizeof(WCHAR),pUnlockLogon->Logon.Pin.Buffer,pUnlockLogon->Logon.Pin.Length);
 			pwzPin[pUnlockLogon->Logon.Pin.Length/sizeof(WCHAR)] = 0;
-			if(CredIsProtectedW(pwzPin, &protectionType))
+			Status = TryToUnprotecThePin(pwzPin,pwzPinUncrypted, dPinUncrypted, &pPin);
+			if (Status != STATUS_SUCCESS)
 			{
-				if(CredUnprotected != protectionType)
-				{
-					if (!CredUnprotectW(FALSE,pwzPin,UNLEN,pwzPinUncrypted,&dPinUncrypted))
-					{
-						EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CredUnprotectW 0x%08x",GetLastError());
-						return STATUS_BAD_VALIDATION_CLASS;
-					}
-					pPin = pwzPinUncrypted;
-					//EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"PIN = %s",pwzPinUncrypted);
-				}
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"TryToUnprotecThePin 0x%08X", Status);
+				return Status;
 			}
 			// impersonate the client to beneficiate from the smart card redirection
 			// if enabled on terminal session
