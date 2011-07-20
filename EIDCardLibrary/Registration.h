@@ -25,3 +25,7 @@ void EIDConfigurationWizardDllRegister();
 void EIDConfigurationWizardDllUnRegister();
 void EnableLogging();
 void DisableLogging();
+BOOL IsLoggingEnabled();
+void EnableCrashDump(PTSTR szPath);
+void DisableCrashDump();
+BOOL IsCrashDumpEnabled();

@@ -17,8 +17,6 @@
 
 #include <windows.h>
 #include <tchar.h>
-#include <Wmistr.h>
-#include <Evntrace.h>
 
 #include "../EIDCardLibrary/EIDCardLibrary.h"
 #include "../EIDCardLibrary/guid.h"
@@ -163,6 +161,144 @@ void RemoveValueFromMultiSz(HKEY hKey, PTSTR szKey, PTSTR szValue, PTSTR szData)
 	RegCloseKey(hkResult);
 }
 
+//*************************************************************
+//
+//  RegDelnodeRecurse()
+//
+//  Purpose:    Deletes a registry key and all its subkeys / values.
+//
+//  Parameters: hKeyRoot    -   Root key
+//              lpSubKey    -   SubKey to delete
+//
+//  Return:     TRUE if successful.
+//              FALSE if an error occurs.
+//
+//*************************************************************
+
+BOOL RegDelnodeRecurse (HKEY hKeyRoot, LPTSTR lpSubKey)
+{
+    LPTSTR lpEnd;
+    LONG lResult;
+    DWORD dwSize;
+    TCHAR szName[MAX_PATH*2];
+    HKEY hKey;
+    FILETIME ftWrite;
+
+    // First, see if we can delete the key without having
+    // to recurse.
+
+    lResult = RegDeleteKey(hKeyRoot, lpSubKey);
+
+    if (lResult == ERROR_SUCCESS) 
+        return TRUE;
+
+    lResult = RegOpenKeyEx (hKeyRoot, lpSubKey, 0, KEY_READ, &hKey);
+
+    if (lResult != ERROR_SUCCESS) 
+    {
+        if (lResult == ERROR_FILE_NOT_FOUND) {
+            return TRUE;
+        } 
+        else {
+            return FALSE;
+        }
+    }
+
+    // Check for an ending slash and add one if it is missing.
+
+    lpEnd = lpSubKey + _tcsclen(lpSubKey);
+
+    if (*(lpEnd - 1) != TEXT('\\')) 
+    {
+        *lpEnd =  TEXT('\\');
+        lpEnd++;
+        *lpEnd =  TEXT('\0');
+    }
+
+    // Enumerate the keys
+
+    dwSize = MAX_PATH;
+    lResult = RegEnumKeyEx(hKey, 0, szName, &dwSize, NULL,
+                           NULL, NULL, &ftWrite);
+
+    if (lResult == ERROR_SUCCESS) 
+    {
+        do {
+
+            _tcscpy_s (lpEnd, MAX_PATH*2 - _tcsclen(lpSubKey), szName);
+
+            if (!RegDelnodeRecurse(hKeyRoot, lpSubKey)) {
+                break;
+            }
+
+            dwSize = MAX_PATH;
+
+            lResult = RegEnumKeyEx(hKey, 0, szName, &dwSize, NULL,
+                                   NULL, NULL, &ftWrite);
+
+        } while (lResult == ERROR_SUCCESS);
+    }
+
+    lpEnd--;
+    *lpEnd = TEXT('\0');
+
+    RegCloseKey (hKey);
+
+    // Try again to delete the key.
+
+    lResult = RegDeleteKey(hKeyRoot, lpSubKey);
+
+    if (lResult == ERROR_SUCCESS) 
+        return TRUE;
+
+    return FALSE;
+}
+
+//*************************************************************
+//
+//  RegDelnode()
+//
+//  Purpose:    Deletes a registry key and all its subkeys / values.
+//
+//  Parameters: hKeyRoot    -   Root key
+//              lpSubKey    -   SubKey to delete
+//
+//  Return:     TRUE if successful.
+//              FALSE if an error occurs.
+//
+//*************************************************************
+
+BOOL RegDelnode (HKEY hKeyRoot, LPTSTR lpSubKey)
+{
+    TCHAR szDelKey[MAX_PATH*2];
+
+    _tcscpy_s(szDelKey, MAX_PATH*2, lpSubKey);
+    return RegDelnodeRecurse(hKeyRoot, szDelKey);
+
+}
+
+// to compil with windows XP
+#if WINVER < 0x600
+
+LONG WINAPI RegSetKeyValueXP(
+  __in      HKEY hKey,
+  __in_opt  LPCTSTR lpSubKey,
+  __in_opt  LPCTSTR lpValueName,
+  __in      DWORD dwType,
+  __in_opt  LPCVOID lpData,
+  __in      DWORD cbData
+)
+{
+	HKEY hTempKey;
+	LONG lResult;
+	lResult = RegCreateKeyEx(hKey, lpSubKey, 0,NULL,0,KEY_WRITE, NULL,&hTempKey,NULL);
+	if (lResult != ERROR_SUCCESS) return lResult;
+	lResult = RegSetValueEx( hTempKey,lpValueName,0, dwType,  (PBYTE) lpData,cbData);
+	RegCloseKey(hKey);
+	return lResult;
+}
+#define RegSetKeyValue RegSetKeyValueXP
+#endif
 /** Installation and uninstallation routine
 */
 
@@ -210,10 +346,10 @@ BOOL LsaEIDRemoveAllStoredCredential();
 
 void EIDCredentialProviderDllUnRegister()
 {
-	RegDeleteTree(HKEY_CLASSES_ROOT, TEXT("CLSID\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"));
-	RegDeleteTree(HKEY_LOCAL_MACHINE, 
+	RegDelnode(HKEY_CLASSES_ROOT, TEXT("CLSID\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"));
+	RegDelnode(HKEY_LOCAL_MACHINE, 
 		TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Providers\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"));
-	RegDeleteTree(HKEY_LOCAL_MACHINE, 
+	RegDelnode(HKEY_LOCAL_MACHINE, 
 		TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Provider Filters\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"));
 	LsaEIDRemoveAllStoredCredential();
 }
@@ -255,77 +391,8 @@ void EIDConfigurationWizardDllRegister()
 
 void EIDConfigurationWizardDllUnRegister()
 {
-	RegDeleteTree(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ControlPanel\\NameSpace\\{F5D846B4-14B0-11DE-B23C-27A355D89593}"));
-	RegDeleteTree(HKEY_CLASSES_ROOT, TEXT("CLSID\\{F5D846B4-14B0-11DE-B23C-27A355D89593}"));
-}
-
-BOOL StartLogging()
-{
-	BOOL fReturn = FALSE;
-	TRACEHANDLE SessionHandle;
-	struct _Prop
-	{
-		EVENT_TRACE_PROPERTIES TraceProperties;
-		TCHAR LogFileName[1024];
-		TCHAR LoggerName[1024];
-	} Properties;
-	ULONG err;
-	__try
-	{
-		memset(&Properties, 0, sizeof(Properties));
-		Properties.TraceProperties.Wnode.BufferSize = sizeof(Properties);
-		Properties.TraceProperties.Wnode.Guid = CLSID_CEIDProvider;
-		Properties.TraceProperties.Wnode.Flags = WNODE_FLAG_TRACED_GUID;
-		Properties.TraceProperties.Wnode.ClientContext = 1;
-		Properties.TraceProperties.LogFileMode = 4864; 
-		Properties.TraceProperties.LogFileNameOffset = sizeof(EVENT_TRACE_PROPERTIES);
-		Properties.TraceProperties.LoggerNameOffset = sizeof(EVENT_TRACE_PROPERTIES) + 1024;
-		Properties.TraceProperties.MaximumFileSize = 8;
-		_tcscpy_s(Properties.LogFileName,1024,TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl"));
-		//_tcscpy_s(Properties.LoggerName,1024,TEXT("EIDCredentialProvider"));
-		DeleteFile(Properties.LogFileName);
-		err = StartTrace(&SessionHandle, TEXT("EIDCredentialProvider"), &(Properties.TraceProperties));
-		if (err != ERROR_SUCCESS)
-		{
-			MessageBoxWin32(err);
-			__leave;
-		}
-		err = EnableTraceEx(&CLSID_CEIDProvider,NULL,SessionHandle,TRUE,WINEVENT_LEVEL_VERBOSE,0,0,0,NULL);
-		if (err != ERROR_SUCCESS)
-		{
-			MessageBoxWin32(err);
-			__leave;
-		}
-		fReturn = TRUE;
-	}
-	__finally
-	{
-	}
-	return fReturn;
-}
-
-void StopLogging()
-{
-	LONG err;
-	struct _Prop
-	{
-		EVENT_TRACE_PROPERTIES TraceProperties;
-		TCHAR LogFileName[1024];
-		TCHAR LoggerName[1024];
-	} Properties;
-	memset(&Properties, 0, sizeof(Properties));
-	Properties.TraceProperties.Wnode.BufferSize = sizeof(Properties);
-	Properties.TraceProperties.Wnode.Guid = CLSID_CEIDProvider;
-	Properties.TraceProperties.Wnode.Flags = WNODE_FLAG_TRACED_GUID;
-	Properties.TraceProperties.LogFileMode = 4864; 
-	Properties.TraceProperties.LogFileNameOffset = sizeof(EVENT_TRACE_PROPERTIES);
-	Properties.TraceProperties.LoggerNameOffset = sizeof(EVENT_TRACE_PROPERTIES) + 1024 * sizeof(TCHAR);
-	Properties.TraceProperties.MaximumFileSize = 8;
-	err = ControlTrace(NULL, TEXT("EIDCredentialProvider"), &(Properties.TraceProperties),EVENT_TRACE_CONTROL_STOP);
-	if (err != ERROR_SUCCESS && err != 0x00001069)
-	{
-		MessageBoxWin32(err);
-	}
+	RegDelnode(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ControlPanel\\NameSpace\\{F5D846B4-14B0-11DE-B23C-27A355D89593}"));
+	RegDelnode(HKEY_CLASSES_ROOT, TEXT("CLSID\\{F5D846B4-14B0-11DE-B23C-27A355D89593}"));
 }
 
 void EnableLogging()
@@ -434,7 +501,107 @@ void EnableLogging()
 void DisableLogging()
 {
 	
-	LONG err = RegDeleteTree(HKEY_LOCAL_MACHINE, TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider"));
-	if (err != ERROR_SUCCESS) {MessageBoxWin32(err); return;}
+	BOOL fSuccess = RegDelnode(HKEY_LOCAL_MACHINE, TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider"));
+	if (!fSuccess) {MessageBoxWin32(GetLastError()); return;}
 	StopLogging();
+}
+
+BOOL IsLoggingEnabled()
+{
+	HKEY hkResult;
+	DWORD Status;
+	BOOL fReturn = FALSE;
+	Status=RegOpenKeyEx(HKEY_LOCAL_MACHINE,TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider"),0,KEY_READ|KEY_QUERY_VALUE|KEY_WRITE,&hkResult);
+	if (Status == ERROR_SUCCESS) {
+		fReturn = TRUE;
+		RegCloseKey(hkResult);
+	}
+	return fReturn;
+}
+
+BOOL Is64BitOS()
+{
+   BOOL bIs64BitOS = FALSE;
+
+   // We check if the OS is 64 Bit
+   typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS) (HANDLE, PBOOL); 
+
+   LPFN_ISWOW64PROCESS
+      fnIsWow64Process = (LPFN_ISWOW64PROCESS)GetProcAddress(GetModuleHandle(TEXT("kernel32")),"IsWow64Process");
+ 
+   if (NULL != fnIsWow64Process)
+   {
+      if (!fnIsWow64Process(GetCurrentProcess(),&bIs64BitOS))
+      {
+         //error
+      }
+   }
+   return bIs64BitOS;
+}
+
+void EnableCrashDump(PTSTR szPath)
+{
+	DWORD dwDumpType = 2;
+	DWORD dwFlag = 0;
+#if defined _M_IX86
+	if (Is64BitOS())
+	{
+		dwFlag = KEY_WOW64_64KEY;
+	}
+#endif
+	DWORD Status;
+	HKEY hkResult = 0;
+	__try
+	{
+		Status=RegCreateKeyEx(HKEY_LOCAL_MACHINE,TEXT("SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting\\LocalDumps\\lsass.exe"),
+			0,NULL,0,KEY_READ|KEY_QUERY_VALUE|KEY_WRITE|dwFlag,NULL,&hkResult,NULL);
+		if (Status != ERROR_SUCCESS) {MessageBoxWin32(Status); __leave;}
+		Status = RegSetValueEx(hkResult,TEXT("DumpFolder"),0,REG_SZ, (PBYTE) szPath,((DWORD)sizeof(TCHAR))*((DWORD)_tcslen(szPath)+1));
+		if (Status != ERROR_SUCCESS) {MessageBoxWin32(Status); __leave;}
+		Status = RegSetValueEx(hkResult,TEXT("DumpType"),0, REG_DWORD, (PBYTE)&dwDumpType,sizeof(dwDumpType));
+		if (Status != ERROR_SUCCESS) {MessageBoxWin32(Status); __leave;}
+	}
+	__finally
+	{
+		if (hkResult)
+			RegCloseKey(hkResult);
+	}
+}
+
+void DisableCrashDump()
+{
+	HKEY hkResult;
+	DWORD Status;
+	DWORD dwFlag = 0;
+#if defined _M_IX86
+	if (Is64BitOS())
+	{
+		dwFlag = KEY_WOW64_64KEY;
+	}
+#endif
+	Status=RegOpenKeyEx(HKEY_LOCAL_MACHINE,TEXT("SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting\\LocalDumps"),0,KEY_READ|KEY_QUERY_VALUE|KEY_WRITE|dwFlag,&hkResult);
+	if (Status == ERROR_SUCCESS) {
+		RegDeleteKey(hkResult, TEXT("lsass.exe"));
+		RegCloseKey(hkResult);
+	}
+}
+
+BOOL IsCrashDumpEnabled()
+{
+	HKEY hkResult;
+	DWORD Status;
+	DWORD dwFlag = 0;
+	BOOL fReturn = FALSE;
+#if defined _M_IX86
+	if (Is64BitOS())
+	{
+		dwFlag = KEY_WOW64_64KEY;
+	}
+#endif
+	Status=RegOpenKeyEx(HKEY_LOCAL_MACHINE,TEXT("SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting\\LocalDumps\\lsass.exe"),0,KEY_READ|KEY_QUERY_VALUE|KEY_WRITE|dwFlag,&hkResult);
+	if (Status == ERROR_SUCCESS) {
+		fReturn = TRUE;
+		RegCloseKey(hkResult);
+	}
+	return fReturn;
 }

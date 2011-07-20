@@ -875,7 +875,7 @@ BOOL CStoredCredentialManager::GetResponseFromCryptedChallenge(__in PBYTE pChall
 	DWORD dwPinLen = 0;
 	HCRYPTKEY hKey = NULL;
 	DWORD dwSize;
-	DWORD dwBlockLen;
+	DWORD dwBlockLen = 20000;
 	DWORD dwError = 0;
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
 	__try

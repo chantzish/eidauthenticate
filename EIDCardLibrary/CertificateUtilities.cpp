@@ -1241,9 +1241,17 @@ PCCERT_CONTEXT FindCertificateFromHashOnCard(PCRYPT_DATA_BLOB pCertInfo, PTSTR s
 					PROV_RSA_FULL,
 					CRYPT_SILENT))
 		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptGetUserKey 0x%08x",dwError);
-			__leave;
+			// for the spanish EID
+			if (!CryptAcquireContext(&HCryptProv,
+					NULL,
+					szProviderName,
+					PROV_RSA_FULL,
+					CRYPT_SILENT))
+			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireContext 0x%08x",dwError);
+				__leave;
+			}
 		}
 		DWORD dwFlags = CRYPT_FIRST;
 		/* Enumerate all the containers */
