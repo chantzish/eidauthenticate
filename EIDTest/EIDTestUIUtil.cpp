@@ -196,6 +196,18 @@ PCCERT_CONTEXT SelectCerts(__in LPCWSTR szReaderName,__in LPCWSTR szCardName,
 				)
 		{
 
+			if (szContainerName[0] == '\\' && szContainerName[0] == '\\')
+			{
+				dwContainerNameLen = sizeof(szContainerName);
+				if (!CryptGetProvParam(HMainCryptProv,
+					PP_CONTAINER,
+					(LPBYTE) szContainerName,
+					&dwContainerNameLen,
+					0))
+				{
+
+				}
+			}
 			// convert the container name to unicode
 			int wLen = MultiByteToWideChar(CP_ACP, 0, szContainerName, -1, NULL, 0);
 			LPWSTR szWideContainerName = (LPWSTR) EIDAlloc(wLen * sizeof(WCHAR));
