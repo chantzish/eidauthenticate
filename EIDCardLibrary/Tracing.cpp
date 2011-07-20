@@ -20,6 +20,8 @@
 #include <stdio.h>
 #include <Evntprov.h>
 #include <crtdbg.h>
+#include <Wmistr.h>
+#include <Evntrace.h>
 
 #define _CRTDBG_MAPALLOC
 #include <Dbghelp.h>
@@ -55,15 +57,97 @@ WCHAR Section[100];
 /**
  *  Display a messagebox giving an error code
  */
-void MessageBoxWin32Ex(DWORD status, LPCSTR szFile, DWORD dwLine) {
+void MessageBoxWin32Ex2(DWORD status, HWND hWnd, LPCSTR szFile, DWORD dwLine) {
 	LPVOID Error;
 	TCHAR szTitle[1024];
 	_stprintf_s(szTitle,ARRAYSIZE(szTitle),TEXT("%hs(%d)"),szFile, dwLine);
 	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_FROM_SYSTEM,
 		NULL,status,0,(LPTSTR)&Error,0,NULL);
-	MessageBox(NULL,(LPCTSTR)Error,szTitle ,MB_ICONASTERISK);
+	MessageBox(hWnd,(LPCTSTR)Error,szTitle ,MB_ICONASTERISK);
 	LocalFree(Error);
 }
+
+//special Windows XP workaround
+#if WINVER < 0x600
+typedef ULONG (NTAPI *EventRegisterFct) (
+  __in      LPCGUID ProviderId,
+  __in_opt  PENABLECALLBACK EnableCallback,
+  __in_opt  PVOID CallbackContext,
+  __out     PREGHANDLE RegHandle
+);
+
+typedef ULONG (NTAPI *EventUnregisterFct)(
+  __in  REGHANDLE RegHandle
+);
+
+typedef ULONG (NTAPI *EventWriteStringFct)(
+  __in  REGHANDLE RegHandle,
+  __in  UCHAR Level,
+  __in  ULONGLONG Keyword,
+  __in  PCWSTR String
+);
+
+typedef ULONG (NTAPI *EnableTraceExFct) (
+  __in      LPCGUID ProviderId,
+  __in_opt  LPCGUID SourceId,
+  __in      TRACEHANDLE TraceHandle,
+  __in      ULONG IsEnabled,
+  __in      UCHAR Level,
+  __in      ULONGLONG MatchAnyKeyword,
+  __in      ULONGLONG MatchAllKeyword,
+  __in      ULONG EnableProperty,
+  __in_opt  PEVENT_FILTER_DESCRIPTOR EnableFilterDesc
+);
+
+
+EventRegisterFct EventRegister = NULL;
+EventUnregisterFct EventUnregister = NULL;
+EventWriteStringFct EventWriteString = NULL;
+EnableTraceExFct EnableTraceEx = NULL;
+
+HMODULE hTracingLibrary = NULL;
+BOOL fCannotLoadLibrary = FALSE;
+
+void UnloadTracingLibrary()
+{
+	if (hTracingLibrary != NULL)
+	{
+		FreeLibrary(hTracingLibrary);
+		hTracingLibrary = NULL;
+	}
+	EventRegister = NULL;
+	EventUnregister = NULL;
+	EventWriteString = NULL;
+	EnableTraceEx = NULL;
+}
+
+BOOL LoadTracingLibrary()
+{
+	BOOL fReturn = FALSE;
+	if (hTracingLibrary) return TRUE;
+	if (fCannotLoadLibrary) return FALSE;
+	hTracingLibrary = LoadLibrary(TEXT("Advapi32.dll"));
+	if (hTracingLibrary)
+	{
+		EventRegister = (EventRegisterFct)GetProcAddress(hTracingLibrary, "EventRegister");
+		EventUnregister = (EventUnregisterFct)GetProcAddress(hTracingLibrary, "EventUnregister");
+		EventWriteString = (EventWriteStringFct)GetProcAddress(hTracingLibrary, "EventWriteString");
+		EnableTraceEx = (EnableTraceExFct)GetProcAddress(hTracingLibrary, "EnableTraceEx");
+		if (EventRegister && EventUnregister && EventWriteString && EnableTraceEx)
+		{
+			fReturn = TRUE;
+		}
+		else
+		{
+			fCannotLoadLibrary = TRUE;
+			UnloadTracingLibrary();
+		}
+	}
+	return fReturn;
+}
+
+
+#endif
 
 BOOL IsTracingEnabled = FALSE;
 
@@ -88,10 +172,16 @@ void NTAPI EnableCallback(
 
 void EIDCardLibraryTracingRegister() {
 	bFirst = FALSE;
+#if WINVER < 0x600
+	if (!LoadTracingLibrary()) return;
+#endif
 	EventRegister(&CLSID_CEIDProvider,EnableCallback,NULL,&hPub);
 }
 
 void EIDCardLibraryTracingUnRegister() {
+#if WINVER < 0x600
+	if (!LoadTracingLibrary()) return;
+#endif
 	EventUnregister(hPub);
 }
 
@@ -124,6 +214,10 @@ void EIDCardLibraryTraceEx(LPCSTR szFile, DWORD dwLine, LPCSTR szFunction, UCHAR
 	OutputDebugString(Buffer2);
 #endif
 	swprintf_s(Buffer2,356,L"%S(%d) : %s",szFunction,dwLine,Buffer);
+
+#if WINVER < 0x600
+	if (!LoadTracingLibrary()) return;
+#endif
 	EventWriteString(hPub,dwLevel,0,Buffer2);
 
 }
@@ -256,6 +350,77 @@ void EIDCardLibraryDumpMemoryEx(LPCSTR szFile, DWORD dwLine, LPCSTR szFunction, 
 				buffer[5],buffer[6],buffer[7],buffer[8],buffer[9]);
 		}
 	}
+}
 
 
+BOOL StartLogging()
+{
+	BOOL fReturn = FALSE;
+#if WINVER < 0x600
+	if (!LoadTracingLibrary()) return FALSE;
+#endif
+	TRACEHANDLE SessionHandle;
+	struct _Prop
+	{
+		EVENT_TRACE_PROPERTIES TraceProperties;
+		TCHAR LogFileName[1024];
+		TCHAR LoggerName[1024];
+	} Properties;
+	ULONG err;
+	__try
+	{
+		memset(&Properties, 0, sizeof(Properties));
+		Properties.TraceProperties.Wnode.BufferSize = sizeof(Properties);
+		Properties.TraceProperties.Wnode.Guid = CLSID_CEIDProvider;
+		Properties.TraceProperties.Wnode.Flags = WNODE_FLAG_TRACED_GUID;
+		Properties.TraceProperties.Wnode.ClientContext = 1;
+		Properties.TraceProperties.LogFileMode = 4864; 
+		Properties.TraceProperties.LogFileNameOffset = sizeof(EVENT_TRACE_PROPERTIES);
+		Properties.TraceProperties.LoggerNameOffset = sizeof(EVENT_TRACE_PROPERTIES) + 1024;
+		Properties.TraceProperties.MaximumFileSize = 8;
+		_tcscpy_s(Properties.LogFileName,1024,TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl"));
+		//_tcscpy_s(Properties.LoggerName,1024,TEXT("EIDCredentialProvider"));
+		DeleteFile(Properties.LogFileName);
+		err = StartTrace(&SessionHandle, TEXT("EIDCredentialProvider"), &(Properties.TraceProperties));
+		if (err != ERROR_SUCCESS)
+		{
+			MessageBoxWin32Ex2(err, NULL, __FILE__,__LINE__);
+			__leave;
+		}
+		err = EnableTraceEx(&CLSID_CEIDProvider,NULL,SessionHandle,TRUE,WINEVENT_LEVEL_VERBOSE,0,0,0,NULL);
+		if (err != ERROR_SUCCESS)
+		{
+			MessageBoxWin32Ex2(err, NULL, __FILE__,__LINE__);
+			__leave;
+		}
+		fReturn = TRUE;
+	}
+	__finally
+	{
+	}
+	return fReturn;
+}
+
+void StopLogging()
+{
+	LONG err;
+	struct _Prop
+	{
+		EVENT_TRACE_PROPERTIES TraceProperties;
+		TCHAR LogFileName[1024];
+		TCHAR LoggerName[1024];
+	} Properties;
+	memset(&Properties, 0, sizeof(Properties));
+	Properties.TraceProperties.Wnode.BufferSize = sizeof(Properties);
+	Properties.TraceProperties.Wnode.Guid = CLSID_CEIDProvider;
+	Properties.TraceProperties.Wnode.Flags = WNODE_FLAG_TRACED_GUID;
+	Properties.TraceProperties.LogFileMode = 4864; 
+	Properties.TraceProperties.LogFileNameOffset = sizeof(EVENT_TRACE_PROPERTIES);
+	Properties.TraceProperties.LoggerNameOffset = sizeof(EVENT_TRACE_PROPERTIES) + 1024 * sizeof(TCHAR);
+	Properties.TraceProperties.MaximumFileSize = 8;
+	err = ControlTrace(NULL, TEXT("EIDCredentialProvider"), &(Properties.TraceProperties),EVENT_TRACE_CONTROL_STOP);
+	if (err != ERROR_SUCCESS && err != 0x00001069)
+	{
+		MessageBoxWin32Ex2(err, NULL, __FILE__,__LINE__);
+	}
 }

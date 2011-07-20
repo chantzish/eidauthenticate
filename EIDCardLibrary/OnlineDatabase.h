@@ -1,3 +1,2 @@
-void TryToFindACSP(PTSTR szATR);
-void CommunicateTestOK();
-void CommunicateTestNotOK(DWORD dwErrorCode);
+BOOL CommunicateTestOK();
+BOOL CommunicateTestNotOK(DWORD dwErrorCode,PTSTR szEmail, PTSTR szTracingFile);

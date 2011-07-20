@@ -1,20 +1,92 @@
 #include <Windows.h>
 #include <tchar.h>
 #include <Winhttp.h>
+
 #include "CertificateUtilities.h"
 #include "Tracing.h"
 
 #pragma comment(lib,"Version.lib")
 #pragma comment(lib,"Winhttp.lib")
+#pragma comment(lib,"Wininet.lib")
 
-void TryToFindACSP(PTSTR szATR)
+extern "C"
 {
-
+	// wininet and winhttp conflicts
+	BOOLAPI
+	InternetCanonicalizeUrlA(
+		__in LPCSTR lpszUrl,
+		__out_ecount(*lpdwBufferLength) LPSTR lpszBuffer,
+		__inout LPDWORD lpdwBufferLength,
+		__in DWORD dwFlags
+		);
+	BOOLAPI
+	InternetCanonicalizeUrlW(
+		__in LPCWSTR lpszUrl,
+		__out_ecount(*lpdwBufferLength) LPWSTR lpszBuffer,
+		__inout LPDWORD lpdwBufferLength,
+		__in DWORD dwFlags
+		);
+	#ifdef UNICODE
+	#define InternetCanonicalizeUrl  InternetCanonicalizeUrlW
+	#else
+	#define InternetCanonicalizeUrl  InternetCanonicalizeUrlA
+	#endif // !UNICODE
 }
 
-
-void CommunicateTestNotOK(DWORD dwErrorCode)
+BOOL PostDataToTheSupportSite(PTSTR szPostData)
 {
+	HINTERNET hSession = NULL;
+	HINTERNET hConnect = NULL;
+	HINTERNET hRequest = NULL;
+	DWORD dwError = 0;
+	BOOL fReturn = FALSE;
+	__try
+	{ 
+		hSession = WinHttpOpen(TEXT("EIDAuthenticate"), 
+				WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, 
+				WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+		if (!hSession)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed WinHttpOpen 0x%08X",dwError);
+			__leave;
+		}
+		hConnect = WinHttpConnect(hSession, TEXT("www.mysmartlogon.com"),INTERNET_DEFAULT_PORT, 0);
+		if (!hConnect)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed WinHttpConnect 0x%08X",dwError);
+			__leave;
+		}
+		// WINHTTP_FLAG_SECURE
+		hRequest = WinHttpOpenRequest(hConnect,TEXT("POST"),TEXT("/support/submitReport.aspx"),NULL,WINHTTP_NO_REFERER,WINHTTP_DEFAULT_ACCEPT_TYPES,0);
+		if (!hRequest)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed WinHttpOpenRequest 0x%08X",dwError);
+			__leave;
+		}
+		LPCTSTR additionalHeaders = TEXT("Content-Type: application/x-www-form-urlencoded\r\n");
+		if (!WinHttpSendRequest(hRequest, additionalHeaders, (DWORD) -1, (LPVOID)szPostData, (DWORD) (_tcslen(szPostData)*sizeof(TCHAR)), (DWORD) _tcslen(szPostData)*sizeof(TCHAR), 0))
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed WinHttpSendRequest 0x%08X",dwError);
+			__leave;
+		}
+		fReturn = TRUE;
+	}
+	__finally
+	{
+		if (hSession)
+			WinHttpCloseHandle(hSession);
+	}
+	SetLastError(dwError);
+	return fReturn;
+}
+
+BOOL CommunicateTestNotOK(DWORD dwErrorCode, PTSTR szEmail, PTSTR szTracingFile)
+{
+	BOOL fReturn = FALSE;
 	TCHAR szReaderName[256] = TEXT("");
 	TCHAR szCardName[256] = TEXT("");
 	TCHAR szProviderName[256] = TEXT("");
@@ -27,9 +99,11 @@ void CommunicateTestNotOK(DWORD dwErrorCode)
 	TCHAR szCompany[256] = TEXT("");
 	DWORD dwProviderNameLen = ARRAYSIZE(szProviderName);
 	DWORD dwSize;
+	TCHAR szPostData[100000]= TEXT("");
+
 	if (!AskForCard(szReaderName,256,szCardName,256))
 	{
-		return;
+		return FALSE;
 	}
 	SchGetProviderNameFromCardName(szCardName, szProviderName, &dwProviderNameLen);
 	HKEY hRegKeyCalais, hRegKeyCSP, hRegKey;
@@ -144,52 +218,21 @@ void CommunicateTestNotOK(DWORD dwErrorCode)
 	GetNativeSystemInfo(&SystemInfo);
 	_stprintf_s(szHardwareInfo, ARRAYSIZE(szHardwareInfo), TEXT("%u;%u;%u"), 
       SystemInfo.dwNumberOfProcessors, SystemInfo.dwProcessorType, SystemInfo.wProcessorRevision);
+
+	dwSize = ARRAYSIZE(szPostData) - (DWORD) _tcslen(szPostData) -1;
+	_tcscat_s(szPostData, dwSize, TEXT("hardwareInfo="));
+	dwSize = ARRAYSIZE(szPostData) - (DWORD) _tcslen(szPostData) -1;
+	InternetCanonicalizeUrl(szHardwareInfo,szPostData + _tcslen(szPostData), &dwSize,0);
+	dwSize = ARRAYSIZE(szPostData) - (DWORD) _tcslen(szPostData) -1;
+	_tcscat_s(szPostData, dwSize, TEXT("&osInfo="));
+	dwSize = ARRAYSIZE(szPostData) - (DWORD) _tcslen(szPostData) -1;
+	InternetCanonicalizeUrl(szOsInfo,szPostData + _tcslen(szPostData), &dwSize,0);
+	_tcscat_s(szPostData, ARRAYSIZE(szPostData), TEXT("\r\n"));
+	PostDataToTheSupportSite(szPostData);
+	return fReturn;
 }
 
-void CommunicateTestOK()
+BOOL CommunicateTestOK()
 {
-	CommunicateTestNotOK(0);
-}
-
-void Communicate()
-{
-	HINTERNET hSession = NULL;
-	HINTERNET hConnect = NULL;
-	HINTERNET hRequest = NULL;
-	DWORD dwError;
-	__try
-	{ 
-		hSession = WinHttpOpen(TEXT("EIDAuthenticate"), 
-				WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, 
-				WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
-		if (!hSession)
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed WinHttpOpen 0x%08X",dwError);
-			__leave;
-		}
-		hConnect = WinHttpConnect(hSession, TEXT("www.mysmartlogon.com"),INTERNET_DEFAULT_PORT, 0);
-		if (!hConnect)
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed WinHttpConnect 0x%08X",dwError);
-			__leave;
-		}
-		hRequest = WinHttpOpenRequest(hConnect,TEXT("POST"),TEXT("/EID/toto.aspx"),NULL,WINHTTP_NO_REFERER,WINHTTP_DEFAULT_ACCEPT_TYPES,WINHTTP_FLAG_SECURE);
-		if (!hRequest)
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed WinHttpOpenRequest 0x%08X",dwError);
-			__leave;
-		}
-		LPCTSTR additionalHeaders = TEXT("Content-Type: application/x-www-form-urlencoded\r\n");
-		DWORD hLen   = -1;
-		//WinHttpSendRequest(hRequest, additionalHeaders, -1, (LPVOID)params, pLen, pLen, 0);
-			//WinHttpWriteData
-	}
-	__finally
-	{
-		if (hSession)
-			WinHttpCloseHandle(hSession);
-	}
+	return CommunicateTestNotOK(0, NULL, NULL);
 }

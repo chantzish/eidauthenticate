@@ -53,8 +53,12 @@ void EIDCardLibraryDumpMemoryEx(LPCSTR szFile, DWORD dwLine, LPCSTR szFunction, 
 /**
  *  Display a messagebox giving an error code
  */
-void MessageBoxWin32Ex(DWORD status, LPCSTR szFile, DWORD dwLine);
-#define MessageBoxWin32(status) MessageBoxWin32Ex (status, __FILE__,__LINE__);
+void MessageBoxWin32Ex2(DWORD status, HWND hWnd, LPCSTR szFile, DWORD dwLine);
+#define MessageBoxWin32(status) MessageBoxWin32Ex2 (status, NULL, __FILE__,__LINE__);
+#define MessageBoxWin32Ex(status, hwnd ) MessageBoxWin32Ex2 (status, hwnd, __FILE__,__LINE__);
 
 LONG EIDExceptionHandler( PEXCEPTION_POINTERS pExceptPtrs );
 LONG EIDExceptionHandlerDebug( PEXCEPTION_POINTERS pExceptPtrs, BOOL fMustCrash );
+
+BOOL StartLogging();
+void StopLogging();

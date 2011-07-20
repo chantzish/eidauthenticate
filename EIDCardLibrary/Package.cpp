@@ -347,7 +347,7 @@ HRESULT RetrieveNegotiateAuthPackage(ULONG * pulAuthPackage)
 
         ULONG ulAuthPackage;
         LSA_STRING lsaszPackageName;
-		LsaInitString(&lsaszPackageName, AUTHENTICATIONPACKAGENAME);
+		LsaInitString(&lsaszPackageName, "Negotiate");//AUTHENTICATIONPACKAGENAME);
 
         status = LsaLookupAuthenticationPackage(hLsa, &lsaszPackageName, &ulAuthPackage);
         if (SUCCEEDED(HRESULT_FROM_NT(status)))
@@ -766,7 +766,14 @@ BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPasswo
             status = LsaCallAuthenticationPackage(hLsa, ulAuthPackage, pBuffer, dwSize, NULL, NULL, NULL);
 			if (status == STATUS_SUCCESS)
 			{
-				fReturn = TRUE;
+				if (pBuffer->dwError != 0)
+				{
+					// fail if the registration doesn't succeed
+				}
+				else
+				{
+					fReturn = TRUE;
+				}
 			}
 			else
 			{
@@ -835,8 +842,15 @@ DWORD LsaEIDGetRIDFromStoredCredential(__in PCCERT_CONTEXT pContext)
             status = LsaCallAuthenticationPackage(hLsa, ulAuthPackage, pBuffer, dwSize, NULL, NULL, NULL);
 			if (status == STATUS_SUCCESS)
 			{
-				dwRid = pBuffer->dwRid;
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Rid = 0x%x",dwRid);
+				if (pBuffer->dwError != 0)
+				{
+					// fail if the registration doesn't succeed
+				}
+				else
+				{
+					dwRid = pBuffer->dwRid;
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Rid = 0x%x",dwRid);
+				}
 			}
 			else
 			{
@@ -931,7 +945,15 @@ BOOL LsaEIDRemoveStoredCredential(__in_opt PWSTR szUsername)
             status = LsaCallAuthenticationPackage(hLsa, ulAuthPackage, pBuffer, dwSize, NULL, NULL, NULL);
 			if (status == STATUS_SUCCESS)
 			{
-				fReturn = TRUE;
+				if (pBuffer->dwError != 0)
+				{
+					// fail if the registration doesn't succeed
+					dwError = pBuffer->dwError;
+				}
+				else
+				{
+					fReturn = TRUE;
+				}
 			}
 			else
 			{
@@ -1001,7 +1023,15 @@ BOOL LsaEIDRemoveAllStoredCredential()
             status = LsaCallAuthenticationPackage(hLsa, ulAuthPackage, pBuffer, dwSize, NULL, NULL, NULL);
 			if (status == STATUS_SUCCESS)
 			{
-				fReturn = TRUE;
+				if (pBuffer->dwError != 0)
+				{
+					// fail if the registration doesn't succeed
+					dwError = pBuffer->dwError;
+				}
+				else
+				{
+					fReturn = TRUE;
+				}
 			}
 			else
 			{
@@ -1072,7 +1102,11 @@ BOOL LsaEIDHasStoredCredential(__in_opt PWSTR szUsername)
             status = LsaCallAuthenticationPackage(hLsa, ulAuthPackage, pBuffer, dwSize, NULL, NULL, NULL);
 			if (status == STATUS_SUCCESS)
 			{
-				fReturn = TRUE;
+				status = pBuffer->dwError;
+				if (status == 0)
+				{
+					fReturn = TRUE;
+				}
 			}
 			else
 			{
@@ -1090,6 +1124,8 @@ BOOL LsaEIDHasStoredCredential(__in_opt PWSTR szUsername)
 	}
 	LsaClose(hLsa);
 	EIDFree(pBuffer);
+	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"return %d with error 0x%08x", fReturn, status);
+	SetLastError(status);
 	return fReturn;
 }
 //

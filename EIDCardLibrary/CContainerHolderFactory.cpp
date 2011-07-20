@@ -112,8 +112,18 @@ BOOL CContainerHolderFactory<T>::ConnectNotificationGeneric(__in LPCTSTR szReade
 				CRYPT_SILENT);
 	if (!bStatus)
 	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireContext 0x%08x",GetLastError());
-		return FALSE;
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireContext 1 0x%08x",GetLastError());
+		// for the spanish EID
+		bStatus = CryptAcquireContext(&HCryptProv,
+				NULL,
+				szProviderName,
+				PROV_RSA_FULL,
+				CRYPT_SILENT);
+		if (!bStatus)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireContext 2 0x%08x",GetLastError());
+			return FALSE;
+		}
 	}
 	DWORD dwFlags = CRYPT_FIRST;
 	/* Enumerate all the containers */

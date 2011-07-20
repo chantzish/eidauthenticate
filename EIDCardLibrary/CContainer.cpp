@@ -128,11 +128,14 @@ PTSTR CContainer::GetUserName()
 
 DWORD CContainer::GetRid()
 {
+	DWORD dwError = 0;
 	if (_dwRid == 0)
 	{
 		_dwRid = LsaEIDGetRIDFromStoredCredential(_pCertContext);
+		dwError = GetLastError();
 		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"_dwRid set to 0x%x",_dwRid);
 	}
+	SetLastError(dwError);
 	return _dwRid;
 }
 
