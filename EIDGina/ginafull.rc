@@ -1,0 +1,204 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// Anglais (États-Unis) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_LOGON DIALOGEX 0, 0, 275, 127
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION
+CAPTION "Log On to Windows"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    EDITTEXT        IDC_NAME,56,67,157,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_PASSWORD,56,87,157,14,ES_PASSWORD | ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,55,108,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,109,108,50,14
+    LTEXT           "&Password:",IDC_STATIC,11,90,34,8
+    LTEXT           "&User Name:",IDC_STATIC,11,70,38,8
+    PUSHBUTTON      "&Shutdown",IDC_SHUTDOWN,163,108,50,14
+    CONTROL         114,IDC_STATIC,"Static",SS_BITMAP,0,0,275,54
+    CONTROL         115,IDC_STATIC,"Static",SS_BITMAP,0,54,275,3
+END
+
+IDD_LOGONPIN DIALOGEX 0, 0, 275, 109
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION
+CAPTION "Log On to Windows"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    EDITTEXT        IDC_PIN,56,67,157,14,ES_PASSWORD | ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,108,88,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,162,88,50,14
+    LTEXT           "&Pin:",IDC_STATIC,11,70,38,8
+    CONTROL         114,IDC_STATIC,"Static",SS_BITMAP,0,0,275,54
+    CONTROL         115,IDC_STATIC,"Static",SS_BITMAP,0,54,275,3
+END
+
+IDD_OPTIONS DIALOGEX 0, 0, 275, 163
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION
+CAPTION "Windows Security"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    PUSHBUTTON      "&Change Password...",IDC_CHANGEPASS,5,143,80,14
+    PUSHBUTTON      "&Task Manager",IDC_TASKMAN,93,143,80,14
+    PUSHBUTTON      "Cancel",IDCANCEL,181,143,80,14
+    LTEXT           "You are logged in as %s.",IDC_NAME,19,73,224,8
+    LTEXT           "Use the Task Manager to close an appliction that is not responding.",IDC_STATIC,11,111,224,8
+    CONTROL         114,IDC_STATIC,"Static",SS_BITMAP,0,0,275,54
+    CONTROL         115,IDC_STATIC,"Static",SS_BITMAP,0,54,275,3
+    GROUPBOX        "Logon information",IDC_STATIC,8,60,261,43
+    LTEXT           "Logon date : %s",IDC_NAME2,19,86,224,8
+    PUSHBUTTON      "Loc&k Computer",IDC_LOCK,6,126,80,14
+    PUSHBUTTON      "&Log Off...",IDC_LOGOFF,94,126,80,14
+    PUSHBUTTON      "&Shut Down",IDC_SHUTDOWN,181,126,80,14
+END
+
+IDD_SASNOTICE DIALOGEX 0, 0, 275, 116
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION
+CAPTION "Welcome to Windows"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    ICON            IDI_WINKEYBD,IDC_STATIC,12,63,20,20,0,WS_EX_TRANSPARENT
+    LTEXT           "Press Ctrl-Alt-Delete to begin.",IDC_STATIC,39,70,201,8,0,WS_EX_TRANSPARENT
+    LTEXT           "Requiring this key combination at startup helps keep your computer secure.",IDC_STATIC,9,91,247,8,0,WS_EX_TRANSPARENT
+    CONTROL         114,IDC_STATIC,"Static",SS_BITMAP,0,0,275,54
+    CONTROL         115,IDC_STATIC,"Static",SS_BITMAP,0,54,275,3
+END
+
+IDD_LOCKEDNOTICE DIALOGEX 0, 0, 275, 125
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION
+CAPTION "Unlock Computer"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    ICON            IDI_COMPUTERLOCKED,IDC_STATIC,9,64,21,20
+    LTEXT           "This computer is in use and has been locked.",IDC_STATIC,38,65,222,8
+    LTEXT           "Only %s or an administrator can unlock this computer.",IDC_NAME,38,82,222,21
+    CONTROL         114,IDC_STATIC,"Static",SS_BITMAP,0,0,275,54
+    CONTROL         115,IDC_STATIC,"Static",SS_BITMAP,0,54,275,3
+END
+
+IDD_STATUS DIALOGEX 0, 0, 275, 88
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION
+CAPTION "WinLogon Status"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    CTEXT           "WinLogon Message",IDC_MESSAGE,0,69,270,19
+    CONTROL         114,IDC_STATIC,"Static",SS_BITMAP,0,0,275,54
+    CONTROL         115,IDC_STATIC,"Static",SS_BITMAP,0,54,275,3
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_WINKEYBD            ICON                    "images\\windowsKeyboard.ico"
+IDI_COMPUTERLOCKED      ICON                    "images\\computerLocked.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_WINDOWSLOGO         BITMAP                  "images\\windowslogo.bmp"
+IDB_PROGRESS            BITMAP                  "images\\progress.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_LOGON, DIALOG
+    BEGIN
+    END
+
+    IDD_LOGONPIN, DIALOG
+    BEGIN
+    END
+
+    IDD_OPTIONS, DIALOG
+    BEGIN
+        BOTTOMMARGIN, 162
+    END
+
+    IDD_SASNOTICE, DIALOG
+    BEGIN
+        BOTTOMMARGIN, 106
+    END
+
+    IDD_LOCKEDNOTICE, DIALOG
+    BEGIN
+    END
+
+    IDD_STATUS, DIALOG
+    BEGIN
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+#endif    // Anglais (États-Unis) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
