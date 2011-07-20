@@ -48,7 +48,7 @@ INT_PTR CALLBACK	WndProc_01MAIN(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
 				{
 					if (!LsaEIDRemoveStoredCredential(NULL))
 					{
-						MessageBoxWin32(GetLastError());
+						MessageBoxWin32Ex(GetLastError(),hWnd);
 						break;
 					}
 					// delete

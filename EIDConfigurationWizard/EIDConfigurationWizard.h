@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by EIDConfigurationWizard.rc
+// Used by EIDConfigurationWizard_fr.rc
 //
 #define IDS_CERT_TRUST_IS_NOT_VALID_FOR_USAGE 2
 #define IDS_CERT_TRUST_IS_UNTRUSTED_ROOT 3
@@ -90,6 +90,7 @@
 #define IDC_02NEW                       116
 #define IDC_03_CREATE                   117
 #define IDC_EDIT1                       118
+#define IDC_07EMAIL                     118
 #define IDC_LSV1                        119
 #define IDC_03CERTIFICATEPANEL          120
 #define IDC_05TEST                      121
@@ -120,6 +121,7 @@
 #define IDC_FORCEDISABLE                145
 #define IDC_FORCEENABLE                 146
 #define IDC_WIZARDERROR                 147
+#define IDC_07SENDREPORT                148
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -128,7 +130,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        72
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         148
+#define _APS_NEXT_CONTROL_VALUE         149
 #define _APS_NEXT_SYMED_VALUE           241
 #endif
 #endif

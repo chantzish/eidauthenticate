@@ -14,12 +14,12 @@ PCCERT_CONTEXT pRootCertificate = NULL;
 BOOL SelectFile(HWND hWnd)
 {
 	// select file to open
-	IFileDialog *pfd;
 	PWSTR szFileName = NULL;
 	TCHAR szSpecContainer[256] = TEXT("");
 	TCHAR szSpecAll[256] = TEXT("");
 	LoadString(g_hinst,IDS_03CONTAINERFILES,szSpecContainer,ARRAYSIZE(szSpecContainer));
 	LoadString(g_hinst,IDS_03ALLFILES,szSpecAll,ARRAYSIZE(szSpecAll));
+	/*IFileDialog *pfd;
 	COMDLG_FILTERSPEC rgSpec[] =
 	{ 
 		{ szSpecContainer, L"*.pfx;*.p12" },
@@ -61,8 +61,31 @@ BOOL SelectFile(HWND hWnd)
         }
         pfd->Release();
     }
-    return SUCCEEDED(hr);
-
+    return SUCCEEDED(hr);*/
+	OPENFILENAME ofn;
+	TCHAR szFile[MAX_PATH], szFilter[256];
+	_stprintf_s(szFilter, 256, TEXT("%s\0*.pfx;*.p12\0%s\0*.*\0"),szSpecContainer,szSpecAll);
+	ZeroMemory(&ofn, sizeof(ofn));
+	ofn.lStructSize = sizeof(ofn);
+	ofn.hwndOwner = hWnd;
+	ofn.lpstrFile = szFile;
+	ofn.lpstrFile[0] = '\0';
+	ofn.nMaxFile = sizeof(szFile);
+	ofn.lpstrFilter = szFilter;
+	ofn.nFilterIndex = 1;
+	ofn.lpstrFileTitle = NULL;
+	ofn.nMaxFileTitle = 0;
+	ofn.lpstrInitialDir = NULL;
+	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+	if (GetOpenFileName(&ofn)==TRUE) 
+	{
+		SetWindowText(GetDlgItem(hWnd,IDC_03FILENAME),szFileName);
+		CheckDlgButton(hWnd,IDC_03IMPORT,BST_CHECKED);
+		CheckDlgButton(hWnd,IDC_03USETHIS,BST_UNCHECKED);
+		CheckDlgButton(hWnd,IDC_03_CREATE,BST_UNCHECKED);
+		return TRUE;
+	}
+	return FALSE;
 }
 
 BOOL CreateRootCertificate()
@@ -196,7 +219,7 @@ INT_PTR CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 					// delete all data
 					if (!ClearCard(szReader, szCard))
 					{
-						MessageBoxWin32(GetLastError());
+						MessageBoxWin32Ex(GetLastError(),hWnd);
 						SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
 						return TRUE;
 					}
@@ -213,7 +236,7 @@ INT_PTR CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 						}
 						else
 						{
-							MessageBoxWin32(GetLastError());
+							MessageBoxWin32Ex(GetLastError(),hWnd);
 							SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
 							return TRUE;
 						}
@@ -230,7 +253,7 @@ INT_PTR CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 					}
 					if (!CreateSmartCardCertificate(pRootCertificate, szReader, szCard))
 					{
-						MessageBoxWin32(GetLastError());
+						MessageBoxWin32Ex(GetLastError(),hWnd);
 						SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
 						return TRUE;
 					}
@@ -243,7 +266,7 @@ INT_PTR CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 					GetWindowText(GetDlgItem(hWnd,IDC_03IMPORTPASSWORD),szPassword,ARRAYSIZE(szPassword));
 					if (!ImportFileToSmartCard(szFileName, szPassword, szReader, szCard))
 					{
-						MessageBoxWin32(GetLastError());
+						MessageBoxWin32Ex(GetLastError(),hWnd);
 						SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
 						return TRUE;
 					}
