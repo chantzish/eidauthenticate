@@ -1,5 +1,6 @@
 #include <Windows.h>
 #include <tchar.h>
+#include <stdio.h>
 #include <Winhttp.h>
 
 #include "CertificateUtilities.h"
@@ -33,7 +34,7 @@ extern "C"
 	#endif // !UNICODE
 }
 
-BOOL PostDataToTheSupportSite(PTSTR szPostData)
+BOOL PostDataToTheSupportSite(PSTR szPostData)
 {
 	HINTERNET hSession = NULL;
 	HINTERNET hConnect = NULL;
@@ -67,7 +68,7 @@ BOOL PostDataToTheSupportSite(PTSTR szPostData)
 			__leave;
 		}
 		LPCTSTR additionalHeaders = TEXT("Content-Type: application/x-www-form-urlencoded\r\n");
-		if (!WinHttpSendRequest(hRequest, additionalHeaders, (DWORD) -1, (LPVOID)szPostData, (DWORD) (_tcslen(szPostData)*sizeof(TCHAR)), (DWORD) _tcslen(szPostData)*sizeof(TCHAR), 0))
+		if (!WinHttpSendRequest(hRequest, additionalHeaders, (DWORD) -1, (LPVOID)szPostData, (DWORD) strlen(szPostData), (DWORD) strlen(szPostData), 0))
 		{
 			dwError = GetLastError();
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed WinHttpSendRequest 0x%08X",dwError);
@@ -84,6 +85,87 @@ BOOL PostDataToTheSupportSite(PTSTR szPostData)
 	return fReturn;
 }
 
+
+void UrlEncoder(__inout PCHAR *ppPointer, __inout PDWORD pdwRemainingSize, __in PTSTR szInput, _In_opt_ BOOL DoNotEscape = FALSE)
+{
+	if (!szInput) return;
+	while(*szInput != L'\0')
+	{
+		if (
+			(
+				((*szInput >= L'A' && *szInput <= L'Z') 
+					|| (*szInput >= L'a' && *szInput <= L'z')
+					|| (*szInput >= L'0' && *szInput <= L'9')
+					|| (*szInput == L'-') || (*szInput == L'_') || (*szInput == L'.') || (*szInput == L'~'))
+				|| DoNotEscape) 
+			&& *pdwRemainingSize > 1)
+		{
+			**ppPointer = (CHAR)*szInput;
+			(*ppPointer)++;
+			(*pdwRemainingSize)--;
+		}
+		else if (*szInput < 256 && *pdwRemainingSize > 3)
+		{
+			sprintf_s(*ppPointer, *pdwRemainingSize, "%%%02X",*szInput);
+			(*ppPointer)+=3;
+			(*pdwRemainingSize)-=3;
+		}
+		else if (*pdwRemainingSize > 6)
+		{
+			sprintf_s(*ppPointer, *pdwRemainingSize, "%%u%04X",*szInput);
+			(*ppPointer)+=6;
+			(*pdwRemainingSize)-=6;
+		}
+		szInput++;
+	}
+	**ppPointer = '\0';
+}
+
+void UrlLogFileEncoder(__inout PCHAR *ppPointer, __inout PDWORD pdwRemainingSize, __in PTSTR szTracingFile)
+{
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	BYTE pbBuffer[256];
+	BOOL bResult;
+	DWORD dwByteRead;
+	__try
+	{
+		hFile = CreateFile(szTracingFile, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hFile == INVALID_HANDLE_VALUE)
+		{
+			__leave;
+		}
+		bResult = ReadFile(hFile, pbBuffer, ARRAYSIZE(pbBuffer), &dwByteRead, NULL);
+		while (! (bResult &&  dwByteRead == 0) )
+		{
+			for(DWORD i = 0; i< dwByteRead; i++)
+			{
+				if (((pbBuffer[i] >= L'A' && pbBuffer[i] <= L'Z') 
+							|| (pbBuffer[i] >= L'a' && pbBuffer[i] <= L'z')
+							|| (pbBuffer[i] >= L'0' && pbBuffer[i] <= L'9')
+							|| (pbBuffer[i] == L'-') || (pbBuffer[i] == L'_') || (pbBuffer[i] == L'.') || (pbBuffer[i] == L'~'))
+					&& *pdwRemainingSize > 1)
+				{
+					**ppPointer = (CHAR)pbBuffer[i];
+					(*ppPointer)++;
+					(*pdwRemainingSize)--;
+				}
+				else if (*pdwRemainingSize > 3)
+				{
+					sprintf_s(*ppPointer, *pdwRemainingSize, "%%%02X",pbBuffer[i]);
+					(*ppPointer)+=3;
+					(*pdwRemainingSize)-=3;
+				}
+			}
+			bResult = ReadFile(hFile, pbBuffer, ARRAYSIZE(pbBuffer), &dwByteRead, NULL);
+		}
+	}
+	__finally
+	{
+		if (hFile != INVALID_HANDLE_VALUE)
+			CloseHandle(hFile);
+	}
+	**ppPointer = '\0';
+}
 BOOL CommunicateTestNotOK(DWORD dwErrorCode, PTSTR szEmail, PTSTR szTracingFile)
 {
 	BOOL fReturn = FALSE;
@@ -99,7 +181,9 @@ BOOL CommunicateTestNotOK(DWORD dwErrorCode, PTSTR szEmail, PTSTR szTracingFile)
 	TCHAR szCompany[256] = TEXT("");
 	DWORD dwProviderNameLen = ARRAYSIZE(szProviderName);
 	DWORD dwSize;
-	TCHAR szPostData[100000]= TEXT("");
+	CHAR szPostData[1000000]= "";
+	DWORD dwRemainingSize = ARRAYSIZE(szPostData);
+	PCHAR ppPointer = szPostData;
 
 	if (!AskForCard(szReaderName,256,szCardName,256))
 	{
@@ -219,16 +303,41 @@ BOOL CommunicateTestNotOK(DWORD dwErrorCode, PTSTR szEmail, PTSTR szTracingFile)
 	_stprintf_s(szHardwareInfo, ARRAYSIZE(szHardwareInfo), TEXT("%u;%u;%u"), 
       SystemInfo.dwNumberOfProcessors, SystemInfo.dwProcessorType, SystemInfo.wProcessorRevision);
 
-	dwSize = ARRAYSIZE(szPostData) - (DWORD) _tcslen(szPostData) -1;
-	_tcscat_s(szPostData, dwSize, TEXT("hardwareInfo="));
-	dwSize = ARRAYSIZE(szPostData) - (DWORD) _tcslen(szPostData) -1;
-	InternetCanonicalizeUrl(szHardwareInfo,szPostData + _tcslen(szPostData), &dwSize,0);
-	dwSize = ARRAYSIZE(szPostData) - (DWORD) _tcslen(szPostData) -1;
-	_tcscat_s(szPostData, dwSize, TEXT("&osInfo="));
-	dwSize = ARRAYSIZE(szPostData) - (DWORD) _tcslen(szPostData) -1;
-	InternetCanonicalizeUrl(szOsInfo,szPostData + _tcslen(szPostData), &dwSize,0);
-	_tcscat_s(szPostData, ARRAYSIZE(szPostData), TEXT("\r\n"));
-	PostDataToTheSupportSite(szPostData);
+	UrlEncoder(&ppPointer, &dwRemainingSize, TEXT("hardwareInfo="), TRUE);
+	UrlEncoder(&ppPointer, &dwRemainingSize, szHardwareInfo);
+	UrlEncoder(&ppPointer, &dwRemainingSize, TEXT("&osInfo="), TRUE);
+	UrlEncoder(&ppPointer, &dwRemainingSize, szOsInfo);
+	UrlEncoder(&ppPointer, &dwRemainingSize, TEXT("&ReaderName="), TRUE);
+	UrlEncoder(&ppPointer, &dwRemainingSize, szReaderName);
+	UrlEncoder(&ppPointer, &dwRemainingSize, TEXT("&CardName="), TRUE);
+	UrlEncoder(&ppPointer, &dwRemainingSize, szCardName);
+	UrlEncoder(&ppPointer, &dwRemainingSize, TEXT("&ProviderName="), TRUE);
+	UrlEncoder(&ppPointer, &dwRemainingSize, szProviderName);
+	UrlEncoder(&ppPointer, &dwRemainingSize, TEXT("&ATR="), TRUE);
+	UrlEncoder(&ppPointer, &dwRemainingSize, szATR);
+	UrlEncoder(&ppPointer, &dwRemainingSize, TEXT("&ATRMask="), TRUE);
+	UrlEncoder(&ppPointer, &dwRemainingSize, szATRMask);
+	UrlEncoder(&ppPointer, &dwRemainingSize, TEXT("&CspDll="), TRUE);
+	UrlEncoder(&ppPointer, &dwRemainingSize, szCspDll);
+	UrlEncoder(&ppPointer, &dwRemainingSize, TEXT("&FileVersion="), TRUE);
+	UrlEncoder(&ppPointer, &dwRemainingSize, szFileVersion);
+	UrlEncoder(&ppPointer, &dwRemainingSize, TEXT("&Company="), TRUE);
+	UrlEncoder(&ppPointer, &dwRemainingSize, szCompany);
+	UrlEncoder(&ppPointer, &dwRemainingSize, TEXT("&ErrorCode="), TRUE);
+	TCHAR szErrorCode[16];
+	_stprintf_s(szErrorCode, ARRAYSIZE(szErrorCode),TEXT("0x%08X"),dwErrorCode);
+	UrlEncoder(&ppPointer, &dwRemainingSize, szErrorCode);
+	if (szEmail != NULL)
+	{
+		UrlEncoder(&ppPointer, &dwRemainingSize, TEXT("&Email="), TRUE);
+		UrlEncoder(&ppPointer, &dwRemainingSize, szEmail);
+	}
+	if (szTracingFile != NULL)
+	{
+		UrlEncoder(&ppPointer, &dwRemainingSize, TEXT("&LogFile="), TRUE);
+		UrlLogFileEncoder(&ppPointer, &dwRemainingSize, szTracingFile);
+	}
+	fReturn = PostDataToTheSupportSite(szPostData);
 	return fReturn;
 }
 
