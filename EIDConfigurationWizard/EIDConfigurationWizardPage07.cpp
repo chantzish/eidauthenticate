@@ -68,6 +68,11 @@ INT_PTR CALLBACK	WndProc_07TESTRESULTNOTOK(HWND hWnd, UINT message, WPARAM wPara
 						{
 							MessageBoxWin32(GetLastError());
 						}
+						else
+						{
+							//success !
+							MessageBoxWin32(0);
+						}
 					}
 					break;
 			}

@@ -55,9 +55,6 @@ BEGIN
     EDITTEXT        IDC_05PASSWORD,99,112,109,11,ES_PASSWORD | ES_AUTOHSCROLL | NOT WS_BORDER,WS_EX_CLIENTEDGE
     CONTROL         "Exécuter un test de connection à la fin de cet assistant",IDC_05TEST,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,156,255,13
-    CONTROL         "Remove Policy",IDC_05REMOVEPOLICYLINK,"SysLink",0x0,24,180,234,12
-    CONTROL         "Force Smart Card Logon Policy",IDC_05FORCEPOLICYLINK,
-                    "SysLink",0x0,24,195,237,12
     ICON            "",IDC_05REMOVEPOLICYICON,6,177,15,12,SS_CENTERIMAGE
     ICON            "",IDC_05FORCEPOLICYICON,6,192,15,12,SS_CENTERIMAGE
     LTEXT           "Selectionner un certificat",IDC_STC4,0,0,272,20
@@ -103,25 +100,21 @@ IDD_06TESTRESULTOK DIALOGEX 0, 0, 273, 209
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 FONT 9, "Segoe UI", 0, 0, 0x0
 BEGIN
-    LTEXT           "The test was successfull. You can now use your smartcard to logon.",IDC_TESTSUCCEFULL,6,6,262,32
-    CONTROL         "Remove Policy",IDC_05REMOVEPOLICYLINK,"SysLink",0x0,24,180,234,12
-    CONTROL         "Force Smart Card Logon Policy",IDC_05FORCEPOLICYLINK,
-                    "SysLink",0x0,24,195,237,12
-    ICON            "",IDC_05REMOVEPOLICYICON,6,177,18,17,SS_CENTERIMAGE
-    ICON            "",IDC_05FORCEPOLICYICON,6,192,18,17,SS_CENTERIMAGE
+    LTEXT           "Le test s'est déroulé avec succès. Vous pouvez désormais utiliser votre carte à puce pour ouvrir une session.",IDC_TESTSUCCEFULL,6,6,262,32
 END
 
 IDD_07TESTRESULTNOTOK DIALOGEX 0, 0, 273, 209
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 FONT 9, "Segoe UI", 0, 0, 0x0
 BEGIN
-    CONTROL         "Send a report to the support team",IDC_07SENDREPORT,
+    CONTROL         "Soumettre un rapport à l'équipe de support",IDC_07SENDREPORT,
                     "Button",BS_COMMANDLINK | WS_TABSTOP,21,96,216,39
-    LTEXT           "You can specify an email to get updates from our support team :",IDC_EMAILLBL,27,141,237,12
-    EDITTEXT        IDC_07EMAIL,80,154,173,13,ES_AUTOHSCROLL
-	LTEXT           "Error description",IDC_WIZARDERROR,21,41,233,33
-    LTEXT           "Email (optional) :",IDC_EMAILSEND,26,155,53,11
-    LTEXT           "The test was unsuccessfull. You can run the test again or send a report to the support team.",IDC_STC6,27,6,228,44
+    LTEXT           "Vous pouvez indiquer de manière optionnelle un email :",IDC_EMAILLBL,21,141,237,12
+    EDITTEXT        IDC_07EMAIL,76,154,118,13,ES_AUTOHSCROLL
+    LTEXT           "Email (optionnel) :",IDC_EMAILSEND,21,155,53,11
+    LTEXT           "Le test a échoué. Vous pouvez effectuer un nouveau test ou contacter notre support.",IDC_STC6,21,6,228,22
+    LTEXT           "Description de l'erreur",IDC_WIZARDERROR,21,41,233,33
+    LTEXT           "Détails :",IDC_STATIC,21,27,105,9
 END
 
 

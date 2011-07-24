@@ -179,8 +179,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <DebugInformationFormat>
-      </DebugInformationFormat>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(OutDir)EIDCardLibrary.lib;Winscard.lib;Crypt32.lib;Netapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -208,8 +207,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <DebugInformationFormat>
-      </DebugInformationFormat>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(OutDir)EIDCardLibrary.lib;Winscard.lib;Crypt32.lib;Netapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -233,7 +231,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(OutDir)EIDCardLibrary.lib;Winscard.lib;Crypt32.lib;Netapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -337,7 +335,6 @@
     </ProjectReference>
     <ProjectReference Include="..\EIDCardLibrary\EIDCardLibrary.vcxproj">
       <Project>{67e4c602-56d2-407e-84da-c8f75642d01a}</Project>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
     <ProjectReference Include="..\EIDCredentialProvider\EIDCredentialProvider.vcxproj">
       <Project>{7348aee0-1f4a-4436-b782-6abb694911ae}</Project>
