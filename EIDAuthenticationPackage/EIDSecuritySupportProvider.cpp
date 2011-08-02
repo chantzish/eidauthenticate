@@ -284,6 +284,26 @@ extern "C"
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter for account name = %wZ type=%d",AccountName, LogonType);
 		UNREFERENCED_PARAMETER(PrimaryCredentials);
 		UNREFERENCED_PARAMETER(SupplementalCredentials);
+		// DEBUG
+		if (PrimaryCredentials)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"PrimaryCredentials");
+			//EIDCardLibraryDumpMemory(PrimaryCredentials, sizeof(SECPKG_PRIMARY_CRED));
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"PrimaryCredentials password = %wZ Flags = 0x%08X", &(PrimaryCredentials->Password), PrimaryCredentials->Flags);
+		}
+		else
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"PrimaryCredentials null");
+		}
+		if (SupplementalCredentials)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"SupplementalCredentials");
+			EIDCardLibraryDumpMemory(SupplementalCredentials, sizeof(SECPKG_SUPPLEMENTAL_CRED));
+		}
+		else
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"SupplementalCredentials null");
+		}
 		return STATUS_SUCCESS;
 	}
 

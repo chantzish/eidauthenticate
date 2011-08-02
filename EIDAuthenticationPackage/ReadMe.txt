@@ -15,10 +15,13 @@ else you will find only asm, not cpp code.
 
 Set a breakpoint in a function called by lsass
 ================================================
-!process lsass.exe
-.process /i 12345678    (obtained in !process with lsass.exe)
+!process 0 0 lsass.exe
+.process -i 12345678    (obtained in !process with lsass.exe)
 g         (to swithc context)
-.reload             (to enable pdb loading)
+.reload  /user           (to enable pdb loading)
 bp eidauthenticationpackage!lsaaplogonuserex2   (to set a breakpoint to lsaaplogonuserex2)
+
+to enable tracing in kernel debugger, issue the following command in windbg : 
+ed nt!Kd_DEFAULT_MASK  0xFFFFFFFF
 
 

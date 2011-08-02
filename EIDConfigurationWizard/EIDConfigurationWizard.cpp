@@ -94,26 +94,6 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 				_tcscpy_s(szUserName,dwUserNameSize, pszCommandLine[1]);
 			}
 		}
-		else if (_tcscmp(pszCommandLine[0],TEXT("ACTIVATEREMOVEPOLICY")) == 0)
-		{
-			ChangeRemovePolicy(TRUE);
-			return 0;
-		} 
-		else if (_tcscmp(pszCommandLine[0],TEXT("DESACTIVATEREMOVEPOLICY")) == 0)
-		{
-			ChangeRemovePolicy(FALSE);
-			return 0;
-		} 
-		else if (_tcscmp(pszCommandLine[0],TEXT("ACTIVATEFORCEPOLICY")) == 0)
-		{
-			ChangeForceSmartCardLogonPolicy(TRUE);
-			return 0;
-		} 
-		else if (_tcscmp(pszCommandLine[0],TEXT("DESACTIVATEFORCEPOLICY")) == 0)
-		{
-			ChangeForceSmartCardLogonPolicy(FALSE);
-			return 0;
-		} 
 		else if (_tcscmp(pszCommandLine[0],TEXT("DIALOGREMOVEPOLICY")) == 0)
 		{
 			DialogRemovePolicy();

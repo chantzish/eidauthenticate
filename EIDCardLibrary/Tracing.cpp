@@ -22,9 +22,13 @@
 #include <crtdbg.h>
 #include <Wmistr.h>
 #include <Evntrace.h>
-
+// load lib on the Vista tracing function
+#include <DelayImp.h>
+#pragma comment(lib, "Delayimp.lib")
 #define _CRTDBG_MAPALLOC
 #include <Dbghelp.h>
+#include <winhttp.h>
+
 #include "EIDCardLibrary.h"
 #include "guid.h"
 
@@ -59,95 +63,46 @@ WCHAR Section[100];
  */
 void MessageBoxWin32Ex2(DWORD status, HWND hWnd, LPCSTR szFile, DWORD dwLine) {
 	LPVOID Error;
+	TCHAR szMessage[1024];
 	TCHAR szTitle[1024];
 	_stprintf_s(szTitle,ARRAYSIZE(szTitle),TEXT("%hs(%d)"),szFile, dwLine);
-	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_FROM_SYSTEM,
-		NULL,status,0,(LPTSTR)&Error,0,NULL);
-	MessageBox(hWnd,(LPCTSTR)Error,szTitle ,MB_ICONASTERISK);
+	if (status >= WINHTTP_ERROR_BASE && status <= WINHTTP_ERROR_LAST)
+	{
+		// winhttp error message
+		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER| FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
+			GetModuleHandle(_T("winhttp.dll")),status,0,(LPTSTR)&Error,0,NULL);
+	}
+	else
+	{
+		// system error message
+		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_FROM_SYSTEM,
+			NULL,status,0,(LPTSTR)&Error,0,NULL);
+	}
+	_stprintf_s(szMessage,ARRAYSIZE(szMessage),TEXT("0x%08X - %s"),status,Error);
+	MessageBox(hWnd,szMessage, szTitle ,MB_ICONASTERISK);
 	LocalFree(Error);
 }
 
-//special Windows XP workaround
-#if WINVER < 0x600
-typedef ULONG (NTAPI *EventRegisterFct) (
-  __in      LPCGUID ProviderId,
-  __in_opt  PENABLECALLBACK EnableCallback,
-  __in_opt  PVOID CallbackContext,
-  __out     PREGHANDLE RegHandle
-);
-
-typedef ULONG (NTAPI *EventUnregisterFct)(
-  __in  REGHANDLE RegHandle
-);
-
-typedef ULONG (NTAPI *EventWriteStringFct)(
-  __in  REGHANDLE RegHandle,
-  __in  UCHAR Level,
-  __in  ULONGLONG Keyword,
-  __in  PCWSTR String
-);
-
-typedef ULONG (NTAPI *EnableTraceExFct) (
-  __in      LPCGUID ProviderId,
-  __in_opt  LPCGUID SourceId,
-  __in      TRACEHANDLE TraceHandle,
-  __in      ULONG IsEnabled,
-  __in      UCHAR Level,
-  __in      ULONGLONG MatchAnyKeyword,
-  __in      ULONGLONG MatchAllKeyword,
-  __in      ULONG EnableProperty,
-  __in_opt  PEVENT_FILTER_DESCRIPTOR EnableFilterDesc
-);
-
-
-EventRegisterFct EventRegister = NULL;
-EventUnregisterFct EventUnregister = NULL;
-EventWriteStringFct EventWriteString = NULL;
-EnableTraceExFct EnableTraceEx = NULL;
-
-HMODULE hTracingLibrary = NULL;
-BOOL fCannotLoadLibrary = FALSE;
-
-void UnloadTracingLibrary()
+INT_PTR FAR WINAPI DoNothing()
 {
-	if (hTracingLibrary != NULL)
-	{
-		FreeLibrary(hTracingLibrary);
-		hTracingLibrary = NULL;
-	}
-	EventRegister = NULL;
-	EventUnregister = NULL;
-	EventWriteString = NULL;
-	EnableTraceEx = NULL;
+	return 0;
 }
 
-BOOL LoadTracingLibrary()
+// delayHookFunc - Delay load hooking function
+// don't fail to load our dll is the computer is xp
+FARPROC WINAPI delayHookFailureFunc (unsigned dliNotify, PDelayLoadInfo pdli)
 {
-	BOOL fReturn = FALSE;
-	if (hTracingLibrary) return TRUE;
-	if (fCannotLoadLibrary) return FALSE;
-	hTracingLibrary = LoadLibrary(TEXT("Advapi32.dll"));
-	if (hTracingLibrary)
+	if (_stricmp(pdli->szDll,"advapi32.dll") == 0 && dliNotify == dliFailGetProc)
 	{
-		EventRegister = (EventRegisterFct)GetProcAddress(hTracingLibrary, "EventRegister");
-		EventUnregister = (EventUnregisterFct)GetProcAddress(hTracingLibrary, "EventUnregister");
-		EventWriteString = (EventWriteStringFct)GetProcAddress(hTracingLibrary, "EventWriteString");
-		EnableTraceEx = (EnableTraceExFct)GetProcAddress(hTracingLibrary, "EnableTraceEx");
-		if (EventRegister && EventUnregister && EventWriteString && EnableTraceEx)
-		{
-			fReturn = TRUE;
-		}
-		else
-		{
-			fCannotLoadLibrary = TRUE;
-			UnloadTracingLibrary();
-		}
+		return &DoNothing;
 	}
-	return fReturn;
+
+	return NULL;
 }
 
 
-#endif
+// __delayLoadHelper gets the hook function in here:
+PfnDliHook __pfnDliFailureHook2 = delayHookFailureFunc;
 
 BOOL IsTracingEnabled = FALSE;
 
@@ -172,16 +127,10 @@ void NTAPI EnableCallback(
 
 void EIDCardLibraryTracingRegister() {
 	bFirst = FALSE;
-#if WINVER < 0x600
-	if (!LoadTracingLibrary()) return;
-#endif
 	EventRegister(&CLSID_CEIDProvider,EnableCallback,NULL,&hPub);
 }
 
 void EIDCardLibraryTracingUnRegister() {
-#if WINVER < 0x600
-	if (!LoadTracingLibrary()) return;
-#endif
 	EventUnregister(hPub);
 }
 
@@ -215,9 +164,6 @@ void EIDCardLibraryTraceEx(LPCSTR szFile, DWORD dwLine, LPCSTR szFunction, UCHAR
 #endif
 	swprintf_s(Buffer2,356,L"%S(%d) : %s",szFunction,dwLine,Buffer);
 
-#if WINVER < 0x600
-	if (!LoadTracingLibrary()) return;
-#endif
 	EventWriteString(hPub,dwLevel,0,Buffer2);
 
 }
@@ -356,9 +302,6 @@ void EIDCardLibraryDumpMemoryEx(LPCSTR szFile, DWORD dwLine, LPCSTR szFunction, 
 BOOL StartLogging()
 {
 	BOOL fReturn = FALSE;
-#if WINVER < 0x600
-	if (!LoadTracingLibrary()) return FALSE;
-#endif
 	TRACEHANDLE SessionHandle;
 	struct _Prop
 	{

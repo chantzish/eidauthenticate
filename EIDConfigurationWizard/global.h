@@ -14,11 +14,8 @@ extern DWORD dwUserNameSize;
 
 VOID CenterWindow(HWND hWnd);
 BOOL IsElevated();
-BOOL ChangeRemovePolicy(BOOL fActivate);
-BOOL ChangeForceSmartCardLogonPolicy(BOOL fActivate);
 BOOL DialogForceSmartCardLogonPolicy();
 BOOL DialogRemovePolicy();
-BOOL ChangeRemovePolicyElevated(DWORD dwActivate);
 BOOL CreateDebugReport(PTSTR szLogFile);
-DWORD GetRemovePolicyValue();
 BOOL SendReport(DWORD dwErrorCode, PTSTR szEmail);
+VOID SetIcon(HWND hWnd);

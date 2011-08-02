@@ -30,7 +30,9 @@ enum GPOPolicy
   FilterDuplicateCertificates,
   ForceReadingAllCertificates,
   scforceoption,
+  scremoveoption,
 } ;
 
 
 DWORD GetPolicyValue(GPOPolicy Policy);
+BOOL SetPolicyValue(GPOPolicy Policy, DWORD dwValue);

@@ -42,7 +42,7 @@ HRESULT CEIDFilter::Filter(
 )
 {
 	UNREFERENCED_PARAMETER(dwFlags);
-	BOOL fFilter = FALSE;
+	/*BOOL fFilter = FALSE;
 	if (cpus == CPUS_LOGON || cpus == CPUS_UNLOCK_WORKSTATION)
 	{
 		fFilter = (GetPolicyValue(scforceoption) == 1);
@@ -56,6 +56,6 @@ HRESULT CEIDFilter::Filter(
 				rgbAllow[dwI] = FALSE;
 			}
 		}
-	}
+	}*/
 	return S_OK;
 }

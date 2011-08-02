@@ -2,6 +2,7 @@
 #include <tchar.h>
 #include "global.h"
 #include "EIDConfigurationWizard.h"
+#include "../EIDCardLibrary/GPO.h"
 
 INT_PTR CALLBACK	WndProc_RemovePolicy(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -12,7 +13,7 @@ INT_PTR CALLBACK	WndProc_RemovePolicy(HWND hWnd, UINT message, WPARAM wParam, LP
 	{
 	case WM_INITDIALOG:
 		CenterWindow(hWnd);
-		dwValue = GetRemovePolicyValue();
+		dwValue = GetPolicyValue(scremoveoption);
 		switch(dwValue)
 		{
 		case 0:
@@ -28,6 +29,7 @@ INT_PTR CALLBACK	WndProc_RemovePolicy(HWND hWnd, UINT message, WPARAM wParam, LP
 			CheckRadioButton(hWnd, IDC_NOACTION, IDC_DISCONNECT, IDC_DISCONNECT);
 			break;
 		}
+		SetIcon(hWnd);
 		break;
 	case WM_COMMAND:
 		wmId    = LOWORD(wParam);
@@ -37,19 +39,19 @@ INT_PTR CALLBACK	WndProc_RemovePolicy(HWND hWnd, UINT message, WPARAM wParam, LP
 		case IDOK:
 			if (IsDlgButtonChecked(hWnd, IDC_NOACTION))
 			{
-				ChangeRemovePolicyElevated(0);
+				SetPolicyValue(scremoveoption, 0);
 			}
 			else if(IsDlgButtonChecked(hWnd, IDC_LOCK))
 			{
-				ChangeRemovePolicyElevated(1);
+				SetPolicyValue(scremoveoption, 1);
 			}
 			else if (IsDlgButtonChecked(hWnd, IDC_LOGOFF))
 			{
-				ChangeRemovePolicyElevated(2);
+				SetPolicyValue(scremoveoption, 2);
 			}
 			else if (IsDlgButtonChecked(hWnd, IDC_DISCONNECT))
 			{
-				ChangeRemovePolicyElevated(3);
+				SetPolicyValue(scremoveoption, 3);
 			}
 		case IDCANCEL:
 			EndDialog(hWnd, 0); 
