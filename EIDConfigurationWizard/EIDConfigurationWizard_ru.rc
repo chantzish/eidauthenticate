@@ -113,7 +113,7 @@ BEGIN
     LTEXT           "Файл:",IDC_STC3,6,153,60,10
     EDITTEXT        IDC_03FILENAME,96,153,162,11,ES_AUTOHSCROLL | NOT WS_BORDER,WS_EX_CLIENTEDGE
     PUSHBUTTON      "...",IDC_03SELECTFILE,258,153,12,12
-    CONTROL         "Удалить все сертификаты со сматр-карты до начала работы",IDC_03DELETE,
+    CONTROL         "Удалить все сертификаты со смарт-карты до начала работы",IDC_03DELETE,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,8,192,261,9
 END
 
