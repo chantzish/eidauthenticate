@@ -347,7 +347,7 @@ HRESULT RetrieveNegotiateAuthPackage(ULONG * pulAuthPackage)
 
         ULONG ulAuthPackage;
         LSA_STRING lsaszPackageName;
-		LsaInitString(&lsaszPackageName, "Negotiate");//AUTHENTICATIONPACKAGENAME);
+		LsaInitString(&lsaszPackageName, AUTHENTICATIONPACKAGENAME);
 
         status = LsaLookupAuthenticationPackage(hLsa, &lsaszPackageName, &ulAuthPackage);
         if (SUCCEEDED(HRESULT_FROM_NT(status)))

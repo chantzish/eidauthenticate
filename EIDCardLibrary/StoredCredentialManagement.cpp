@@ -736,6 +736,26 @@ NTSTATUS CompletePrimaryCredential(__in PLSA_UNICODE_STRING AuthenticatingAuthor
 						__out  PSECPKG_PRIMARY_CRED PrimaryCredentials)
 {
 
+	// general comment about the SECPKG_PRIMARY_CRED structure and DPAPI
+	// grabbed from the kerberos SSP output :
+	// Password logon :
+	//  2 credentials added through AddCredentials (and not LsaApLogonUserEx2)
+	//    password = the password in clear
+	//    flag = 0x10000009 ( PRIMARY_CRED_CLEAR_PASSWORD | PRIMARY_CRED_CACHED_LOGON )
+	//    password = the password in clear
+	//    flag = 0x00000001 ( PRIMARY_CRED_CLEAR_PASSWORD )
+	//
+	// smart card logon :
+	//  2 credentials added through AddCredentials (and not LsaApLogonUserEx2)
+	//    password = the PIN in clear
+	//    flag = 0x10000048 ( PRIMARY_CRED_INTERACTIVE_SMARTCARD_LOGON | PRIMARY_CRED_CACHED_LOGON )
+	//    password = the PIN in clear
+	//    flag = 0x00000040 ( PRIMARY_CRED_INTERACTIVE_SMARTCARD_LOGON )
+	//
+	// grabbed from the MSV_10 output :
+	//     password = the password in clear
+	//     flag = 0x0A000001 ( PRIMARY_CRED_CLEAR_PASSWORD )
+
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
 	memset(PrimaryCredentials, 0, sizeof(SECPKG_PRIMARY_CRED));
 	PrimaryCredentials->LogonId.HighPart = LogonId->HighPart;
@@ -766,8 +786,10 @@ NTSTATUS CompletePrimaryCredential(__in PLSA_UNICODE_STRING AuthenticatingAuthor
 	PrimaryCredentials->OldPassword.Length = 0;
 	PrimaryCredentials->OldPassword.MaximumLength = 0;
 	PrimaryCredentials->OldPassword.Buffer = NULL;//(PWSTR) FunctionTable->AllocateLsaHeap(PrimaryCredentials->OldPassword.MaximumLength);;
-
-	PrimaryCredentials->Flags = PRIMARY_CRED_CLEAR_PASSWORD;
+	
+	// the flag PRIMARY_CRED_INTERACTIVE_SMARTCARD_LOGON is used for the "force smart card policy"
+	// the flag PRIMARY_CRED_CLEAR_PASSWORD is used to tell the password to DPAPI
+	PrimaryCredentials->Flags = PRIMARY_CRED_CLEAR_PASSWORD | PRIMARY_CRED_INTERACTIVE_SMARTCARD_LOGON;
 
 	PrimaryCredentials->UserSid = (PSID)EIDAlloc(GetLengthSid(UserSid));
 	if (PrimaryCredentials->UserSid)

@@ -264,12 +264,12 @@ FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,181,162,50,14
     PUSHBUTTON      "Cancel",IDCANCEL,238,162,50,14
-    LTEXT           "Enforce Smart Card required for Logon on a per machine basis.  ",IDC_STATIC,7,7,281,17
+    LTEXT           "Enforce Smart Card required for Logon on a per machine basis.",IDC_STATIC,7,7,281,17
     CONTROL         "Disable (recommended)",IDC_FORCEDISABLE,"Button",BS_AUTORADIOBUTTON,31,65,185,13
     CONTROL         "Enable (not recommended)",IDC_FORCEENABLE,"Button",BS_AUTORADIOBUTTON,31,113,239,13
     LTEXT           "Users can log on to the computer using any method",IDC_STATIC,31,81,166,8
     LTEXT           "Users can only log on to the computer using a smart card. ",IDC_STATIC,31,130,197,11
-    LTEXT           "Enabling this setting would be very unusual. Normally security requirements will be met more closely by using the user account level setting to require smart card. You won't be able to logon anymore if you have lost your smart card or if it has expired.",IDC_STATIC,7,25,273,35
+    LTEXT           "You won't be able to logon anymore if you have lost your smart card or if it has expired.",IDC_STATIC,7,25,273,35
 END
 
 

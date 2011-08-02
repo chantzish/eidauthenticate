@@ -473,6 +473,7 @@ extern "C"
 	) 
 	{
 		UNREFERENCED_PARAMETER(AuthenticationInformationLength);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
 		NTSTATUS Status;
 		DWORD dwLen = MAX_COMPUTERNAME_LENGTH +1;
 		WCHAR ComputerName[MAX_COMPUTERNAME_LENGTH + 1];
@@ -489,7 +490,6 @@ extern "C"
 		{
 			*SubStatus = STATUS_SUCCESS;
 
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"LogonType = %d",LogonType);
 			
 			// the buffer come from another address space

@@ -19,7 +19,8 @@ CertPropRootEnabledString %d\r\n\
 RootsCleanupOption %d\r\n\
 FilterDuplicateCertificates %d\r\n\
 ForceReadingAllCertificates %d\r\n\
-scforceoption %d";
+scforceoption %d\r\n\
+scremoveoption %d";
 
 	swprintf_s(buffer,4096,pMessage,GetPolicyValue(AllowSignatureOnlyKeys),
 		GetPolicyValue(AllowCertificatesWithNoEKU),
@@ -33,7 +34,8 @@ scforceoption %d";
 		GetPolicyValue(RootsCleanupOption),
 		GetPolicyValue(FilterDuplicateCertificates),
 		GetPolicyValue(ForceReadingAllCertificates),
-		GetPolicyValue(scforceoption));
+		GetPolicyValue(scforceoption),
+		GetPolicyValue(scremoveoption));
 	MessageBox(NULL,buffer,L"Policy",0);
 
 }

@@ -20,6 +20,7 @@ INT_PTR CALLBACK WndProc_ForcePolicy(HWND hWnd, UINT message, WPARAM wParam, LPA
 		{
 			CheckRadioButton(hWnd, IDC_FORCEDISABLE, IDC_FORCEENABLE, IDC_FORCEDISABLE);
 		}
+		SetIcon(hWnd);
 		break;
 	case WM_COMMAND:
 		wmId    = LOWORD(wParam);
@@ -27,7 +28,7 @@ INT_PTR CALLBACK WndProc_ForcePolicy(HWND hWnd, UINT message, WPARAM wParam, LPA
 		switch(wmId)
 		{
 		case IDOK:
-			ChangeForceSmartCardLogonPolicy(IsDlgButtonChecked(hWnd, IDC_FORCEENABLE));
+			SetPolicyValue(scforceoption,IsDlgButtonChecked(hWnd, IDC_FORCEENABLE));
 		case IDCANCEL:
 			EndDialog(hWnd, 0); 
 			return TRUE;

@@ -83,7 +83,13 @@
   </ItemGroup>
   <Import Project="$(WixTargetsPath)" />
   <PropertyGroup>
-    <PostBuildEvent>"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign /f $(SolutionDir)\CodeSigning\test.pfx /p test /t http://tsa.starfieldtech.com "$(TargetPath)"</PostBuildEvent>
+    <PreBuildEvent>"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign /f $(SolutionDir)\CodeSigning\certificate.pfx /p vletoux /t http://timestamp.comodoca.com/authenticode "$(TargetDir)EIDAuthenticationPackage.dll"
+"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign /f $(SolutionDir)\CodeSigning\certificate.pfx /p vletoux /t http://timestamp.comodoca.com/authenticode "$(TargetDir)EIDCredentialProvider.dll"
+"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign /f $(SolutionDir)\CodeSigning\certificate.pfx /p vletoux /t http://timestamp.comodoca.com/authenticode "$(TargetDir)EIDConfigurationWizard.exe"
+"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign /f $(SolutionDir)\CodeSigning\certificate.pfx /p vletoux /t http://timestamp.comodoca.com/authenticode "$(TargetDir)EIDPasswordChangeNotification.dll"</PreBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PostBuildEvent>"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign /f $(SolutionDir)\CodeSigning\certificate.pfx /p vletoux /t http://timestamp.comodoca.com/authenticode /d EIDAuthenticate "$(TargetPath)"</PostBuildEvent>
   </PropertyGroup>
   <!--
 	To modify your build process, add your task inside one of the targets below and uncomment it.

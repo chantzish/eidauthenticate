@@ -139,7 +139,11 @@ void UrlLogFileEncoder(__inout PCHAR *ppPointer, __inout PDWORD pdwRemainingSize
 		{
 			for(DWORD i = 0; i< dwByteRead; i++)
 			{
-				if (((pbBuffer[i] >= L'A' && pbBuffer[i] <= L'Z') 
+				if (pbBuffer[i] == '\0')
+				{
+					// ignore null character (conversion from WCHAR to CHAR)
+				}
+				else if (((pbBuffer[i] >= L'A' && pbBuffer[i] <= L'Z') 
 							|| (pbBuffer[i] >= L'a' && pbBuffer[i] <= L'z')
 							|| (pbBuffer[i] >= L'0' && pbBuffer[i] <= L'9')
 							|| (pbBuffer[i] == L'-') || (pbBuffer[i] == L'_') || (pbBuffer[i] == L'.') || (pbBuffer[i] == L'~'))
@@ -169,124 +173,122 @@ void UrlLogFileEncoder(__inout PCHAR *ppPointer, __inout PDWORD pdwRemainingSize
 BOOL CommunicateTestNotOK(DWORD dwErrorCode, PTSTR szEmail, PTSTR szTracingFile)
 {
 	BOOL fReturn = FALSE;
-	TCHAR szReaderName[256] = TEXT("");
-	TCHAR szCardName[256] = TEXT("");
-	TCHAR szProviderName[256] = TEXT("");
-	TCHAR szATR[256] = TEXT("");
-	TCHAR szATRMask[256] = TEXT("");
-	TCHAR szCspDll[256] = TEXT("");
-	TCHAR szOsInfo[256] = TEXT("");
-	TCHAR szHardwareInfo[256] = TEXT("");
-	TCHAR szFileVersion[256] = TEXT("");
-	TCHAR szCompany[256] = TEXT("");
+	TCHAR szReaderName[256] = TEXT("Unknown");
+	TCHAR szCardName[256] = TEXT("Unknown");
+	TCHAR szProviderName[256] = TEXT("Unknown");
+	TCHAR szATR[256] = TEXT("Unknown");
+	TCHAR szATRMask[256] = TEXT("Unknown");
+	TCHAR szCspDll[256] = TEXT("Unknown");
+	TCHAR szOsInfo[256] = TEXT("Unknown");
+	TCHAR szHardwareInfo[256] = TEXT("Unknown");
+	TCHAR szFileVersion[256] = TEXT("Unknown");
+	TCHAR szCompany[256] = TEXT("Unknown");
 	DWORD dwProviderNameLen = ARRAYSIZE(szProviderName);
 	DWORD dwSize;
 	CHAR szPostData[1000000]= "";
 	DWORD dwRemainingSize = ARRAYSIZE(szPostData);
 	PCHAR ppPointer = szPostData;
 
-	if (!AskForCard(szReaderName,256,szCardName,256))
+	if (AskForCard(szReaderName,256,szCardName,256))
 	{
-		return FALSE;
-	}
-	SchGetProviderNameFromCardName(szCardName, szProviderName, &dwProviderNameLen);
-	HKEY hRegKeyCalais, hRegKeyCSP, hRegKey;
-	// smart card info (atr & mask)
-	if (!RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\Cryptography\\Calais\\SmartCards"), 0, KEY_READ, &hRegKeyCalais))
-	{
-		BYTE bATR[100];
-		DWORD dwSize = sizeof(bATR);
-		if (!RegOpenKeyEx(hRegKeyCalais, szCardName, 0, KEY_READ, &hRegKey))
+		SchGetProviderNameFromCardName(szCardName, szProviderName, &dwProviderNameLen);
+		HKEY hRegKeyCalais, hRegKeyCSP, hRegKey;
+		// smart card info (atr & mask)
+		if (!RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\Cryptography\\Calais\\SmartCards"), 0, KEY_READ, &hRegKeyCalais))
 		{
-			RegQueryValueEx(hRegKey,TEXT("ATR"), NULL, NULL,(PBYTE)&bATR,&dwSize);
-			for(DWORD i=0; i< dwSize; i++)
+			BYTE bATR[100];
+			DWORD dwSize = sizeof(bATR);
+			if (!RegOpenKeyEx(hRegKeyCalais, szCardName, 0, KEY_READ, &hRegKey))
 			{
-				_stprintf_s(szATR + 2*i, ARRAYSIZE(szATR) - 2*i,TEXT("%02X"),bATR[i]);
-			}
-			dwSize = sizeof(bATR);
-			RegQueryValueEx(hRegKey,TEXT("ATRMask"), NULL, NULL,(PBYTE)&bATR,&dwSize);
-			for(DWORD i=0; i< dwSize; i++)
-			{
-				_stprintf_s(szATRMask + 2*i, ARRAYSIZE(szATRMask) - 2*i,TEXT("%02X"),bATR[i]);
-			}
-			if (_tcscmp(TEXT("Microsoft Base Smart Card Crypto Provider"), szProviderName) == 0)
-			{
-				dwSize = sizeof(szCspDll);
-				RegQueryValueEx(hRegKey,TEXT("80000001"), NULL, NULL,(PBYTE)&szCspDll,&dwSize);
-			}
-			RegCloseKey(hRegKey);
-		}
-		RegCloseKey(hRegKeyCalais);
-	}
-	if (szCspDll[0] == 0)
-	{
-		// csp info
-		if (!RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\Cryptography\\Defaults\\Provider"), 0, KEY_READ, &hRegKeyCSP))
-		{
-			dwSize = sizeof(szCspDll);
-			if (!RegOpenKeyEx(hRegKeyCalais, szProviderName, 0, KEY_READ, &hRegKey))
-			{
-				RegQueryValueEx(hRegKey, TEXT("Image Path"), NULL,NULL,(PBYTE)&szCspDll,&dwSize);
+				RegQueryValueEx(hRegKey,TEXT("ATR"), NULL, NULL,(PBYTE)&bATR,&dwSize);
+				for(DWORD i=0; i< dwSize; i++)
+				{
+					_stprintf_s(szATR + 2*i, ARRAYSIZE(szATR) - 2*i,TEXT("%02X"),bATR[i]);
+				}
+				dwSize = sizeof(bATR);
+				RegQueryValueEx(hRegKey,TEXT("ATRMask"), NULL, NULL,(PBYTE)&bATR,&dwSize);
+				for(DWORD i=0; i< dwSize; i++)
+				{
+					_stprintf_s(szATRMask + 2*i, ARRAYSIZE(szATRMask) - 2*i,TEXT("%02X"),bATR[i]);
+				}
+				if (_tcscmp(TEXT("Microsoft Base Smart Card Crypto Provider"), szProviderName) == 0)
+				{
+					dwSize = sizeof(szCspDll);
+					RegQueryValueEx(hRegKey,TEXT("80000001"), NULL, NULL,(PBYTE)&szCspDll,&dwSize);
+				}
 				RegCloseKey(hRegKey);
 			}
 			RegCloseKey(hRegKeyCalais);
 		}
-	}
-	if (szCspDll[0] != 0)
-	{
-		DWORD dwHandle;
-		dwSize = GetFileVersionInfoSize(szCspDll, &dwHandle);
-		if (dwSize)
+		if (szCspDll[0] == 0)
 		{
-			UINT uSize;
-			PVOID versionInfo = malloc(dwSize);
-			PWSTR pszFileVersion = NULL;
-			PWSTR pszCompany = NULL;
-			if (GetFileVersionInfo(szCspDll, dwHandle, dwSize, versionInfo))
+			// csp info
+			if (!RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\Cryptography\\Defaults\\Provider"), 0, KEY_READ, &hRegKeyCSP))
 			{
-				BOOL retVal; 
-				LPVOID version=NULL;
-				DWORD vLen,langD;
-				TCHAR szfileVersionPath[256];
-				retVal = VerQueryValue(versionInfo,TEXT("\\VarFileInfo\\Translation"),&version,(UINT *)&vLen);
-				if (retVal && vLen==4) 
+				dwSize = sizeof(szCspDll);
+				if (!RegOpenKeyEx(hRegKeyCalais, szProviderName, 0, KEY_READ, &hRegKey))
 				{
-					memcpy(&langD,version,4);            
-					_stprintf_s(szfileVersionPath, ARRAYSIZE(szfileVersionPath),
-								TEXT("\\StringFileInfo\\%02X%02X%02X%02X\\FileVersion"),
-							(langD & 0xff00)>>8,langD & 0xff,(langD & 0xff000000)>>24, 
-							(langD & 0xff0000)>>16);            
+					RegQueryValueEx(hRegKey, TEXT("Image Path"), NULL,NULL,(PBYTE)&szCspDll,&dwSize);
+					RegCloseKey(hRegKey);
 				}
-				else 
-					_stprintf_s(szfileVersionPath, ARRAYSIZE(szfileVersionPath),
-								TEXT("\\StringFileInfo\\%04X04B0\\FileVersion"),
-							GetUserDefaultLangID());
-				retVal = VerQueryValue(versionInfo,szfileVersionPath,(PVOID*)&pszFileVersion,(UINT *)&uSize);
-
-				if (pszFileVersion != NULL) 
-					_stprintf_s(szFileVersion, ARRAYSIZE(szFileVersion),TEXT("%ls"),pszFileVersion);
-
-				if (retVal && vLen==4) 
-				{
-					memcpy(&langD,version,4);            
-					_stprintf_s(szfileVersionPath, ARRAYSIZE(szfileVersionPath),
-								TEXT("\\StringFileInfo\\%02X%02X%02X%02X\\CompanyName"),
-							(langD & 0xff00)>>8,langD & 0xff,(langD & 0xff000000)>>24, 
-							(langD & 0xff0000)>>16);            
-				}
-				else 
-					_stprintf_s(szfileVersionPath, ARRAYSIZE(szfileVersionPath),
-								TEXT("\\StringFileInfo\\%04X04B0\\CompanyName"),
-							GetUserDefaultLangID());
-				retVal = VerQueryValue(versionInfo,szfileVersionPath,(PVOID*)&pszCompany,(UINT *)&uSize);
-
-				if (pszFileVersion != NULL) 
-					_stprintf_s(szCompany, ARRAYSIZE(szCompany),TEXT("%ls"),pszCompany);
+				RegCloseKey(hRegKeyCalais);
 			}
-			free(versionInfo);
+		}
+		if (szCspDll[0] != 0)
+		{
+			DWORD dwHandle;
+			dwSize = GetFileVersionInfoSize(szCspDll, &dwHandle);
+			if (dwSize)
+			{
+				UINT uSize;
+				PVOID versionInfo = malloc(dwSize);
+				PWSTR pszFileVersion = NULL;
+				PWSTR pszCompany = NULL;
+				if (GetFileVersionInfo(szCspDll, dwHandle, dwSize, versionInfo))
+				{
+					BOOL retVal; 
+					LPVOID version=NULL;
+					DWORD vLen,langD;
+					TCHAR szfileVersionPath[256];
+					retVal = VerQueryValue(versionInfo,TEXT("\\VarFileInfo\\Translation"),&version,(UINT *)&vLen);
+					if (retVal && vLen==4) 
+					{
+						memcpy(&langD,version,4);            
+						_stprintf_s(szfileVersionPath, ARRAYSIZE(szfileVersionPath),
+									TEXT("\\StringFileInfo\\%02X%02X%02X%02X\\FileVersion"),
+								(langD & 0xff00)>>8,langD & 0xff,(langD & 0xff000000)>>24, 
+								(langD & 0xff0000)>>16);            
+					}
+					else 
+						_stprintf_s(szfileVersionPath, ARRAYSIZE(szfileVersionPath),
+									TEXT("\\StringFileInfo\\%04X04B0\\FileVersion"),
+								GetUserDefaultLangID());
+					retVal = VerQueryValue(versionInfo,szfileVersionPath,(PVOID*)&pszFileVersion,(UINT *)&uSize);
+
+					if (pszFileVersion != NULL) 
+						_stprintf_s(szFileVersion, ARRAYSIZE(szFileVersion),TEXT("%ls"),pszFileVersion);
+
+					if (retVal && vLen==4) 
+					{
+						memcpy(&langD,version,4);            
+						_stprintf_s(szfileVersionPath, ARRAYSIZE(szfileVersionPath),
+									TEXT("\\StringFileInfo\\%02X%02X%02X%02X\\CompanyName"),
+								(langD & 0xff00)>>8,langD & 0xff,(langD & 0xff000000)>>24, 
+								(langD & 0xff0000)>>16);            
+					}
+					else 
+						_stprintf_s(szfileVersionPath, ARRAYSIZE(szfileVersionPath),
+									TEXT("\\StringFileInfo\\%04X04B0\\CompanyName"),
+								GetUserDefaultLangID());
+					retVal = VerQueryValue(versionInfo,szfileVersionPath,(PVOID*)&pszCompany,(UINT *)&uSize);
+
+					if (pszFileVersion != NULL) 
+						_stprintf_s(szCompany, ARRAYSIZE(szCompany),TEXT("%ls"),pszCompany);
+				}
+				free(versionInfo);
+			}
 		}
 	}
-
 	// os version
 	OSVERSIONINFOEX version;
 	version.dwOSVersionInfoSize = sizeof(version);
