@@ -266,6 +266,7 @@ BEGIN
     IDS_04TRUSTMAKETRUSTED  "Faire confiance au certificat"
     IDS_RENAME              "Votre session doit être fermée pour poursuivre. Voulez-vous continuer ?"
     IDS_RENAMECONF          "Votre compte a été renommé sous le nom ""%s""."
+	IDS_NODOMAINACCOUNT     "EIDAuthenticate ne fonctionne pas sur des comptes appartenant à un domaine. EIDAuthenticate ne fonctionne que sur les postes non connectés à un domaine ou avec un compte local."
 END
 /////////////////////////////////////////////////////////////////////////////
 

@@ -319,6 +319,7 @@ BEGIN
     IDS_04ENCRYPTIONOK      "The card supports encryption"
     IDS_04ENCRYPTIONNOK     "The card doesn't support encryption"
     IDS_05ACTIVATEREMOVE    "<a id=""idActRemove"">Turn the remove policy on or off</a>"
+    IDS_NODOMAINACCOUNT     "EIDAuthenticate doesn't work on domain account. EIDAuthenticate works only on stand alone computer or with local account."
     IDS_05ACTIVATEFORCE     "<a id=""idActForce"">Turn the force smart card logon policy on or off</a>"
     IDS_04TESTUSERNAME      "Username"
 END

@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by EIDConfigurationWizard_fr.rc
+// Used by EIDConfigurationWizard.rc
 //
 #define IDS_CERT_TRUST_IS_NOT_VALID_FOR_USAGE 2
 #define IDS_CERT_TRUST_IS_UNTRUSTED_ROOT 3
@@ -122,6 +122,7 @@
 #define IDC_FORCEENABLE                 146
 #define IDC_WIZARDERROR                 147
 #define IDC_07SENDREPORT                148
+#define IDS_NODOMAINACCOUNT             149
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
