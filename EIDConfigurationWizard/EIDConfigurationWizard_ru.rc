@@ -221,6 +221,7 @@ BEGIN
     IDS_04ENCRYPTIONOK      "Карта поддерживает шифрование"
     IDS_04ENCRYPTIONNOK     "Карта не поддерживает шифрование"
     IDS_05ACTIVATEREMOVE    "<a id=""idActRemove"">Задать политику извлечения смарт-карты</a>"
+	IDS_NODOMAINACCOUNT     "Внимание! EIDAuthenticate не поддерживает работу в домене. Используйте EIDAuthenticate только для локальных компьютеров и пользователей."
     IDS_05ACTIVATEFORCE     "<a id=""idActForce"">Задать групповые политики смарт-карт</a>"
     IDS_04TESTUSERNAME      "Пользователь"
 END
