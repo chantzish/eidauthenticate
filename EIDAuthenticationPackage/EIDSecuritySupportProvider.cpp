@@ -93,7 +93,8 @@ extern "C"
 			initializeExportedFunctionsTable(&MyExportedFunctions);
 			*ppTables = &MyExportedFunctions;
 			*pcTables = MyExportedFunctionsCount;
-			Status = STATUS_SUCCESS;
+			// see remark in NTSecPkg.h line 1889
+			Status = SECPKG_INTERFACE_VERSION_6;
 		}
 		__finally
 		{

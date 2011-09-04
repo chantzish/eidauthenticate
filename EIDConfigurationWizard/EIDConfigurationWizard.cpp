@@ -44,6 +44,8 @@ WCHAR szCard[256];
 DWORD dwCardSize = ARRAYSIZE(szCard);
 WCHAR szUserName[256];
 DWORD dwUserNameSize = ARRAYSIZE(szUserName);
+WCHAR szPassword[256];
+DWORD dwPasswordSize = ARRAYSIZE(szPassword);
 
 #if WINVER < 0x600
 // this function doesn't exists on xp, only since Vista.
@@ -69,10 +71,19 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
 
+	// check that the authentication package is loaded
 	if (!IsEIDPackageAvailable())
 	{
 		TCHAR szMessage[256] = TEXT("");
 		LoadString(g_hinst,IDS_EIDNOTAVAILABLE, szMessage, ARRAYSIZE(szMessage));
+		MessageBox(NULL,szMessage,TEXT("Error"),MB_ICONERROR);
+		return -1;
+	}
+	// check that the user is not connected to a domain
+	if (IsCurrentUserBelongToADomain())
+	{
+		TCHAR szMessage[2000] = TEXT("");
+		LoadString(g_hinst,IDS_NODOMAINACCOUNT, szMessage, ARRAYSIZE(szMessage));
 		MessageBox(NULL,szMessage,TEXT("Error"),MB_ICONERROR);
 		return -1;
 	}
@@ -139,13 +150,13 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 			EIDFree(pbCertificate);
 			return 0;
 		} 
-		else if (_tcscmp(pszCommandLine[0],TEXT("DEBUGREPORT")) == 0)
+		else if(_tcscmp(pszCommandLine[0],TEXT("REPORT")) == 0)
 		{
 			if (iNumArgs < 2)
 			{
 				return 0;
 			}
-			CreateDebugReport(pszCommandLine[1]);
+			CreateReport(pszCommandLine[1]);
 			return 0;
 		}
 	}
