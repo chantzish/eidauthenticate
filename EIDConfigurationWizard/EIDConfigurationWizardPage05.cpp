@@ -51,7 +51,6 @@ INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPAR
 {
 	int wmId;
 	int wmEvent;
-	TCHAR szPassword[1024];
 	switch(message)
 	{
 	case WM_INITDIALOG:
@@ -104,7 +103,7 @@ INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPAR
 				break;
 			case PSN_WIZFINISH :
 			case PSN_WIZNEXT:
-				GetWindowText(GetDlgItem(hWnd,IDC_05PASSWORD),szPassword,ARRAYSIZE(szPassword));
+				GetWindowText(GetDlgItem(hWnd,IDC_05PASSWORD),szPassword,dwPasswordSize);
 				if (!WizardFinishButton(szPassword))
 				{
 					// go to the error page

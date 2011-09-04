@@ -13,6 +13,10 @@
 #include "../EIDCardLibrary/Tracing.h"
 #include "../EIDCardLibrary/OnlineDatabase.h"
 
+#include "../EIDCardLibrary/CContainer.h"
+#include "../EIDCardLibrary/CContainerHolderFactory.h"
+
+#include "CContainerHolder.h"
 #pragma comment(lib,"Credui")
 
 BOOL TestLogon(HWND hMainWnd)
@@ -61,6 +65,7 @@ BOOL TestLogon(HWND hMainWnd)
 		if (err)
 		{
 			dwError = LsaNtStatusToWinError(err);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaLogonUser error 0x%08X", result);
 		}
 		else
 		{
@@ -77,6 +82,7 @@ BOOL TestLogon(HWND hMainWnd)
 	}
 	else //if (result == ERROR_CANCELLED)
 	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CredUIPromptForWindowsCredentials error 0x%08X", result);
 		//fReturn = TRUE;
 		dwError = result;
 	}
@@ -89,7 +95,7 @@ BOOL TestLogon(HWND hMainWnd)
 	return fReturn;
 }
 
-HANDLE hFile = NULL;
+HANDLE hInternalLogWriteHandle = NULL;
 
 VOID WINAPI ProcessEvents(PEVENT_TRACE pEvent)
 {
@@ -109,12 +115,12 @@ VOID WINAPI ProcessEvents(PEVENT_TRACE pEvent)
 		TCHAR szLocalDate[255], szLocalTime[255];
 		_stprintf_s(szLocalDate, ARRAYSIZE(szLocalDate),TEXT("%04d-%02d-%02d"),st.wYear,st.wMonth,st.wDay);
 		_stprintf_s(szLocalTime, ARRAYSIZE(szLocalTime),TEXT("%02d:%02d:%02d"),st.wHour,st.wMinute,st.wSecond);
-		WriteFile ( hFile, szLocalDate, (DWORD)_tcslen(szLocalDate) * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
-		WriteFile ( hFile, TEXT(";"), 1 * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
-		WriteFile ( hFile, szLocalTime, (DWORD)_tcslen(szLocalTime) * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
-		WriteFile ( hFile, TEXT(";"), 1 * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
-		WriteFile ( hFile, pEvent->MofData, (DWORD)_tcslen((PTSTR) pEvent->MofData) * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
-		WriteFile ( hFile, TEXT("\r\n"), 2 * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
+		WriteFile ( hInternalLogWriteHandle, szLocalDate, (DWORD)_tcslen(szLocalDate) * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
+		WriteFile ( hInternalLogWriteHandle, TEXT(";"), 1 * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
+		WriteFile ( hInternalLogWriteHandle, szLocalTime, (DWORD)_tcslen(szLocalTime) * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
+		WriteFile ( hInternalLogWriteHandle, TEXT(";"), 1 * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
+		WriteFile ( hInternalLogWriteHandle, pEvent->MofData, (DWORD)_tcslen((PTSTR) pEvent->MofData) * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
+		WriteFile ( hInternalLogWriteHandle, TEXT("\r\n"), 2 * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
 	  }
   }
 
@@ -148,12 +154,12 @@ void ExportOneTraceFile(PTSTR szTraceFile)
 		DWORD dwWritten;
 		TCHAR szBuffer[256];
 		_tcscpy_s(szBuffer,ARRAYSIZE(szBuffer),TEXT("================================================\r\n"));
-		WriteFile ( hFile, szBuffer, (DWORD)_tcslen(szBuffer) * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
-		WriteFile ( hFile, szTraceFile, (DWORD)_tcslen(szTraceFile) * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
+		WriteFile ( hInternalLogWriteHandle, szBuffer, (DWORD)_tcslen(szBuffer) * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
+		WriteFile ( hInternalLogWriteHandle, szTraceFile, (DWORD)_tcslen(szTraceFile) * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
 		_tcscpy_s(szBuffer,ARRAYSIZE(szBuffer),TEXT("\r\n"));
-		WriteFile ( hFile, szBuffer, (DWORD)_tcslen(szBuffer) * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
+		WriteFile ( hInternalLogWriteHandle, szBuffer, (DWORD)_tcslen(szBuffer) * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
 		_tcscpy_s(szBuffer,ARRAYSIZE(szBuffer),TEXT("================================================\r\n"));
-		WriteFile ( hFile, szBuffer, (DWORD)_tcslen(szBuffer) * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
+		WriteFile ( hInternalLogWriteHandle, szBuffer, (DWORD)_tcslen(szBuffer) * (DWORD)sizeof(TCHAR), &dwWritten, NULL);
 		rc = ProcessTrace(&handle, 1, 0, 0);
 		if (rc != ERROR_SUCCESS && rc != ERROR_CANCELLED)
 		{
@@ -168,9 +174,9 @@ void ExportOneTraceFile(PTSTR szTraceFile)
 	}
 }
 
-BOOL CreateDebugReportElevated(PTSTR szLogFile)
+HANDLE StartReport(PTSTR szLogFile)
 {
-	DWORD dwError;
+	DWORD dwError = 0;
 	BOOL fSuccess = FALSE;
 	HANDLE hOutput = INVALID_HANDLE_VALUE;
 	__try
@@ -185,67 +191,143 @@ BOOL CreateDebugReportElevated(PTSTR szLogFile)
 							   NULL);                // no template 
 		if (hOutput == INVALID_HANDLE_VALUE) 
 		{ 
+			dwError = GetLastError();
 			__leave;
 		}
-		// hFile MUST be a module variable because the callback can't use any parameter
-		hFile = hOutput;
+		// hInternalLogWriteHandle MUST be a module variable because the callback can't use any parameter
+		hInternalLogWriteHandle = hOutput;
 		// disable the logging, just in case if was active
 		StopLogging();
 		// enable the logging
 		if (!StartLogging())
 		{
+			dwError = GetLastError();
 			__leave;
 		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Starting report");
+		fSuccess = TRUE;
+	}
+	__finally
+	{
+		if (!fSuccess)
+		{
+			if (hOutput != INVALID_HANDLE_VALUE)
+				CloseHandle(hOutput);
+			hOutput = INVALID_HANDLE_VALUE;
+		}
+	}
+	SetLastError(dwError);
+	return hOutput;
+}
+
+// from previous step
+// credentials
+extern CContainerHolderFactory<CContainerHolderTest> *pCredentialList;
+// selected credential
+extern DWORD dwCurrentCredential;
+
+BOOL DoTheActionToBeTraced()
+{
+	DWORD dwError;
+	BOOL fSuccess = FALSE;
+	PCCERT_CONTEXT pCertContext = NULL;
+	__try
+	{
+		
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Starting report");
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"===============");
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Register the certificate");
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"===============");
+		// register the package again
+		CContainerHolderTest* MyTest = pCredentialList->GetContainerHolderAt(dwCurrentCredential);
+		CContainer* container = MyTest->GetContainer();
+		pCertContext = container->GetCertificate();
+		fSuccess = LsaEIDCreateStoredCredential(szUserName, szPassword, pCertContext, container->GetKeySpec() == AT_KEYEXCHANGE);
+		if (!fSuccess)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Test failed with 0x%08X", dwError);
+			__leave;
+		}
+		
 		// call for a test
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Test Logon");
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"===============");
 		if (!TestLogon(NULL))
 		{
 			dwError = GetLastError();
 			if (dwError == ERROR_CANCELLED)
 			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"TestLogonCancelled");
 				__leave;
 			}
+			else
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Test failed with 0x%08X", dwError);
+			}
 		}
-		// disable the logging
-		StopLogging();
-		// get the text
-		ExportOneTraceFile(TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl"));
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Success !!!");
 		fSuccess = TRUE;
 	}
 	__finally
 	{
-		if (hOutput != INVALID_HANDLE_VALUE)
-		{
-			CloseHandle(hOutput);
-		}
+		if (pCertContext)
+			CertFreeCertificateContext(pCertContext);
 	}
+	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Ending tests");
+	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"===============");
+	SetLastError(dwError);
 	return fSuccess;
 }
 
+// called from the wizard (non elevated)
+// create the elevated process
 BOOL CreateDebugReport(PTSTR szLogFile)
 {
 	BOOL fReturn = FALSE;
 	DWORD dwError = 0;
-	
-	if (IsElevated())
-	{	
-		
-		fReturn = CreateDebugReportElevated(szLogFile);
-	}
-	else
+	TCHAR szNamedPipeName[256] = TEXT("\\\\.\\pipe\\EIDAuthenticateWizard");
+	HANDLE hNamedPipe = INVALID_HANDLE_VALUE;
+	TCHAR szParameter[356];
+	DWORD dwWrite;
+	__try
 	{
-		// elevate
+		// run the process of the wizard with a special parameter, elevated
+		// so the tracing can be done in another process
+		// and no information is transmitted to that process
+
+		// create a named pipe for intercommunication process
+		// generate the name
+
+		static const char alphanum[] =
+        "0123456789"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz";
+
+		for (int i = 0; i < 10; ++i) {
+			szNamedPipeName[_tcslen(szNamedPipeName)] = alphanum[rand() % (sizeof(alphanum) - 1)];
+		}
+
+		hNamedPipe = CreateNamedPipe(szNamedPipeName,PIPE_ACCESS_DUPLEX,0,PIPE_UNLIMITED_INSTANCES,0,0,0,NULL);
+		if (hNamedPipe == INVALID_HANDLE_VALUE)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CreateNamedPipe 0x%08X", GetLastError());
+			__leave;
+		}
+		_stprintf_s(szParameter,ARRAYSIZE(szParameter),TEXT("REPORT %s"),szNamedPipeName);
+		// launch the wizard elevated
 		SHELLEXECUTEINFO shExecInfo;
-		TCHAR szParameters[MAX_PATH + 100] = TEXT("DEBUGREPORT ");
 		TCHAR szName[1024];
 		GetModuleFileName(GetModuleHandle(NULL),szName, ARRAYSIZE(szName));
-		_tcscat_s(szParameters, ARRAYSIZE(szParameters),szLogFile);
 
 		shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
 		shExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
 		shExecInfo.hwnd = NULL;
 		shExecInfo.lpVerb = TEXT("runas");
 		shExecInfo.lpFile = szName;
-		shExecInfo.lpParameters = szParameters;
+		// sending the named pipe name so the other process can connect
+		shExecInfo.lpParameters = szParameter;
 		shExecInfo.lpDirectory = NULL;
 		shExecInfo.nShow = SW_NORMAL;
 		shExecInfo.hInstApp = NULL;
@@ -253,9 +335,27 @@ BOOL CreateDebugReport(PTSTR szLogFile)
 		if (!ShellExecuteEx(&shExecInfo))
 		{
 			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CreateNamedPipe 0x%08X", GetLastError());
 		}
 		else
 		{
+			if (! (ConnectNamedPipe(hNamedPipe, NULL) ? TRUE : (GetLastError() == ERROR_PIPE_CONNECTED)))
+			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CreateNamedPipe 0x%08X", GetLastError());
+				__leave;
+			}
+			// send to the process the log file name
+			WriteFile(hNamedPipe,szLogFile,(_tcslen(szLogFile) +1) * sizeof(TCHAR),&dwWrite,NULL);
+			Sleep(1000);
+			// do the action ...
+			DoTheActionToBeTraced();
+			Sleep(1000);
+			// send to the process the order to stop
+			// an empty line will do it
+			WriteFile(hNamedPipe,TEXT("\n"),2 * sizeof(TCHAR),NULL,NULL);
+			DisconnectNamedPipe(hNamedPipe);
+			// then wait to its stop to have the file (if we don't, the file can be not written)
 			if (WaitForSingleObject(shExecInfo.hProcess, INFINITE) == WAIT_OBJECT_0)
 			{
 				fReturn = TRUE;
@@ -266,8 +366,78 @@ BOOL CreateDebugReport(PTSTR szLogFile)
 			}
 		}
 	}
+	__finally
+	{
+		if (hNamedPipe != INVALID_HANDLE_VALUE)
+			CloseHandle(hNamedPipe);
+	}
 	SetLastError(dwError);
 	return fReturn;
+}
+
+// called from the elevated process
+VOID CreateReport(PTSTR szNamedPipeName)
+{
+	// read the file from the command line
+	TCHAR szFile [256];
+	HANDLE hReport = INVALID_HANDLE_VALUE;
+	HANDLE hPipe = INVALID_HANDLE_VALUE;
+	DWORD dwRead;
+	__try
+	{
+		hPipe = CreateFile( szNamedPipeName,GENERIC_READ |GENERIC_WRITE,0,NULL,OPEN_EXISTING, 0,NULL);
+		if (hPipe == INVALID_HANDLE_VALUE)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"INVALID_HANDLE_VALUE 1");
+			if (GetLastError() != ERROR_PIPE_BUSY) 
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"hPipe connect 0x%08X",GetLastError());
+				__leave;
+			}
+			if ( ! WaitNamedPipe(szNamedPipeName, 20000)) 
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"WaitNamedPipe 0x%08X",GetLastError());
+				__leave;
+			}
+			hPipe = CreateFile( szNamedPipeName,GENERIC_READ |GENERIC_WRITE,0,NULL,OPEN_EXISTING, 0,NULL);
+		}
+		if (hPipe == INVALID_HANDLE_VALUE)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"INVALID_HANDLE_VALUE 2 0X%08X",GetLastError());
+			__leave;
+		}
+		if (!ReadFile(hPipe,szFile,ARRAYSIZE(szFile) * sizeof(TCHAR), &dwRead,NULL))
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"ReadFile 0X%08X",GetLastError());
+			__leave;
+		}
+		
+		// Warning : hReport is used as hInternalLogWriteHandle
+		// Side Effect !!!!!!!!
+		// hInternalLogWriteHandle MUST be a module variable because the callback can't use any parameter
+		hReport = StartReport(szFile);
+		
+		// fait for <Enter> to quit
+		if (!ReadFile(hPipe,szFile,1 * sizeof(TCHAR), &dwRead,NULL))
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"ReadFile 0X%08X",GetLastError());
+			__leave;
+		}
+
+		// write the ouput to the log fil
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Ending report");
+		// disable the logging
+		StopLogging();
+		// get the text
+		ExportOneTraceFile(TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl"));
+	}
+	__finally
+	{
+		if (hReport != INVALID_HANDLE_VALUE)
+		{
+			CloseHandle(hReport);
+		}
+	}
 }
 
 BOOL SendReport(DWORD dwErrorCode, PTSTR szEmail)

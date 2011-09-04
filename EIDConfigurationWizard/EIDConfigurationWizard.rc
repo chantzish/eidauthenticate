@@ -27,8 +27,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,3,0,5
- PRODUCTVERSION 0,3,0,5
+ FILEVERSION 0,4,0,1
+ PRODUCTVERSION 0,4,0,1
  FILEFLAGSMASK 0x0L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -45,11 +45,11 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "www.mysmartlogon.com"
             VALUE "FileDescription", "Configuration Wizard"
-            VALUE "FileVersion", "0.3.0.5"
+            VALUE "FileVersion", "0.4.0.1"
             VALUE "InternalName", "EIDConfigurationWizard.exe"
             VALUE "OriginalFilename", "EIDConfigurationWizard.exe"
             VALUE "ProductName", "EID Configuration Wizard"
-            VALUE "ProductVersion", "0.3.0.5"
+            VALUE "ProductVersion", "0.4.0.1"
         END
     END
     BLOCK "VarFileInfo"

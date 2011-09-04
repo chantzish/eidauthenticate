@@ -17,6 +17,8 @@
 
 #include <windows.h>
 #include <tchar.h>
+#define SECURITY_WIN32
+#include <sspi.h>
 
 #include "../EIDCardLibrary/EIDCardLibrary.h"
 #include "../EIDCardLibrary/guid.h"
@@ -226,13 +228,10 @@ BOOL RegDelnodeRecurse (HKEY hKeyRoot, LPTSTR lpSubKey)
         do {
 
             _tcscpy_s (lpEnd, MAX_PATH*2 - _tcsclen(lpSubKey), szName);
-
             if (!RegDelnodeRecurse(hKeyRoot, lpSubKey)) {
                 break;
             }
-
             dwSize = MAX_PATH;
-
             lResult = RegEnumKeyEx(hKey, 0, szName, &dwSize, NULL,
                                    NULL, NULL, &ftWrite);
 
@@ -299,12 +298,57 @@ LONG WINAPI RegSetKeyValueXP(
 }
 #define RegSetKeyValue RegSetKeyValueXP
 #endif
+
+void RegisterTheSecurityPackage()
+{
+	NTSTATUS Status;
+	DWORD dwNbPackage;
+	PSecPkgInfo pPackageInfo;
+	BOOL fFound = FALSE;
+	__try
+	{
+		
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Starting...");
+		Status = EnumerateSecurityPackages(&dwNbPackage, &pPackageInfo);
+		if (Status != SEC_E_OK)
+		{
+			__leave;
+		}
+		for(DWORD dwI = 0; dwI < dwNbPackage; dwI++)
+		{
+			PTSTR szPackage = pPackageInfo[dwI].Name;
+			if (_tcscmp(szPackage, AUTHENTICATIONPACKAGENAMET) == 0)
+			{
+				fFound = TRUE;
+			}
+		}
+		FreeContextBuffer(pPackageInfo);
+		if (fFound)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"The security package was loaded before");
+			__leave;
+		}
+		SECURITY_PACKAGE_OPTIONS options = {sizeof(SECURITY_PACKAGE_OPTIONS)};
+		Status = AddSecurityPackage(AUTHENTICATIONPACKAGENAMET, &options);
+		if (Status != SEC_E_OK)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Unable to register the package 0x%08X 0x%08X",Status, GetLastError());
+			__leave;
+		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Sucessfully registered the package");
+	}
+	__finally
+	{
+	}	
+}
+
 /** Installation and uninstallation routine
 */
 
 void EIDAuthenticationPackageDllRegister()
 {
 	AppendValueToMultiSz(HKEY_LOCAL_MACHINE, TEXT("SYSTEM\\CurrentControlSet\\Control\\Lsa"), TEXT("Security Packages"), AUTHENTICATIONPACKAGENAMET);
+	RegisterTheSecurityPackage();
 }
 
 void EIDAuthenticationPackageDllUnRegister()
