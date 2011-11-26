@@ -36,6 +36,7 @@
 #include "EIDSecuritySupportProviderTest.h"
 #include "OnlineDatabaseTest.h"
 #include "../EIDCardLibrary/Registration.h"
+#include "../EIDCardLibrary/XPCompatibility.h"
 
 #ifdef UNICODE
 #if defined _M_IX86
@@ -137,7 +138,7 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		hMainWnd = hWnd;
 		
 		// shield icon
-		sii.cbSize = sizeof(sii);
+		/*sii.cbSize = sizeof(sii);
 		SHGetStockIconInfo(SIID_SHIELD, SHGFI_ICON | SHGFI_SMALLICON, &sii);
 		g_hShieldIcon = sii.hIcon;
 		mii.cbSize = sizeof(mii);
@@ -146,7 +147,7 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		mii.dwItemData = (ULONG_PTR)g_hShieldIcon;
 		
 		SetMenuItemInfo(GetMenu(hWnd), IDM_CRED_RP_TRIGGER, FALSE, &mii);
-		SetMenuItemInfo(GetMenu(hWnd), IDM_INFO_TRACING, FALSE, &mii);
+		SetMenuItemInfo(GetMenu(hWnd), IDM_INFO_TRACING, FALSE, &mii);*/
 		// default authentication mean
 		CheckMenuRadioItem(GetMenu(hWnd),IDM_CRED_LSA,IDM_CRED_CredSSP,IDM_CRED_SSPI,MF_BYCOMMAND);
 		SetAuthentication(SSPI);
