@@ -12,8 +12,10 @@
 
 class PinDialog : public GinaModalDialog {
 public:
-    PinDialog(IWinLogon* pWinLogon)
-        : GinaModalDialog(pWinLogon, IDD_LOGONPIN), pin(0) {
+    PinDialog(IWinLogon* pWinLogon, CContainerHolderFactory<GinaSmartCardCredential> *pCredentialList)
+        : GinaModalDialog(pWinLogon, IDD_LOGONPIN), pin(0) 
+	{
+		_pCredentialList = pCredentialList;
     }
     ~PinDialog() {
         if (pin)   delete pin;
@@ -21,5 +23,6 @@ public:
     
     INT_PTR DialogProc(UINT msg, WPARAM wp, LPARAM lp);
 	GinaSmartCardCredential* certificate;
+	CContainerHolderFactory<GinaSmartCardCredential> *_pCredentialList;
     wchar_t* pin;
 };

@@ -42,8 +42,13 @@ public:
     BOOL GetConsoleSwitchCredentials(WLX_CONSOLESWITCH_CREDENTIALS_INFO_V1_0* pCredInfo);
     void DisconnectNotify();
     void ReconnectNotify();
-
+	//
 	virtual void Callback(EID_CREDENTIAL_PROVIDER_READER_STATE Message, __in LPCTSTR szReader,__in_opt LPCTSTR szCardName, __in_opt USHORT ActivityCount);
+
+	Gina()
+	{
+		_CredentialList.SetUsageScenario(CPUS_LOGON,0);
+	}
 private:
     Gina(IWinLogon* pWinLogon, HANDLE hLsa);
 	__override ~Gina();

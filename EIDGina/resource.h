@@ -29,6 +29,8 @@
 #define IDC_MESSAGE                     2000
 #define IDC_OPTIONS                     2001
 #define IDC_PIN                         2002
+#define IDC_COMBO1                      2003
+#define IDC_CONTAINER                   2003
 
 // Next default values for new objects
 // 
@@ -36,7 +38,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        117
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         2003
+#define _APS_NEXT_CONTROL_VALUE         2004
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
