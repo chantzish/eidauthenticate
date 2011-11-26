@@ -15,7 +15,7 @@
 #include "SecurityHelper.h"
 #include "RegistryHelper.h"
 #include "GuiHelper.h"
-
+#include "../EIDCardLibrary/XPCompatibility.h"
 
 // length of a Windows logon SID of the form S-1-5-5-x-y
 #define LOGON_SID_SIZE 20
@@ -135,7 +135,7 @@ int Gina::LoggedOutSAS(DWORD dwSasType, PLUID pAuthenticationId, PSID pLogonSid,
     const wchar_t* password    = 0;
 	
     LogonDialog dlg(_pWinLogon);
-	PinDialog dlgPin(_pWinLogon);
+	PinDialog dlgPin(_pWinLogon, &_CredentialList);
 	if (dwSasType == WLX_SAS_TYPE_SC_REMOVE)
 	{
 		return WLX_SAS_ACTION_NONE;
@@ -143,6 +143,11 @@ int Gina::LoggedOutSAS(DWORD dwSasType, PLUID pAuthenticationId, PSID pLogonSid,
 	else if (dwSasType == WLX_SAS_TYPE_SC_INSERT)
 	{
 		
+		if (_CredentialList.ContainerHolderCount() <= 0)
+		{
+			_pWinLogon->wlxMessageBox(0, L"The smart card doesn't contain any valid certificate", L"Security", MB_ICONSTOP);
+			return WLX_SAS_ACTION_NONE;
+		}
 		if (IDOK != dlgPin.Show()) return WLX_SAS_ACTION_NONE;
 		        // attempt the login
         DWORD win32Error;
@@ -169,6 +174,10 @@ int Gina::LoggedOutSAS(DWORD dwSasType, PLUID pAuthenticationId, PSID pLogonSid,
             return WLX_SAS_ACTION_NONE;
         }
         LsaFreeReturnBuffer(pProfile);
+		// to be free by EIDFree
+		userName = dlgPin.certificate->GetContainer()->GetUserNameW();
+		domain = L"";
+		password = L"";
 	}
 	else if (WLX_SAS_TYPE_CTRL_ALT_DEL == dwSasType) {
 
@@ -274,7 +283,9 @@ int Gina::LoggedOutSAS(DWORD dwSasType, PLUID pAuthenticationId, PSID pLogonSid,
             }
         }
     }
-
+	if (WLX_SAS_TYPE_SC_INSERT == dwSasType) {
+		EIDFree((PVOID)userName);
+	}
     if (success) {
         // GINA caches a copy of the interactive user's token
         _hToken = *phToken;
@@ -476,20 +487,20 @@ void Gina::Callback(EID_CREDENTIAL_PROVIDER_READER_STATE Message, __in LPCTSTR s
 	switch(Message)
 	{
 	case EIDCPRSConnecting:
+		//_pWinLogon->wlxMessageBox(0, L"EIDCPRSConnecting", L"Security", MB_ICONSTOP);
+		_CredentialList.ConnectNotification(szReader,szCardName,ActivityCount);
 		if (sendSASNotification)
 		{
 			_pWinLogon->wlxSasNotify(WLX_SAS_TYPE_SC_INSERT);
 		}
-		//_pWinLogon->wlxMessageBox(0, L"EIDCPRSConnecting", L"Security", MB_ICONSTOP);
-		_CredentialList.ConnectNotification(szReader,szCardName,ActivityCount);
 		break;
 	case EIDCPRSDisconnected:
+		_CredentialList.DisconnectNotification(szReader);
+		//_pWinLogon->wlxMessageBox(0, L"EIDCPRSDisconnected", L"Security", MB_ICONSTOP);
 		if (sendSASNotification)
 		{
 			_pWinLogon->wlxSasNotify(WLX_SAS_TYPE_SC_REMOVE);
 		}
-		_CredentialList.DisconnectNotification(szReader);
-		//_pWinLogon->wlxMessageBox(0, L"EIDCPRSDisconnected", L"Security", MB_ICONSTOP);
 		break;
 	}
 }

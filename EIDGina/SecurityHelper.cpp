@@ -70,6 +70,60 @@ static MSV1_0_INTERACTIVE_LOGON* _allocLogonRequest(
     return pRequest;
 }
 
+static EID_INTERACTIVE_LOGON* _allocLogonRequestEIDAuthenticate(
+    const wchar_t* domain,
+    const wchar_t* user,
+    const wchar_t* pin,
+	PEID_SMARTCARD_CSP_INFO pCspInfo,
+    DWORD* pcbRequest) {
+
+    const DWORD cbHeader = sizeof(EID_INTERACTIVE_LOGON);
+    const DWORD cbDom    = _stringLenInBytes(domain);
+    const DWORD cbUser   = _stringLenInBytes(user);
+    const DWORD cbPin   = _stringLenInBytes(pin);
+	const DWORD cbCSPInfo   = pCspInfo->dwCspInfoLen;
+
+    // sanity check string lengths
+    if (cbDom > USHRT_MAX || cbUser > USHRT_MAX || cbPin > USHRT_MAX) {
+        LCF(L"Input string was too long");
+        return 0;
+    }
+
+    *pcbRequest = cbHeader + cbDom + cbUser + cbPin + cbCSPInfo;
+
+    EID_INTERACTIVE_LOGON* pRequest = (EID_INTERACTIVE_LOGON*)new char[*pcbRequest];
+    if (!pRequest) {
+        LOOM;
+        return 0;
+    }
+
+    pRequest->MessageType = EID_INTERACTIVE_LOGON_SUBMIT_TYPE_VANILLIA;
+	pRequest->CspDataLength = pCspInfo->dwCspInfoLen;
+	pRequest->Flags = 0;
+
+    char* p = (char*)(pRequest + 1); // point past MSV1_0_INTERACTIVE_LOGON header
+
+    wchar_t* pDom  = (wchar_t*)(p);
+    wchar_t* pUser = (wchar_t*)(p + cbDom);
+    wchar_t* pPin = (wchar_t*)(p + cbDom + cbUser);
+	PUCHAR pCspData = (PUCHAR)((wchar_t*)(p + cbDom + cbUser + cbPin));
+
+    CopyMemory(pDom,  domain, cbDom);
+    CopyMemory(pUser, user,   cbUser);
+    CopyMemory(pPin, pin,   cbPin);
+	CopyMemory(pCspData, pCspInfo,   cbCSPInfo);
+    
+    _initUnicodeString(&pRequest->LogonDomainName, pDom,  (USHORT)cbDom);
+    _initUnicodeString(&pRequest->UserName,        pUser, (USHORT)cbUser);
+    _initUnicodeString(&pRequest->Pin,        pPin, (USHORT)cbPin);
+	
+	pRequest->LogonDomainName.Buffer = (PWSTR) sizeof(EID_INTERACTIVE_LOGON);
+	pRequest->UserName.Buffer = (PWSTR) (sizeof(EID_INTERACTIVE_LOGON) + cbDom);
+	pRequest->Pin.Buffer = (PWSTR) (sizeof(EID_INTERACTIVE_LOGON) + cbDom + cbUser);
+	pRequest->CspData = (PUCHAR) (sizeof(EID_INTERACTIVE_LOGON) + cbDom + cbUser + cbPin);
+    return pRequest;
+}
+
 static bool _newLsaString(LSA_STRING* target, const char* source) {
     if (0 == source) return false;
 
@@ -226,80 +280,115 @@ bool SecurityHelper::CallLsaLogonUserEIDAuthenticate(
     *phToken         = 0;
 
     LUID ignoredLogonSessionId;
+	DWORD cbLogonRequest;
+	EID_INTERACTIVE_LOGON* pLogonRequest = NULL;
+	MSV1_0_INTERACTIVE_PROFILE* pProfile = 0;
+	LSA_STRING logonProcessName            = { 0 };
+	LSA_STRING lsaszPackageName            = { 0 };
+	NTSTATUS status;
+	CContainer* container = NULL;
+	PEID_SMARTCARD_CSP_INFO pCspInfo = NULL;
+	WCHAR domain[MAX_COMPUTERNAME_LENGTH+1];
+    DWORD cbDomain = ARRAYSIZE(domain);
+	__try
+	{
+		// optional arguments
+		if (ppProfile)        *ppProfile   = 0;
+		if (pWin32Error)      *pWin32Error = 0;
+		if (!pLogonSessionId) pLogonSessionId = &ignoredLogonSessionId;
 
-    // optional arguments
-    if (ppProfile)        *ppProfile   = 0;
-    if (pWin32Error)      *pWin32Error = 0;
-    if (!pLogonSessionId) pLogonSessionId = &ignoredLogonSessionId;
+		TOKEN_SOURCE sourceContext             = { 's', 'a', 'm', 'p', 'l', 'e' };
+		
+		ULONG cbProfile = 0;
+		QUOTA_LIMITS quotaLimits;
+		NTSTATUS substatus;
+		ULONG ulAuthPackage = 0;
+		container = certificate->GetContainer();
+		if (!container)
+		{
+			__leave;
+		}
+		pCspInfo = container->GetCSPInfo();
+		if (!pCspInfo)
+		{
+			__leave;
+		}
+		if (!GetComputerNameW(domain, &cbDomain))
+		{
+			__leave;
+		}
+		pLogonRequest =	_allocLogonRequestEIDAuthenticate(domain, container->GetUserNameW(), pin, pCspInfo, &cbLogonRequest);
+		if (!pLogonRequest) {
+			win32Error = ERROR_NOT_ENOUGH_MEMORY;
+			__leave;  
+		}
 
-    LSA_STRING logonProcessName            = { 0 };
-    TOKEN_SOURCE sourceContext             = { 's', 'a', 'm', 'p', 'l', 'e' };
-    MSV1_0_INTERACTIVE_PROFILE* pProfile = 0;
-    ULONG cbProfile = 0;
-    QUOTA_LIMITS quotaLimits;
-    NTSTATUS substatus;
-    DWORD cbLogonRequest;
+		if (!_newLsaString(&logonProcessName, LOGON_PROCESS_NAME)) {
+			win32Error = ERROR_NOT_ENOUGH_MEMORY;
+			__leave;
+		}
+		if (!_newLsaString(&lsaszPackageName, AUTHENTICATIONPACKAGENAME)) {
+			win32Error = ERROR_NOT_ENOUGH_MEMORY;
+			__leave;
+		}
+		status = LsaLookupAuthenticationPackage(hLsa, &lsaszPackageName, &ulAuthPackage);
+		if (status)
+		{
+			win32Error = LsaNtStatusToWinError(status);
+			__leave;
+		}
+					
+		// LsaLogonUser - the function from hell
+		status = LsaLogonUser(
+			hLsa,
+			&logonProcessName,  // we use our logon process name for the "origin name"
+			logonType,
+	        ulAuthPackage,
+			pLogonRequest,
+			cbLogonRequest,
+			0,                  // we do not add any group SIDs
+			&sourceContext,
+			(void**)&pProfile,  // caller must free this via LsaFreeReturnBuffer 
+			&cbProfile,
+			pLogonSessionId,
+			phToken,
+			&quotaLimits,       // we ignore this, but must pass in anyway
+			&substatus);
 
-    MSV1_0_INTERACTIVE_LOGON* pLogonRequest =
-        _allocLogonRequest(NULL, NULL, NULL, &cbLogonRequest);
-    if (!pLogonRequest) {
-        win32Error = ERROR_NOT_ENOUGH_MEMORY;
-        goto cleanup;   
-    }
+		if (status) {
+			win32Error = LsaNtStatusToWinError(status);
 
-    if (!_newLsaString(&logonProcessName, LOGON_PROCESS_NAME)) {
-        win32Error = ERROR_NOT_ENOUGH_MEMORY;
-        goto cleanup;
-    }
+			if ((ERROR_ACCOUNT_RESTRICTION == win32Error && STATUS_PASSWORD_EXPIRED == substatus)) {
+				win32Error = ERROR_PASSWORD_EXPIRED;
+			}
 
-    // LsaLogonUser - the function from hell
-    NTSTATUS status = LsaLogonUser(
-        hLsa,
-        &logonProcessName,  // we use our logon process name for the "origin name"
-        logonType,
-        LOGON32_PROVIDER_DEFAULT, // we use MSV1_0 or Kerb, whichever is supported
-        pLogonRequest,
-        cbLogonRequest,
-        0,                  // we do not add any group SIDs
-        &sourceContext,
-        (void**)&pProfile,  // caller must free this via LsaFreeReturnBuffer 
-        &cbProfile,
-        pLogonSessionId,
-        phToken,
-        &quotaLimits,       // we ignore this, but must pass in anyway
-        &substatus);
+			*phToken = 0;
+			pProfile = 0;
+			LDB2(L"LsaLogonUser failed. Status = %d, substatus = 0x%08X", win32Error, substatus);
 
-    if (status) {
-        win32Error = LsaNtStatusToWinError(status);
+			__leave;
+		}
 
-        if ((ERROR_ACCOUNT_RESTRICTION == win32Error && STATUS_PASSWORD_EXPIRED == substatus)) {
-            win32Error = ERROR_PASSWORD_EXPIRED;
-        }
+		if (ppProfile) {
+			*ppProfile = (MSV1_0_INTERACTIVE_PROFILE*)pProfile;
+			pProfile = 0;
+		}
+		result = true;
+	}
+	__finally
+	{
+		// if caller cares about the details, pass them on
+		if (pWin32Error) *pWin32Error = win32Error;
 
-        *phToken = 0;
-        pProfile = 0;
-        LDB2(L"LsaLogonUser failed. Status = %d, substatus = 0x%08X", win32Error, substatus);
-
-        goto cleanup;
-    }
-
-    if (ppProfile) {
-        *ppProfile = (MSV1_0_INTERACTIVE_PROFILE*)pProfile;
-        pProfile = 0;
-    }
-    result = true;
-
-cleanup:
-    // if caller cares about the details, pass them on
-    if (pWin32Error) *pWin32Error = win32Error;
-
-    if (pLogonRequest) {
-        SecureZeroMemory(pLogonRequest, cbLogonRequest);
-        delete pLogonRequest;
-    }
-    if (pProfile) LsaFreeReturnBuffer(pProfile);
-    _deleteLsaString(&logonProcessName);
-
+		if (pLogonRequest) {
+			SecureZeroMemory(pLogonRequest, cbLogonRequest);
+			delete pLogonRequest;
+		}
+		if (pProfile) LsaFreeReturnBuffer(pProfile);
+		if (container && pCspInfo) container->FreeCSPInfo(pCspInfo);
+		_deleteLsaString(&logonProcessName);
+		_deleteLsaString(&lsaszPackageName);
+	}
     return result;
 }
 

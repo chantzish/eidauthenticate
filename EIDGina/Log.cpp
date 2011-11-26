@@ -20,7 +20,8 @@ static void _writeLog(const wchar_t* msg) {
 static void _simpleLog(const wchar_t* sourceFile, int lineNumber, const wchar_t* formatString, va_list args) {
     wchar_t msg[512];
     if (Log::FormatLogEntry(msg, sizeof msg / sizeof *msg, sourceFile, lineNumber, formatString, args)) {
-        _writeLog(msg);
+        OutputDebugString(msg);
+		_writeLog(msg);
     }
 }
 
