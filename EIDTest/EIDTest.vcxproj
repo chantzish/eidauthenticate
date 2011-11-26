@@ -99,7 +99,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(OutDir)EIDCardLibrary.lib;Winscard.lib;Crypt32.lib;Netapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs>%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>%(DelayLoadDLLs);advapi32.dll;shell32.dll;credui.dll</DelayLoadDLLs>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
@@ -149,7 +149,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>$(OutDir)EIDCardLibrary.lib;Winscard.lib;Crypt32.lib;Netapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs>%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>%(DelayLoadDLLs);advapi32.dll;shell32.dll;credui.dll</DelayLoadDLLs>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
@@ -157,7 +157,8 @@
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
     <PostBuildEvent>
-      <Command>"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign /f $(SolutionDir)\CodeSigning\test.pfx /p test /t http://tsa.starfieldtech.com "$(TargetPath)"</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -184,7 +185,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
     </Link>
     <PostBuildEvent>
-      <Command>"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign /f $(SolutionDir)\CodeSigning\test.pfx /p test /t http://tsa.starfieldtech.com "$(TargetPath)"</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
