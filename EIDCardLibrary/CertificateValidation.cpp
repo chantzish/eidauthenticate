@@ -197,6 +197,25 @@ BOOL HasCertificateRightEKU(__in PCCERT_CONTEXT pCertContext)
 	return fValidation;
 }
 
+BOOL IsCertificateInComputerTrustedPeopleStore(__in PCCERT_CONTEXT pCertContext)
+{
+	BOOL fReturn = FALSE;
+	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Testing trusted certificate");
+	HCERTSTORE hTrustedPeople = CertOpenStore(CERT_STORE_PROV_SYSTEM,0,NULL,CERT_SYSTEM_STORE_LOCAL_MACHINE,_T("TrustedPeople"));
+	if (hTrustedPeople)
+	{
+					
+		PCCERT_CONTEXT pCertificateFound = CertFindCertificateInStore(hTrustedPeople, pCertContext->dwCertEncodingType, 0, CERT_FIND_EXISTING, pCertContext, NULL);
+		if (pCertificateFound)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Certificate found in trusted people store");
+			fReturn = TRUE;
+			CertFreeCertificateContext(pCertificateFound);
+		}
+		CertCloseStore(hTrustedPeople, 0);
+	}
+	return fReturn;
+}
 
 BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt DWORD dwFlag)
 {
@@ -214,7 +233,8 @@ BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt DWORD dwFla
 	LPSTR					szOid;
 	HCERTCHAINENGINE		hChainEngine		= HCCE_LOCAL_MACHINE;
 	DWORD dwError = 0;
-
+	// used for XP compatibility for the Trusted people cert store
+	BOOL fClearPeerTrustFlag = FALSE;
 	//---------------------------------------------------------
     // Initialize data structures for chain building.
 	EnhkeyUsage.cUsageIdentifier = 0;
@@ -255,32 +275,38 @@ BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt DWORD dwFla
 				__leave;
 			}
 		}
-	    if(!CertGetCertificateChain(
-			hChainEngine,pCertContext,NULL,NULL,&ChainPara,CERT_CHAIN_ENABLE_PEER_TRUST,NULL,&pChainContext))
+		// XP doesn't support CERT_CHAIN_ENABLE_PEER_TRUST
+		if (IsCertificateInComputerTrustedPeopleStore(pCertContext))
 		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CertGetCertificateChain", GetLastError());
-			__leave;
 		}
+		else
+		{
+			if(!CertGetCertificateChain(
+				hChainEngine,pCertContext,NULL,NULL,&ChainPara,CERT_CHAIN_ENABLE_PEER_TRUST,NULL,&pChainContext))
+			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CertGetCertificateChain", GetLastError());
+			}
 
-		if (pChainContext->TrustStatus.dwErrorStatus)
-		{
-			dwError = pChainContext->TrustStatus.dwErrorStatus;
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error %s (0x%08x) returned by CertVerifyCertificateChainPolicy",GetTrustErrorText(pChainContext->TrustStatus.dwErrorStatus),pChainContext->TrustStatus.dwErrorStatus);
-			__leave;
+			if (pChainContext->TrustStatus.dwErrorStatus)
+			{
+				dwError = pChainContext->TrustStatus.dwErrorStatus;
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error %s (0x%08x) returned by CertVerifyCertificateChainPolicy",GetTrustErrorText(pChainContext->TrustStatus.dwErrorStatus),pChainContext->TrustStatus.dwErrorStatus);
+				__leave;
+			}
+			if(! CertVerifyCertificateChainPolicy(CERT_CHAIN_POLICY_BASE, pChainContext, &ChainPolicy, &PolicyStatus))
+			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CertGetCertificateChain", GetLastError());
+				__leave;
+			}
+			if(PolicyStatus.dwError)
+			{
+				dwError = PolicyStatus.dwError;
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error %s %d returned by CertVerifyCertificateChainPolicy",GetTrustErrorText(PolicyStatus.dwError),PolicyStatus.dwError);
+				__leave;
+			}
 		}
-		if(! CertVerifyCertificateChainPolicy(CERT_CHAIN_POLICY_BASE, pChainContext, &ChainPolicy, &PolicyStatus))
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CertGetCertificateChain", GetLastError());
-			__leave;
-		}
-		if(PolicyStatus.dwError)
-		{
-			dwError = PolicyStatus.dwError;
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error %s %d returned by CertVerifyCertificateChainPolicy",GetTrustErrorText(PolicyStatus.dwError),PolicyStatus.dwError);
-			__leave;
-		} 
 		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"Chain OK");
 
 		// verifiate time compliance

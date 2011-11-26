@@ -21,9 +21,10 @@
 #pragma comment(lib,"Msi.lib")
 
 #include "../EIDCardLibrary/Registration.h"
-
+#include "../EIDCardLibrary/XPCompatibility.h"
 extern "C"
 {
+	
 	void NTAPI DllRegister()
 	{
 		EIDAuthenticationPackageDllRegister();

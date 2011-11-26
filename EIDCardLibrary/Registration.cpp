@@ -163,141 +163,7 @@ void RemoveValueFromMultiSz(HKEY hKey, PTSTR szKey, PTSTR szValue, PTSTR szData)
 	RegCloseKey(hkResult);
 }
 
-//*************************************************************
-//
-//  RegDelnodeRecurse()
-//
-//  Purpose:    Deletes a registry key and all its subkeys / values.
-//
-//  Parameters: hKeyRoot    -   Root key
-//              lpSubKey    -   SubKey to delete
-//
-//  Return:     TRUE if successful.
-//              FALSE if an error occurs.
-//
-//*************************************************************
 
-BOOL RegDelnodeRecurse (HKEY hKeyRoot, LPTSTR lpSubKey)
-{
-    LPTSTR lpEnd;
-    LONG lResult;
-    DWORD dwSize;
-    TCHAR szName[MAX_PATH*2];
-    HKEY hKey;
-    FILETIME ftWrite;
-
-    // First, see if we can delete the key without having
-    // to recurse.
-
-    lResult = RegDeleteKey(hKeyRoot, lpSubKey);
-
-    if (lResult == ERROR_SUCCESS) 
-        return TRUE;
-
-    lResult = RegOpenKeyEx (hKeyRoot, lpSubKey, 0, KEY_READ, &hKey);
-
-    if (lResult != ERROR_SUCCESS) 
-    {
-        if (lResult == ERROR_FILE_NOT_FOUND) {
-            return TRUE;
-        } 
-        else {
-            return FALSE;
-        }
-    }
-
-    // Check for an ending slash and add one if it is missing.
-
-    lpEnd = lpSubKey + _tcsclen(lpSubKey);
-
-    if (*(lpEnd - 1) != TEXT('\\')) 
-    {
-        *lpEnd =  TEXT('\\');
-        lpEnd++;
-        *lpEnd =  TEXT('\0');
-    }
-
-    // Enumerate the keys
-
-    dwSize = MAX_PATH;
-    lResult = RegEnumKeyEx(hKey, 0, szName, &dwSize, NULL,
-                           NULL, NULL, &ftWrite);
-
-    if (lResult == ERROR_SUCCESS) 
-    {
-        do {
-
-            _tcscpy_s (lpEnd, MAX_PATH*2 - _tcsclen(lpSubKey), szName);
-            if (!RegDelnodeRecurse(hKeyRoot, lpSubKey)) {
-                break;
-            }
-            dwSize = MAX_PATH;
-            lResult = RegEnumKeyEx(hKey, 0, szName, &dwSize, NULL,
-                                   NULL, NULL, &ftWrite);
-
-        } while (lResult == ERROR_SUCCESS);
-    }
-
-    lpEnd--;
-    *lpEnd = TEXT('\0');
-
-    RegCloseKey (hKey);
-
-    // Try again to delete the key.
-
-    lResult = RegDeleteKey(hKeyRoot, lpSubKey);
-
-    if (lResult == ERROR_SUCCESS) 
-        return TRUE;
-
-    return FALSE;
-}
-
-//*************************************************************
-//
-//  RegDelnode()
-//
-//  Purpose:    Deletes a registry key and all its subkeys / values.
-//
-//  Parameters: hKeyRoot    -   Root key
-//              lpSubKey    -   SubKey to delete
-//
-//  Return:     TRUE if successful.
-//              FALSE if an error occurs.
-//
-//*************************************************************
-
-BOOL RegDelnode (HKEY hKeyRoot, LPTSTR lpSubKey)
-{
-    TCHAR szDelKey[MAX_PATH*2];
-
-    _tcscpy_s(szDelKey, MAX_PATH*2, lpSubKey);
-    return RegDelnodeRecurse(hKeyRoot, szDelKey);
-
-}
-
-// to compil with windows XP
-#if WINVER < 0x600
-
-LONG WINAPI RegSetKeyValueXP(
-  __in      HKEY hKey,
-  __in_opt  LPCTSTR lpSubKey,
-  __in_opt  LPCTSTR lpValueName,
-  __in      DWORD dwType,
-  __in_opt  LPCVOID lpData,
-  __in      DWORD cbData
-)
-{
-	HKEY hTempKey;
-	LONG lResult;
-	lResult = RegCreateKeyEx(hKey, lpSubKey, 0,NULL,0,KEY_WRITE, NULL,&hTempKey,NULL);
-	if (lResult != ERROR_SUCCESS) return lResult;
-	lResult = RegSetValueEx( hTempKey,lpValueName,0, dwType,  (PBYTE) lpData,cbData);
-	RegCloseKey(hKey);
-	return lResult;
-}
-#define RegSetKeyValue RegSetKeyValueXP
-#endif
 
 void RegisterTheSecurityPackage()
 {
@@ -390,10 +256,10 @@ BOOL LsaEIDRemoveAllStoredCredential();
 
 void EIDCredentialProviderDllUnRegister()
 {
-	RegDelnode(HKEY_CLASSES_ROOT, TEXT("CLSID\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"));
-	RegDelnode(HKEY_LOCAL_MACHINE, 
+	RegDeleteTree(HKEY_CLASSES_ROOT, TEXT("CLSID\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"));
+	RegDeleteTree(HKEY_LOCAL_MACHINE, 
 		TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Providers\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"));
-	RegDelnode(HKEY_LOCAL_MACHINE, 
+	RegDeleteTree(HKEY_LOCAL_MACHINE, 
 		TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Provider Filters\\{B4866A0A-DB08-4835-A26F-414B46F3244C}"));
 	LsaEIDRemoveAllStoredCredential();
 }
@@ -435,8 +301,8 @@ void EIDConfigurationWizardDllRegister()
 
 void EIDConfigurationWizardDllUnRegister()
 {
-	RegDelnode(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ControlPanel\\NameSpace\\{F5D846B4-14B0-11DE-B23C-27A355D89593}"));
-	RegDelnode(HKEY_CLASSES_ROOT, TEXT("CLSID\\{F5D846B4-14B0-11DE-B23C-27A355D89593}"));
+	RegDeleteTree(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ControlPanel\\NameSpace\\{F5D846B4-14B0-11DE-B23C-27A355D89593}"));
+	RegDeleteTree(HKEY_CLASSES_ROOT, TEXT("CLSID\\{F5D846B4-14B0-11DE-B23C-27A355D89593}"));
 }
 
 void EnableLogging()
@@ -545,7 +411,7 @@ void EnableLogging()
 void DisableLogging()
 {
 	
-	BOOL fSuccess = RegDelnode(HKEY_LOCAL_MACHINE, TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider"));
+	BOOL fSuccess = RegDeleteTree(HKEY_LOCAL_MACHINE, TEXT("SYSTEM\\CurrentControlSet\\Control\\WMI\\Autologger\\EIDCredentialProvider"));
 	if (!fSuccess) {MessageBoxWin32(GetLastError()); return;}
 	StopLogging();
 }

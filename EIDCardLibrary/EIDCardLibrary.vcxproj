@@ -167,6 +167,7 @@
     <ClCompile Include="smartcardmodule.cpp" />
     <ClCompile Include="StoredCredentialManagement.cpp" />
     <ClCompile Include="Tracing.cpp" />
+    <ClCompile Include="XPCompatibility.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CContainer.h" />
@@ -186,6 +187,7 @@
     <ClInclude Include="SmartCardModule.h" />
     <ClInclude Include="StoredCredentialManagement.h" />
     <ClInclude Include="Tracing.h" />
+    <ClInclude Include="XPCompatibility.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="ReadMe.txt" />

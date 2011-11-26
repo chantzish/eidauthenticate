@@ -423,34 +423,70 @@ HRESULT CallAuthPackage(LPCWSTR username ,LPWSTR * szAuthPackageValue, PULONG sz
 
 // change pointer according ClientAuthenticationBase : the struct is a copy
 // so pointer are invalid
-VOID RemapPointer(PEID_INTERACTIVE_UNLOCK_LOGON pUnlockLogon, PVOID ClientAuthenticationBase)
+NTSTATUS RemapPointer(PEID_INTERACTIVE_UNLOCK_LOGON pUnlockLogon, PVOID ClientAuthenticationBase, ULONG AuthenticationInformationLength)
 {
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Diff %d %d",(PUCHAR) pUnlockLogon, (PUCHAR) ClientAuthenticationBase);
 	if ((pUnlockLogon->Logon.UserName.Buffer) != NULL)
 	{
+		if ((ULONG)(pUnlockLogon->Logon.UserName.Buffer) + pUnlockLogon->Logon.UserName.MaximumLength > AuthenticationInformationLength)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"UserName Overflow1");
+			return STATUS_INVALID_PARAMETER_3;
+		}
+		if ((ULONG)(pUnlockLogon->Logon.UserName.Buffer) + pUnlockLogon->Logon.UserName.Length > AuthenticationInformationLength)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"UserName Overflow2");
+			return STATUS_INVALID_PARAMETER_3;
+		}
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Remap Logon from %d",pUnlockLogon->Logon.UserName.Buffer);
 		pUnlockLogon->Logon.UserName.Buffer = PWSTR((DWORD)( pUnlockLogon) + (PUCHAR) pUnlockLogon->Logon.UserName.Buffer);
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Remap Logon to %d",pUnlockLogon->Logon.UserName.Buffer);
 	}
 	if ((pUnlockLogon->Logon.LogonDomainName.Buffer) != NULL)
 	{
+		if ((ULONG)(pUnlockLogon->Logon.LogonDomainName.Buffer) + pUnlockLogon->Logon.LogonDomainName.MaximumLength > AuthenticationInformationLength)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LogonDomainName Overflow1");
+			return STATUS_INVALID_PARAMETER_3;
+		}
+		if ((ULONG)(pUnlockLogon->Logon.LogonDomainName.Buffer) + pUnlockLogon->Logon.LogonDomainName.Length > AuthenticationInformationLength)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LogonDomainName Overflow2");
+			return STATUS_INVALID_PARAMETER_3;
+		}
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Remap LogonDomainName from %d",pUnlockLogon->Logon.LogonDomainName.Buffer);
 		pUnlockLogon->Logon.LogonDomainName.Buffer = PWSTR((DWORD)( pUnlockLogon) + (PUCHAR) pUnlockLogon->Logon.LogonDomainName.Buffer);
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Remap LogonDomainName to %d",pUnlockLogon->Logon.LogonDomainName.Buffer);
 	}
 	if ((pUnlockLogon->Logon.Pin.Buffer) != NULL)
 	{
+		if ((ULONG)(pUnlockLogon->Logon.Pin.Buffer) + pUnlockLogon->Logon.Pin.MaximumLength > AuthenticationInformationLength)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Pin Overflow1");
+			return STATUS_INVALID_PARAMETER_3;
+		}
+		if ((ULONG)(pUnlockLogon->Logon.Pin.Buffer) + pUnlockLogon->Logon.Pin.Length > AuthenticationInformationLength)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Pin Overflow2");
+			return STATUS_INVALID_PARAMETER_3;
+		}
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Remap Pin from %d",pUnlockLogon->Logon.Pin.Buffer);
 		pUnlockLogon->Logon.Pin.Buffer = PWSTR((DWORD)( pUnlockLogon) + (PUCHAR) pUnlockLogon->Logon.Pin.Buffer);
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Remap Pin to %d",pUnlockLogon->Logon.Pin.Buffer);
 	}
 	if ((pUnlockLogon->Logon.CspData) != NULL)
 	{
+		if ((ULONG)(pUnlockLogon->Logon.CspData) + pUnlockLogon->Logon.CspDataLength > AuthenticationInformationLength)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CspData Overflow");
+			return STATUS_INVALID_PARAMETER_3;
+		}
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Remap CSPData from %d",pUnlockLogon->Logon.CspData);
 		pUnlockLogon->Logon.CspData = PUCHAR( (PBYTE)pUnlockLogon + (DWORD) pUnlockLogon->Logon.CspData);
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Remap CSPData to %d",pUnlockLogon->Logon.CspData);
 	}
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave");
+	return STATUS_SUCCESS;
 }
 
 VOID EIDDebugPrintEIDUnlockLogonStruct(UCHAR dwLevel, PEID_INTERACTIVE_UNLOCK_LOGON pUnlockLogon) {
@@ -723,10 +759,12 @@ BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPasswo
 	}
 	if (!szUsername) 
 	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"szUsername null");
 		pBuffer->dwRid = GetCurrentRid();
 	}
 	else
 	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"szUsername = %s", szUsername);
 		pBuffer->dwRid = GetRidFromUsername(szUsername);
 	}
 	pBuffer->MessageType = EIDCMCreateStoredCredential;
@@ -737,12 +775,19 @@ BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPasswo
 	memcpy(pPointer, szPassword, dwPasswordSize);
 	pPointer += dwPasswordSize;
 	
+	if (pContext->cbCertEncoded > 0xFFFF)
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pContext->cbCertEncoded > 0xFFFF (0x%08X)",pContext->cbCertEncoded);
+		dwError = ERROR_OUTOFMEMORY;
+		return FALSE;
+	}
+
 	pBuffer->dwCertificateSize = (USHORT) pContext->cbCertEncoded;
 	pBuffer->fEncryptPassword = fEncryptPassword;
 
 	pBuffer->pbCertificate = (PBYTE) pPointer;
-	memcpy(pPointer, pContext->pbCertEncoded, pContext->cbCertEncoded);
-	pPointer += pContext->cbCertEncoded;
+	memcpy(pPointer, pContext->pbCertEncoded, pBuffer->dwCertificateSize);
+	pPointer += pBuffer->dwCertificateSize;
 	
 	if (!pBuffer->dwRid)
 	{
@@ -806,6 +851,13 @@ DWORD LsaEIDGetRIDFromStoredCredential(__in PCCERT_CONTEXT pContext)
 	PBYTE pPointer;
 	DWORD dwError;
 	DWORD dwRid = 0;
+
+	if (pContext->cbCertEncoded > 0xFFFF)
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pContext->cbCertEncoded > 0xFFFF (0x%08X)",pContext->cbCertEncoded);
+		SetLastError(ERROR_OUTOFMEMORY);
+		return 0;
+	}
 
 	dwSize = (DWORD) (sizeof(EID_CALLPACKAGE_BUFFER) + pContext->cbCertEncoded); 
 

@@ -495,7 +495,12 @@ extern "C"
 			// the buffer come from another address space
 			// so the pointers inside the buffer are invalid
 			PEID_INTERACTIVE_UNLOCK_LOGON pUnlockLogon = (PEID_INTERACTIVE_UNLOCK_LOGON) AuthenticationInformation;
-			RemapPointer(pUnlockLogon,ClientAuthenticationBase);
+			Status = RemapPointer(pUnlockLogon,ClientAuthenticationBase, AuthenticationInformationLength);
+			if (Status != STATUS_SUCCESS)
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"RemapPointer 0x%08X", Status);
+				return Status;
+			}
 			PEID_SMARTCARD_CSP_INFO pSmartCardCspInfo = (PEID_SMARTCARD_CSP_INFO) pUnlockLogon->Logon.CspData;
 			EIDDebugPrintEIDUnlockLogonStruct(WINEVENT_LEVEL_VERBOSE, pUnlockLogon);
 			

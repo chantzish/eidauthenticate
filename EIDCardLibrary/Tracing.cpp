@@ -24,7 +24,6 @@
 #include <Evntrace.h>
 // load lib on the Vista tracing function
 #include <DelayImp.h>
-#pragma comment(lib, "Delayimp.lib")
 #define _CRTDBG_MAPALLOC
 #include <Dbghelp.h>
 #include <winhttp.h>
@@ -51,7 +50,8 @@ WCHAR Section[100];
 // Open up the registry and go to this path,
 // HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Debug Print Filter 
 // and add the following value "DEFAULT" : REG_DWORD : 0xFFFFFFFF and then reboot
-
+//
+// Note : you don't need this in Windows XP as the tracing is shown automatically
 /**
  *  Tracing function.
  *  Extract data using :
@@ -87,22 +87,6 @@ INT_PTR FAR WINAPI DoNothing()
 {
 	return 0;
 }
-
-// delayHookFunc - Delay load hooking function
-// don't fail to load our dll is the computer is xp
-FARPROC WINAPI delayHookFailureFunc (unsigned dliNotify, PDelayLoadInfo pdli)
-{
-	if (_stricmp(pdli->szDll,"advapi32.dll") == 0 && dliNotify == dliFailGetProc)
-	{
-		return &DoNothing;
-	}
-
-	return NULL;
-}
-
-
-// __delayLoadHelper gets the hook function in here:
-PfnDliHook __pfnDliFailureHook2 = delayHookFailureFunc;
 
 BOOL IsTracingEnabled = FALSE;
 
