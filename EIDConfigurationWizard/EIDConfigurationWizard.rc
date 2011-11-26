@@ -182,7 +182,7 @@ BEGIN
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,156,255,13
     LTEXT           "Select a certificate",IDC_STC4,0,0,272,20
     CONTROL         "",IDC_05LIST,"SysListView32",LVS_SINGLESEL | LVS_SHOWSELALWAYS | WS_TABSTOP,0,24,273,51,WS_EX_CLIENTEDGE
-    LTEXT           "Type your password",IDC_STC5,0,84,272,20
+    LTEXT           "Please type the password of your account (not the PIN of the smart card) to check your identity. Leave this field blank if your account doesn't have a password",IDC_STC5,0,84,272,20
 END
 
 IDD_03NEW DIALOGEX 65535, 65523, 273, 209
