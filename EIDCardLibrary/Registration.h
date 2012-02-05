@@ -29,3 +29,4 @@ BOOL IsLoggingEnabled();
 void EnableCrashDump(PTSTR szPath);
 void DisableCrashDump();
 BOOL IsCrashDumpEnabled();
+VOID RegisterTheSecurityPackage();

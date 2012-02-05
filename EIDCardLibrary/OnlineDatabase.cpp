@@ -170,7 +170,39 @@ void UrlLogFileEncoder(__inout PCHAR *ppPointer, __inout PDWORD pdwRemainingSize
 	}
 	**ppPointer = '\0';
 }
-BOOL CommunicateTestNotOK(DWORD dwErrorCode, PTSTR szEmail, PTSTR szTracingFile)
+
+void UrlLogCertificateEncoder(__inout PCHAR *ppPointer, __inout PDWORD pdwRemainingSize, __in PCCERT_CONTEXT pCertContext)
+{
+	PBYTE pbBuffer = pCertContext->pbCertEncoded;
+	__try
+	{
+		for(DWORD i = 0; i< pCertContext->cbCertEncoded; i++)
+		{
+			if (((pbBuffer[i] >= L'A' && pbBuffer[i] <= L'Z') 
+						|| (pbBuffer[i] >= L'a' && pbBuffer[i] <= L'z')
+						|| (pbBuffer[i] >= L'0' && pbBuffer[i] <= L'9')
+						|| (pbBuffer[i] == L'-') || (pbBuffer[i] == L'_') || (pbBuffer[i] == L'.') || (pbBuffer[i] == L'~'))
+				&& *pdwRemainingSize > 1)
+			{
+				**ppPointer = (CHAR)pbBuffer[i];
+				(*ppPointer)++;
+				(*pdwRemainingSize)--;
+			}
+			else if (*pdwRemainingSize > 3)
+			{
+				sprintf_s(*ppPointer, *pdwRemainingSize, "%%%02X",pbBuffer[i]);
+				(*ppPointer)+=3;
+				(*pdwRemainingSize)-=3;
+			}
+		}
+	}
+	__finally
+	{
+	}
+	**ppPointer = '\0';
+}
+
+BOOL CommunicateTestNotOK(DWORD dwErrorCode, PTSTR szEmail, PTSTR szTracingFile, PCCERT_CONTEXT pCertContext)
 {
 	BOOL fReturn = FALSE;
 	TCHAR szReaderName[256] = TEXT("Unknown");
@@ -339,11 +371,16 @@ BOOL CommunicateTestNotOK(DWORD dwErrorCode, PTSTR szEmail, PTSTR szTracingFile)
 		UrlEncoder(&ppPointer, &dwRemainingSize, TEXT("&LogFile="), TRUE);
 		UrlLogFileEncoder(&ppPointer, &dwRemainingSize, szTracingFile);
 	}
+	if (pCertContext != NULL)
+	{
+		UrlEncoder(&ppPointer, &dwRemainingSize, TEXT("&Certificate="), TRUE);
+		UrlLogCertificateEncoder(&ppPointer, &dwRemainingSize, pCertContext);
+	}
 	fReturn = PostDataToTheSupportSite(szPostData);
 	return fReturn;
 }
 
 BOOL CommunicateTestOK()
 {
-	return CommunicateTestNotOK(0, NULL, NULL);
+	return CommunicateTestNotOK(0, NULL, NULL, NULL);
 }

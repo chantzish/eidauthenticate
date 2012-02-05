@@ -233,8 +233,6 @@ BOOL IsTrustedCertificate(__in PCCERT_CONTEXT pCertContext, __in_opt DWORD dwFla
 	LPSTR					szOid;
 	HCERTCHAINENGINE		hChainEngine		= HCCE_LOCAL_MACHINE;
 	DWORD dwError = 0;
-	// used for XP compatibility for the Trusted people cert store
-	BOOL fClearPeerTrustFlag = FALSE;
 	//---------------------------------------------------------
     // Initialize data structures for chain building.
 	EnhkeyUsage.cUsageIdentifier = 0;

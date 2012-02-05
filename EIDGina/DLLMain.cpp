@@ -1,6 +1,10 @@
 // DLLMain.cpp : Defines the entry point for the GINA DLL.
 //
-#include "stdafx.h"
+#include <Windows.h>
+
+#include "..\EIDCardLibrary\XPCompatibility.h"
+#pragma comment(lib,"Winscard")
+#pragma comment(lib,"Crypt32")
 
 // this is the one and only global variable we use, and it's implemented to be read-only
 static HANDLE _hModule;
@@ -15,7 +19,8 @@ BOOL APIENTRY DllMain( HANDLE hModule,
 {
     if (DLL_PROCESS_ATTACH == reason) {
         _hModule = hModule;
-        DisableThreadLibraryCalls(GetMyModuleHandle());
+        // memory leak when linked statically
+		//DisableThreadLibraryCalls(GetMyModuleHandle());
     }
     return TRUE;
 }

@@ -1,13 +1,14 @@
-#include "stdafx.h"
+#include <Windows.h>
 #include <WinCrypt.h>
+#include <credentialprovider.h>
 #include "../EIDCardLibrary/CContainer.h"
 #include "GinaSmartCardCredential.h"
 
 
 GinaSmartCardCredential::GinaSmartCardCredential(CContainer* container)
-	{
-		_pContainer = container;
-	}
+{
+	_pContainer = container;
+}
 
 GinaSmartCardCredential::~GinaSmartCardCredential()
 	{

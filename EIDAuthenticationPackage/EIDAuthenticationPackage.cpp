@@ -341,7 +341,167 @@ extern "C"
 		}
 	}
 
+	NTSTATUS NTAPI PerformGinaAuthenticationChallenge(
+	  __in   PLSA_CLIENT_REQUEST ClientRequest,
+	  __in   PVOID ProtocolSubmitBuffer,
+	  __in   PVOID ClientBufferBase,
+	  __in   ULONG SubmitBufferLength,
+	  __out  PVOID *ProtocolReturnBuffer,
+	  __out  PULONG ReturnBufferLength,
+	  __out  PNTSTATUS ProtocolStatus
+	  ) 
+	{
+		UNREFERENCED_PARAMETER(ProtocolStatus);
+		UNREFERENCED_PARAMETER(ClientBufferBase);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
+		NTSTATUS StatusReturned = STATUS_SUCCESS;
+		PEID_MSGINA_AUTHENTICATION_CHALLENGE_REQUEST pGina = (PEID_MSGINA_AUTHENTICATION_CHALLENGE_REQUEST) ProtocolSubmitBuffer;
+		PBYTE pbChallenge = NULL;
+		DWORD dwChallengeSize = 0, dwType = 0;
+		EID_MSGINA_AUTHENTICATION_CHALLENGE_ANSWER response = {0};
+		__try
+		{
+			memset(&response, 0, sizeof(EID_MSGINA_AUTHENTICATION_CHALLENGE_ANSWER));
+			if (SubmitBufferLength < sizeof(EID_MSGINA_AUTHENTICATION_CHALLENGE_REQUEST))
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"SubmitBufferLength");
+				return STATUS_INVALID_PARAMETER;
+			}
+			// go look for the password stored
+			CStoredCredentialManager* manager = CStoredCredentialManager::Instance();
+			if (!manager)
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"manager NULL");
+				response.dwError = ERROR_INTERNAL_ERROR;
+				__leave;
+			}
+			// check the PIN if using the base smart card provider to get the remaining pin attempts
+			// put the result in SubStatus
+						
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"RID = 0x%x", pGina->dwRid);
+			// the real job is done here
+			if (!manager->GetChallenge(pGina->dwRid,&pbChallenge, &dwChallengeSize, &dwType))
+			{
+				response.dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"GetChallenge 0x%08X", response.dwError);
+				__leave;
+			}
+			// success
+			response.dwChallengeSize = dwChallengeSize;
+			response.dwChallengeType = dwType;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"OK");
+		}
+		__finally
+		{
+			StatusReturned = MyLsaDispatchTable->AllocateClientBuffer(ClientRequest, sizeof(EID_MSGINA_AUTHENTICATION_CHALLENGE_ANSWER) + dwChallengeSize, ProtocolReturnBuffer);
+			if (StatusReturned == STATUS_SUCCESS) 
+			{
+				if (pbChallenge) 
+				{
+					response.pbChallenge = (PBYTE)((PUCHAR)*ProtocolReturnBuffer + sizeof(EID_MSGINA_AUTHENTICATION_CHALLENGE_ANSWER));
+				}
+				StatusReturned = MyLsaDispatchTable->CopyToClientBuffer(ClientRequest, sizeof(EID_MSGINA_AUTHENTICATION_CHALLENGE_ANSWER), *ProtocolReturnBuffer, &response);
+				if (StatusReturned == STATUS_SUCCESS && pbChallenge) 
+				{
+					StatusReturned = MyLsaDispatchTable->CopyToClientBuffer(ClientRequest, dwChallengeSize,response.pbChallenge, pbChallenge);
+				}
+				*ReturnBufferLength = sizeof(EID_MSGINA_AUTHENTICATION_CHALLENGE_ANSWER) + dwChallengeSize;
+			}
+			if (pbChallenge) EIDFree(pbChallenge);
+		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"return 0x%08X",StatusReturned);
+		return StatusReturned;
+	}
 
+
+	NTSTATUS NTAPI PerformGinaAuthenticationResponse(
+	  __in   PLSA_CLIENT_REQUEST ClientRequest,
+	  __in   PVOID ProtocolSubmitBuffer,
+	  __in   PVOID ClientBufferBase,
+	  __in   ULONG SubmitBufferLength,
+	  __out  PVOID *ProtocolReturnBuffer,
+	  __out  PULONG ReturnBufferLength,
+	  __out  PNTSTATUS ProtocolStatus
+	  ) 
+	{
+		UNREFERENCED_PARAMETER(ProtocolStatus);
+		UNREFERENCED_PARAMETER(ClientBufferBase);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
+		NTSTATUS StatusReturned = STATUS_SUCCESS;
+		PEID_MSGINA_AUTHENTICATION_RESPONSE_REQUEST pGina = (PEID_MSGINA_AUTHENTICATION_RESPONSE_REQUEST) ProtocolSubmitBuffer;
+		PWSTR szPassword = NULL;
+		EID_MSGINA_AUTHENTICATION_RESPONSE_ANSWER response = {0};
+		__try
+		{
+			memset(&response, 0, sizeof(EID_MSGINA_AUTHENTICATION_RESPONSE_ANSWER));
+			if (SubmitBufferLength < sizeof(EID_MSGINA_AUTHENTICATION_RESPONSE_REQUEST))
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SubmitBufferLength");
+				return STATUS_INVALID_PARAMETER;
+			}
+			// go look for the password stored
+			CStoredCredentialManager* manager = CStoredCredentialManager::Instance();
+			if (!manager)
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"manager NULL");
+				response.dwError = ERROR_INTERNAL_ERROR;
+				__leave;
+			}
+			if ((ULONG) pGina->pbChallenge + pGina->dwChallengeSize > SubmitBufferLength)
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pbChallenge");
+				response.dwError = ERROR_INVALID_PARAMETER;
+				__leave;
+			}
+			if ((ULONG) pGina->pbResponse + pGina->dwResponseSize > SubmitBufferLength)
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pbResponse");
+				response.dwError = ERROR_INVALID_PARAMETER;
+				__leave;
+			}
+			pGina->pbChallenge = pGina->pbChallenge + (ULONG) pGina;
+			pGina->pbResponse = pGina->pbResponse + (ULONG) pGina;
+			// check the PIN if using the base smart card provider to get the remaining pin attempts
+			// put the result in SubStatus
+						
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"RID = 0x%x", pGina->dwRid);
+			// the real job is done here
+			if (!manager->GetPasswordFromChallengeResponse(pGina->dwRid,pGina->pbChallenge, pGina->dwChallengeSize, 
+										pGina->dwChallengeType,pGina->pbResponse, pGina->dwResponseSize,&szPassword))
+			{
+				response.dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"GetChallenge 0x%08X", response.dwError);
+				__leave;
+			}
+			// success
+			response.Password.MaximumLength = response.Password.Length = (USHORT)(sizeof(WCHAR) * wcslen(szPassword));
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"OK");
+		}
+		__finally
+		{
+			StatusReturned = MyLsaDispatchTable->AllocateClientBuffer(ClientRequest, sizeof(EID_MSGINA_AUTHENTICATION_RESPONSE_ANSWER) + response.Password.Length, ProtocolReturnBuffer);
+			if (StatusReturned == STATUS_SUCCESS) 
+			{
+				if (szPassword) 
+				{
+					response.Password.Buffer = (PWSTR)((PUCHAR)*ProtocolReturnBuffer + sizeof(EID_MSGINA_AUTHENTICATION_RESPONSE_ANSWER));
+				}
+				StatusReturned = MyLsaDispatchTable->CopyToClientBuffer(ClientRequest, sizeof(EID_MSGINA_AUTHENTICATION_RESPONSE_ANSWER), *ProtocolReturnBuffer, &response);
+				if (StatusReturned == STATUS_SUCCESS && szPassword) 
+				{
+					StatusReturned = MyLsaDispatchTable->CopyToClientBuffer(ClientRequest, response.Password.Length,response.Password.Buffer,szPassword);
+				}
+				*ReturnBufferLength = sizeof(EID_MSGINA_AUTHENTICATION_RESPONSE_ANSWER) + response.Password.Length;
+			}
+			if (szPassword)
+			{
+				SecureZeroMemory(szPassword, response.Password.Length);
+				EIDFree(szPassword);
+			}
+		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"return 0x%08X",StatusReturned);
+		return StatusReturned;
+	}
 		/** Called when the authentication package's identifier has been specified in a call to 
 	LsaCallAuthenticationPackage by an application that is using a trusted connection.
 
@@ -356,9 +516,36 @@ extern "C"
 	  __out  PULONG ReturnBufferLength,
 	  __out  PNTSTATUS ProtocolStatus
 	) {
-		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"");
-		return LsaApCallPackageUntrusted(ClientRequest,ProtocolSubmitBuffer,ClientBufferBase,
-			SubmitBufferLength,ProtocolReturnBuffer,ReturnBufferLength,ProtocolStatus);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
+		NTSTATUS Status;
+		__try
+		{
+			*ProtocolStatus = STATUS_SUCCESS;
+			// we take care here of messages requiring the TCB privilege (winlogon, msgina, ...)
+			// the other message are forwarded to LsaApCallPackageUntrusted
+			PEID_CALLPACKAGE_BUFFER pBuffer = (PEID_CALLPACKAGE_BUFFER) ProtocolSubmitBuffer;
+			switch (pBuffer->MessageType)
+			{
+			case EIDCMEIDGinaAuthenticationChallenge:
+				Status = PerformGinaAuthenticationChallenge(ClientRequest,ProtocolSubmitBuffer,ClientBufferBase,
+					SubmitBufferLength,ProtocolReturnBuffer,ReturnBufferLength,ProtocolStatus);
+				break;
+			case EIDCMEIDGinaAuthenticationResponse:
+				Status = PerformGinaAuthenticationResponse(ClientRequest,ProtocolSubmitBuffer,ClientBufferBase,
+					SubmitBufferLength,ProtocolReturnBuffer,ReturnBufferLength,ProtocolStatus);
+				break;
+			default:
+				Status = LsaApCallPackageUntrusted(ClientRequest,ProtocolSubmitBuffer,ClientBufferBase,
+					SubmitBufferLength,ProtocolReturnBuffer,ReturnBufferLength,ProtocolStatus);
+			}
+			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"return 0x%08X",Status);
+			return Status;
+		}
+		__except(EIDExceptionHandler(GetExceptionInformation()))
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"NT exception 0x%08x",GetExceptionCode());
+			return STATUS_LOGON_FAILURE;
+		}
 	}  
 
 	/**
@@ -395,6 +582,7 @@ extern "C"
 			__in LPWSTR                 pszProtectedCredentials,
 			__out CRED_PROTECTION_TYPE* pProtectionType
 			);
+
 	typedef BOOL (WINAPI *CredUnprotectWFct) (
 			__in BOOL                                   fAsSelf,
 			__in_ecount(cchProtectedCredentials) LPWSTR pszProtectedCredentials,
@@ -402,6 +590,7 @@ extern "C"
 			__out_ecount_opt(*pcchMaxChars) LPWSTR      pszCredentials,
 			__inout DWORD*                              pcchMaxChars
 			);
+
 	NTSTATUS TryToUnprotecThePin(PWSTR pwzPin, PWSTR pwzPinUncrypted, DWORD dPinUncrypted, PWSTR *pResultingPin)
 	{
 		CRED_PROTECTION_TYPE protectionType;

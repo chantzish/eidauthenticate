@@ -175,6 +175,7 @@ BOOL CContainer::IsOnReader(LPCTSTR szReaderName)
 
 PEID_SMARTCARD_CSP_INFO CContainer::GetCSPInfo()
 {
+	_ASSERTE( _CrtCheckMemory( ) );
 	DWORD dwReaderLen = (DWORD) _tcslen(_szReaderName)+1;
 	DWORD dwCardLen = (DWORD) _tcslen(_szCardName)+1;
 	DWORD dwProviderLen = (DWORD) _tcslen(_szProviderName)+1;
@@ -197,6 +198,7 @@ PEID_SMARTCARD_CSP_INFO CContainer::GetCSPInfo()
 	_tcscpy_s(&pCspInfo->bBuffer[pCspInfo->nReaderNameOffset] ,dwBufferSize + 4 - pCspInfo->nReaderNameOffset, _szReaderName);
 	_tcscpy_s(&pCspInfo->bBuffer[pCspInfo->nContainerNameOffset] ,dwBufferSize + 4 - pCspInfo->nContainerNameOffset, _szContainerName);
 	_tcscpy_s(&pCspInfo->bBuffer[pCspInfo->nCSPNameOffset] ,dwBufferSize + 4 - pCspInfo->nCSPNameOffset, _szProviderName);
+	_ASSERTE( _CrtCheckMemory( ) );
 	return pCspInfo;
 }
 
@@ -322,3 +324,204 @@ BOOL CContainer::TriggerRemovePolicy()
 	}
 	return fReturn;
 }
+
+PEID_INTERACTIVE_LOGON CContainer::AllocateLogonStruct(PWSTR szPin, PDWORD pdwSize)
+{
+	PEID_INTERACTIVE_LOGON pReturn = NULL;
+	PEID_INTERACTIVE_LOGON pRequest = NULL;
+	DWORD dwRid = 0;
+	PWSTR szUserName = NULL;
+	WCHAR szDomainName[MAX_COMPUTERNAME_LENGTH+1];
+	DWORD dwSize, dwTotalSize;
+	__try
+	{
+	
+		// sanity check string lengths
+		if (wcslen(szPin) * sizeof(WCHAR) > USHRT_MAX) {
+			EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"Input string is too long");
+			__leave;
+		}
+		dwRid = this->GetRid();
+		if (!dwRid)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"dwRid = 0");
+			__leave;
+		}
+		szUserName = GetUsernameFromRid(dwRid);
+		if (!szUserName)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"szUserName not found");
+			__leave;
+		}
+		dwSize = ARRAYSIZE(szDomainName);
+		GetComputerName(szDomainName,&dwSize);
+
+		DWORD dwCspBufferLength = wcslen(_szCardName)+1
+						+ wcslen(_szContainerName)+1
+						+ wcslen(_szProviderName)+1
+						+ wcslen(_szReaderName)+1;
+		DWORD dwCspDataLength = sizeof(EID_SMARTCARD_CSP_INFO)
+						+ (dwCspBufferLength) * sizeof(WCHAR);
+		dwTotalSize = sizeof(EID_INTERACTIVE_LOGON) 
+						+ wcslen(szUserName) * sizeof(WCHAR)
+						+ wcslen(szDomainName) * sizeof(WCHAR)
+						+ wcslen(szPin) * sizeof(WCHAR)
+						+ dwCspDataLength;
+    
+		pRequest = (PEID_INTERACTIVE_LOGON) EIDAlloc(dwTotalSize);
+		if (!pRequest)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"Out of memory");
+			__leave;
+		}
+		memset(pRequest, 0, dwTotalSize);
+		pRequest->MessageType = EID_INTERACTIVE_LOGON_SUBMIT_TYPE_VANILLIA;
+		pRequest->Flags = 0;
+		_ASSERTE( _CrtCheckMemory( ) );
+		PVOID pPointer = (PUCHAR) pRequest + sizeof(EID_INTERACTIVE_LOGON);
+		// PIN
+		_ASSERTE( _CrtCheckMemory( ) );
+		pRequest->Pin.Length = pRequest->Pin.MaximumLength = (USHORT) (wcslen(szPin) * sizeof(WCHAR));
+		pRequest->Pin.Buffer = (PWSTR) pPointer;
+		memcpy(pRequest->Pin.Buffer, szPin, pRequest->Pin.Length);
+		pPointer = (PVOID) ((PCHAR) pPointer + pRequest->Pin.Length);
+		// Username
+		_ASSERTE( _CrtCheckMemory( ) );
+		pRequest->UserName.Length = pRequest->UserName.MaximumLength = (USHORT) (wcslen(szUserName) * sizeof(WCHAR));
+		pRequest->UserName.Buffer = (PWSTR) pPointer;
+		memcpy(pRequest->UserName.Buffer, szUserName, pRequest->UserName.Length);
+		pPointer = (PVOID) ((PCHAR) pPointer + pRequest->UserName.Length);
+		// Domain
+		_ASSERTE( _CrtCheckMemory( ) );
+		pRequest->LogonDomainName.Length = pRequest->LogonDomainName.MaximumLength = (USHORT) (wcslen(szDomainName) * sizeof(WCHAR));
+		pRequest->LogonDomainName.Buffer = (PWSTR) pPointer;
+		memcpy(pRequest->LogonDomainName.Buffer, szDomainName, pRequest->LogonDomainName.Length);
+		pPointer = (PVOID) ((PCHAR) pPointer + pRequest->LogonDomainName.Length);
+		// CSPInfo
+		_ASSERTE( _CrtCheckMemory( ) );
+		pRequest->CspDataLength = dwCspDataLength;
+		pRequest->CspData = (PUCHAR) pPointer;
+		PEID_SMARTCARD_CSP_INFO pCspInfo = (PEID_SMARTCARD_CSP_INFO) pPointer;
+		pCspInfo->dwCspInfoLen = pRequest->CspDataLength;
+		// CSPInfo + content
+		_ASSERTE( _CrtCheckMemory( ) );
+		pCspInfo->MessageType = 1;
+		pCspInfo->KeySpec = _KeySpec;
+		pCspInfo->nCardNameOffset = ARRAYSIZE(pCspInfo->bBuffer);
+		pCspInfo->nReaderNameOffset = pCspInfo->nCardNameOffset + wcslen(_szCardName) + 1 ;
+		pCspInfo->nContainerNameOffset = pCspInfo->nReaderNameOffset + wcslen(_szReaderName) + 1 ;
+		pCspInfo->nCSPNameOffset = pCspInfo->nContainerNameOffset + wcslen(_szContainerName) + 1 ;
+		_ASSERTE( _CrtCheckMemory( ) );
+		wcscpy_s(&pCspInfo->bBuffer[pCspInfo->nCardNameOffset] , dwCspBufferLength +  ARRAYSIZE(pCspInfo->bBuffer) - pCspInfo->nCardNameOffset, _szCardName);
+		_ASSERTE( _CrtCheckMemory( ) );
+		wcscpy_s(&pCspInfo->bBuffer[pCspInfo->nReaderNameOffset] ,dwCspBufferLength + ARRAYSIZE(pCspInfo->bBuffer) - pCspInfo->nReaderNameOffset, _szReaderName);
+		_ASSERTE( _CrtCheckMemory( ) );
+		wcscpy_s(&pCspInfo->bBuffer[pCspInfo->nContainerNameOffset] ,dwCspBufferLength + ARRAYSIZE(pCspInfo->bBuffer) - pCspInfo->nContainerNameOffset, _szContainerName);
+		_ASSERTE( _CrtCheckMemory( ) );
+		wcscpy_s(&pCspInfo->bBuffer[pCspInfo->nCSPNameOffset] , dwCspBufferLength + ARRAYSIZE(pCspInfo->bBuffer) - pCspInfo->nCSPNameOffset, _szProviderName);	
+		_ASSERTE( _CrtCheckMemory( ) );
+		// Put pointer in relative format
+		pRequest->Pin.Buffer = (PWSTR) ((PUCHAR) pRequest->Pin.Buffer - (ULONG) pRequest);
+		pRequest->UserName.Buffer = (PWSTR) ((PUCHAR) pRequest->UserName.Buffer - (ULONG) pRequest);
+		pRequest->LogonDomainName.Buffer = (PWSTR) ((PUCHAR) pRequest->LogonDomainName.Buffer - (ULONG) pRequest);
+		pRequest->CspData = (pRequest->CspData - (ULONG) pRequest);
+		// sucess !
+		_ASSERTE( _CrtCheckMemory( ) );
+		pReturn = pRequest;
+		if (pdwSize) *pdwSize = dwTotalSize;
+	}
+	__finally
+	{
+		if (!pReturn && pRequest)
+			EIDFree(pRequest);
+		if (szUserName)
+			EIDFree(szUserName);
+	}
+	return pReturn;
+}
+/*
+PEID_MSGINA_AUTHENTICATION CContainer::AllocateGinaStruct(PWSTR szPin, PDWORD pdwSize)
+{
+	PEID_MSGINA_AUTHENTICATION pReturn = NULL;
+	PEID_MSGINA_AUTHENTICATION pRequest = NULL;
+	DWORD dwRid = 0;
+	DWORD dwTotalSize;
+	__try
+	{
+	
+		// sanity check string lengths
+		if (wcslen(szPin) * sizeof(WCHAR) > USHRT_MAX) {
+			EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"Input string is too long");
+			__leave;
+		}
+		dwRid = this->GetRid();
+		if (!dwRid)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"dwRid = 0");
+			__leave;
+		}
+		DWORD dwCspBufferLength = wcslen(_szCardName)+1
+						+ wcslen(_szContainerName)+1
+						+ wcslen(_szProviderName)+1
+						+ wcslen(_szReaderName)+1;
+		DWORD dwCspDataLength = sizeof(EID_SMARTCARD_CSP_INFO)
+						+ (dwCspBufferLength) * sizeof(WCHAR);
+		dwTotalSize = sizeof(EID_INTERACTIVE_LOGON) 
+						+ wcslen(szPin) * sizeof(WCHAR)
+						+ dwCspDataLength;
+    
+		pRequest = (PEID_MSGINA_AUTHENTICATION) EIDAlloc(dwTotalSize);
+		if (!pRequest)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"Out of memory");
+			__leave;
+		}
+		memset(pRequest, 0, dwTotalSize);
+		pRequest->MessageType = EIDCMEIDGinaAuthentication;
+		pRequest->CspDataLength = dwCspBufferLength;
+		pRequest->dwRid = dwRid;
+		_ASSERTE( _CrtCheckMemory( ) );
+		PVOID pPointer = (PUCHAR) pRequest + sizeof(EID_INTERACTIVE_LOGON);
+		// PIN
+		_ASSERTE( _CrtCheckMemory( ) );
+		pRequest->Pin.Length = pRequest->Pin.MaximumLength = (USHORT) (wcslen(szPin) * sizeof(WCHAR));
+		pRequest->Pin.Buffer = (PWSTR) pPointer;
+		memcpy(pRequest->Pin.Buffer, szPin, pRequest->Pin.Length);
+		pPointer = (PVOID) ((PCHAR) pPointer + pRequest->Pin.Length);
+		// CSPInfo
+		_ASSERTE( _CrtCheckMemory( ) );
+		pRequest->CspData = (PEID_SMARTCARD_CSP_INFO) pPointer;
+		PEID_SMARTCARD_CSP_INFO pCspInfo = (PEID_SMARTCARD_CSP_INFO) pPointer;
+		pCspInfo->dwCspInfoLen = dwCspBufferLength;
+		// CSPInfo + content
+		_ASSERTE( _CrtCheckMemory( ) );
+		pCspInfo->MessageType = 1;
+		pCspInfo->KeySpec = _KeySpec;
+		pCspInfo->nCardNameOffset = ARRAYSIZE(pCspInfo->bBuffer);
+		pCspInfo->nReaderNameOffset = pCspInfo->nCardNameOffset + wcslen(_szCardName) + 1 ;
+		pCspInfo->nContainerNameOffset = pCspInfo->nReaderNameOffset + wcslen(_szReaderName) + 1 ;
+		pCspInfo->nCSPNameOffset = pCspInfo->nContainerNameOffset + wcslen(_szContainerName) + 1 ;
+		_ASSERTE( _CrtCheckMemory( ) );
+		wcscpy_s(&pCspInfo->bBuffer[pCspInfo->nCardNameOffset] , dwCspBufferLength +  ARRAYSIZE(pCspInfo->bBuffer) - pCspInfo->nCardNameOffset, _szCardName);
+		_ASSERTE( _CrtCheckMemory( ) );
+		wcscpy_s(&pCspInfo->bBuffer[pCspInfo->nReaderNameOffset] ,dwCspBufferLength + ARRAYSIZE(pCspInfo->bBuffer) - pCspInfo->nReaderNameOffset, _szReaderName);
+		_ASSERTE( _CrtCheckMemory( ) );
+		wcscpy_s(&pCspInfo->bBuffer[pCspInfo->nContainerNameOffset] ,dwCspBufferLength + ARRAYSIZE(pCspInfo->bBuffer) - pCspInfo->nContainerNameOffset, _szContainerName);
+		_ASSERTE( _CrtCheckMemory( ) );
+		wcscpy_s(&pCspInfo->bBuffer[pCspInfo->nCSPNameOffset] , dwCspBufferLength + ARRAYSIZE(pCspInfo->bBuffer) - pCspInfo->nCSPNameOffset, _szProviderName);	
+		_ASSERTE( _CrtCheckMemory( ) );
+		// Put pointer in relative format
+		pRequest->Pin.Buffer = (PWSTR) ((PUCHAR) pRequest->Pin.Buffer - (ULONG) pRequest);
+		pRequest->CspData = (PEID_SMARTCARD_CSP_INFO) ((PUCHAR)pRequest->CspData - (ULONG) pRequest);
+		// sucess !
+		_ASSERTE( _CrtCheckMemory( ) );
+		pReturn = pRequest;
+		if (pdwSize) *pdwSize = dwTotalSize;
+	}
+	__finally
+	{
+		if (!pReturn && pRequest)
+			EIDFree(pRequest);
+	}
+	return pReturn;
+}*/

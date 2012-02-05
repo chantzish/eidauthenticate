@@ -32,12 +32,15 @@
 
 
 
-CSmartCardConnectionNotifier::CSmartCardConnectionNotifier(ISmartCardConnectionNotifierRef* CallBack) 
+CSmartCardConnectionNotifier::CSmartCardConnectionNotifier(ISmartCardConnectionNotifierRef* CallBack, BOOL fImmediateStart) 
 {
 	_CallBack = CallBack;
 	_hAccessStartedEvent = NULL;
 	_hThread = NULL;
-	Start();
+	if (fImmediateStart)
+	{
+		Start();
+	}
 }
 
 CSmartCardConnectionNotifier::~CSmartCardConnectionNotifier() 
