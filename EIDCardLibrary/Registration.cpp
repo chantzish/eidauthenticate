@@ -214,7 +214,6 @@ void RegisterTheSecurityPackage()
 void EIDAuthenticationPackageDllRegister()
 {
 	AppendValueToMultiSz(HKEY_LOCAL_MACHINE, TEXT("SYSTEM\\CurrentControlSet\\Control\\Lsa"), TEXT("Security Packages"), AUTHENTICATIONPACKAGENAMET);
-	RegisterTheSecurityPackage();
 }
 
 void EIDAuthenticationPackageDllUnRegister()

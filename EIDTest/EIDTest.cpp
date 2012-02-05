@@ -129,7 +129,7 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	int wmId, wmEvent;
 	SHSTOCKICONINFO sii = {0};
-	HICON g_hShieldIcon;
+//	HICON g_hShieldIcon;
 	MENUITEMINFO mii= {0};
 	HMENU hmenu;
 	switch (message)
@@ -276,6 +276,9 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		case IDM_CRED_CSPINFO:
 			menu_CREDENTIAL_CspInfo();
+			break;
+		case IDM_CRED_LOGONSTRUCT:
+			menu_CREDENTIAL_AllocateLogonStruct();
 			break;
 		case IDM_CRED_CERT:
 			menu_CREDENTIAL_Certificate();

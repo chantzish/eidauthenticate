@@ -22,5 +22,5 @@ BOOL DialogForceSmartCardLogonPolicy();
 BOOL DialogRemovePolicy();
 BOOL CreateDebugReport(PTSTR szLogFile);
 VOID CreateReport(PTSTR szNamedPipeName);
-BOOL SendReport(DWORD dwErrorCode, PTSTR szEmail);
+BOOL SendReport(DWORD dwErrorCode, PTSTR szEmail, PCCERT_CONTEXT pCertContext);
 VOID SetIcon(HWND hWnd);

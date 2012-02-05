@@ -57,6 +57,8 @@ void MessageBoxWin32Ex2(DWORD status, HWND hWnd, LPCSTR szFile, DWORD dwLine);
 #define MessageBoxWin32(status) MessageBoxWin32Ex2 (status, NULL, __FILE__,__LINE__);
 #define MessageBoxWin32Ex(status, hwnd ) MessageBoxWin32Ex2 (status, hwnd, __FILE__,__LINE__);
 
+BOOL LookUpErrorMessage(PWSTR buf, int cch, DWORD err);
+
 LONG EIDExceptionHandler( PEXCEPTION_POINTERS pExceptPtrs );
 LONG EIDExceptionHandlerDebug( PEXCEPTION_POINTERS pExceptPtrs, BOOL fMustCrash );
 

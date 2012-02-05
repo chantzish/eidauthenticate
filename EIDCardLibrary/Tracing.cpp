@@ -58,6 +58,19 @@ WCHAR Section[100];
  * C:\Windows\System32\LogFiles\WMI>tracerpt EIDCredentialProvider.etl.001 -o c:\users\Adiant\Desktop\report.txt -of csv
  */
 
+BOOL LookUpErrorMessage(PWSTR buf, int cch, DWORD err)
+{
+	if (FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, err, 0, buf, cch, 0)) {
+        return TRUE;
+    }
+    else 
+	{
+        swprintf_s(buf, cch, (err < 15000) ? L"Error number: %d" :
+                                                  L"Error number: 0x%08X", err);
+        return false;
+    }
+}
+
 /**
  *  Display a messagebox giving an error code
  */

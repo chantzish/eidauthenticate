@@ -22,6 +22,9 @@
 
 #include "../EIDCardLibrary/Registration.h"
 #include "../EIDCardLibrary/XPCompatibility.h"
+
+BOOL LsaEIDRemoveAllStoredCredential();
+
 extern "C"
 {
 	
@@ -31,6 +34,7 @@ extern "C"
 		EIDCredentialProviderDllRegister();
 		EIDPasswordChangeNotificationDllRegister();
 		EIDConfigurationWizardDllRegister();
+		RegisterTheSecurityPackage();
 	}
 
 	void NTAPI DllUnRegister()
@@ -54,20 +58,22 @@ extern "C"
 	int NTAPI Commit(MSIHANDLE hInstall)
 	{
 		UNREFERENCED_PARAMETER(hInstall);
-		EIDAuthenticationPackageDllRegister();
+		/*EIDAuthenticationPackageDllRegister();
 		EIDCredentialProviderDllRegister();
 		EIDPasswordChangeNotificationDllRegister();
-		EIDConfigurationWizardDllRegister();
+		EIDConfigurationWizardDllRegister();*/
+		RegisterTheSecurityPackage();
 		return ERROR_SUCCESS;
 	}
 
 	int NTAPI Uninstall(MSIHANDLE hInstall)
 	{
 		UNREFERENCED_PARAMETER(hInstall);
-		EIDAuthenticationPackageDllUnRegister();
+		/*EIDAuthenticationPackageDllUnRegister();
 		EIDCredentialProviderDllUnRegister();
 		EIDPasswordChangeNotificationDllUnRegister();
-		EIDConfigurationWizardDllUnRegister();
+		EIDConfigurationWizardDllUnRegister();*/
+		LsaEIDRemoveAllStoredCredential();
 		return ERROR_SUCCESS;
 	}
 }

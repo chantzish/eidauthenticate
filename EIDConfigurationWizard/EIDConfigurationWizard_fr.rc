@@ -267,6 +267,7 @@ BEGIN
     IDS_RENAME              "Votre session doit être fermée pour poursuivre. Voulez-vous continuer ?"
     IDS_RENAMECONF          "Votre compte a été renommé sous le nom ""%s""."
 	IDS_NODOMAINACCOUNT     "EIDAuthenticate ne fonctionne pas sur des comptes appartenant à un domaine. EIDAuthenticate ne fonctionne que sur les postes non connectés à un domaine ou avec un compte local."
+	IDS_CHECKDRIVERONLINE   "EIDAuthenticate a détecté que la carte à puce que vous utilisez (ATR:%s) ne possède pas de pilote. Voulez-vous rechercher dans notre base de données une solution ?"
 END
 /////////////////////////////////////////////////////////////////////////////
 

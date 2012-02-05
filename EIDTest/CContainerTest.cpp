@@ -132,6 +132,41 @@ void menu_CREDENTIAL_CspInfo()
 	}
 }
 
+
+void menu_CREDENTIAL_AllocateLogonStruct()
+{
+	WCHAR szReader[256];
+	WCHAR szCard[256];
+	if (AskForCard(szReader,256,szCard,256))
+	{
+		CContainerHolderFactory<CContainerHolderTest> MyCredentialList;
+		MyCredentialList.ConnectNotification(szReader,szCard,0);
+		if (MyCredentialList.HasContainerHolder())
+		{
+			DWORD dwMax = MyCredentialList.ContainerHolderCount();
+			for (DWORD dwI = 0; dwI < dwMax ; dwI++)
+			{
+				PEID_INTERACTIVE_LOGON pLogonStruct;
+				CContainerHolderTest* MyTest = MyCredentialList.GetContainerHolderAt(dwI);
+				pLogonStruct = MyTest->GetContainer()->AllocateLogonStruct(L"123", NULL);
+				if (pLogonStruct)
+				{
+					EIDFree(pLogonStruct);
+				}
+				else
+				{
+					MessageBox(hMainWnd,_T("Erreur"),_T("test"),0);
+				}
+			}
+		}
+		else
+		{
+			MessageBox(hMainWnd,_T("No Credential"),_T("test"),0);
+		}
+		MyCredentialList.DisconnectNotification(szReader);
+	}
+}
+
 void menu_CRED_RP_Trigger()
 {
 	WCHAR szReader[256];

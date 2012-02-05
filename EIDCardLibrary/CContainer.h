@@ -45,7 +45,8 @@ class CContainer
 	BOOL ViewCertificate(HWND hWnd = NULL);
 
 	BOOL TriggerRemovePolicy();
-	
+	PEID_INTERACTIVE_LOGON AllocateLogonStruct(PWSTR szPin, PDWORD pdwSize);
+//	PEID_MSGINA_AUTHENTICATION CContainer::AllocateGinaStruct(PWSTR szPin, PDWORD pdwSize);
   private:
 
 	LPTSTR					_szReaderName;

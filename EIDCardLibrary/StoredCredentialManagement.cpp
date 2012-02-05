@@ -698,7 +698,7 @@ BOOL CStoredCredentialManager::GetPassword(__in DWORD dwRid, __in PCCERT_CONTEXT
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetResponseFromChallenge 0x%08x",dwError);
 			__leave;
 		}
-		fStatus = GetPasswordFromChallengeResponse(dwRid, pChallenge, dwChallengeSize, pContext, type, pResponse, dwResponseSize, pszPassword);
+		fStatus = GetPasswordFromChallengeResponse(dwRid, pChallenge, dwChallengeSize, type, pResponse, dwResponseSize, pszPassword);
 		if (!fStatus)
 		{
 			dwError = GetLastError();
@@ -1286,25 +1286,24 @@ BOOL CStoredCredentialManager::EncryptPasswordAndSaveIt(__in HCRYPTKEY hKey, __i
 	return fReturn;
 }
 
-BOOL CStoredCredentialManager::GetPasswordFromChallengeResponse(__in DWORD dwRid, __in PBYTE ppChallenge, __in DWORD dwChallengeSize,  __in PCCERT_CONTEXT pCertContext, __in DWORD dwChallengeType, __in PBYTE pResponse, __in DWORD dwResponseSize, PWSTR *pszPassword)
+BOOL CStoredCredentialManager::GetPasswordFromChallengeResponse(__in DWORD dwRid, __in PBYTE ppChallenge, __in DWORD dwChallengeSize, __in DWORD dwChallengeType, __in PBYTE pResponse, __in DWORD dwResponseSize, PWSTR *pszPassword)
 {
 	switch(dwChallengeType)
 	{
 	case eidpdtClearText:
-		return GetPasswordFromSignatureChallengeResponse(dwRid,ppChallenge,dwChallengeSize,pCertContext,pResponse,dwResponseSize,pszPassword);
+		return GetPasswordFromSignatureChallengeResponse(dwRid,ppChallenge,dwChallengeSize,pResponse,dwResponseSize,pszPassword);
 		break;
 	case eidpdtCrypted:
-		return GetPasswordFromCryptedChallengeResponse(dwRid,ppChallenge,dwChallengeSize,pCertContext,pResponse,dwResponseSize,pszPassword);
+		return GetPasswordFromCryptedChallengeResponse(dwRid,ppChallenge,dwChallengeSize,pResponse,dwResponseSize,pszPassword);
 		break;
 	}
 	EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Type not implemented");
 	return FALSE;
 }
 
-BOOL CStoredCredentialManager::GetPasswordFromCryptedChallengeResponse(__in DWORD dwRid, __in PBYTE ppChallenge, __in DWORD dwChallengeSize,__in PCCERT_CONTEXT pCertContext, __in PBYTE pResponse, __in DWORD dwResponseSize, PWSTR *pszPassword)
+BOOL CStoredCredentialManager::GetPasswordFromCryptedChallengeResponse(__in DWORD dwRid, __in PBYTE ppChallenge, __in DWORD dwChallengeSize, __in PBYTE pResponse, __in DWORD dwResponseSize, PWSTR *pszPassword)
 {
 	UNREFERENCED_PARAMETER(ppChallenge);
-	UNREFERENCED_PARAMETER(pCertContext);
 	UNREFERENCED_PARAMETER(dwChallengeSize);
 	BOOL fReturn = FALSE, fStatus;
 	DWORD dwSize;
@@ -1331,6 +1330,12 @@ BOOL CStoredCredentialManager::GetPasswordFromCryptedChallengeResponse(__in DWOR
 		{
 			dwError = GetLastError();
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"RetrievePrivateData 0x%08x",dwError);
+			__leave;
+		}
+		if (pEidPrivateData->dwSymetricKeySize != dwChallengeSize)
+		{
+			dwError = ERROR_NONE_MAPPED;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"dwChallengeSize = 0x%08x",dwChallengeSize);
 			__leave;
 		}
 		// key is generated here
@@ -1427,10 +1432,8 @@ BOOL CStoredCredentialManager::GetPasswordFromCryptedChallengeResponse(__in DWOR
 	return fReturn;
 }
 
-BOOL CStoredCredentialManager::GetPasswordFromSignatureChallengeResponse(__in DWORD dwRid, __in PBYTE ppChallenge, __in DWORD dwChallengeSize, __in PCCERT_CONTEXT pCertContext, __in PBYTE pResponse, __in DWORD dwResponseSize, PWSTR *pszPassword)
+BOOL CStoredCredentialManager::GetPasswordFromSignatureChallengeResponse(__in DWORD dwRid, __in PBYTE ppChallenge, __in DWORD dwChallengeSize, __in PBYTE pResponse, __in DWORD dwResponseSize, PWSTR *pszPassword)
 {
-	UNREFERENCED_PARAMETER(dwChallengeSize);
-	UNREFERENCED_PARAMETER(pCertContext);
 	BOOL fReturn = FALSE, fStatus;
 	DWORD dwError = 0;
 	PEID_PRIVATE_DATA pEidPrivateData = NULL;
@@ -1447,6 +1450,12 @@ BOOL CStoredCredentialManager::GetPasswordFromSignatureChallengeResponse(__in DW
 		{
 			dwError = ERROR_NONE_MAPPED;
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"dwRid 0x%08x",dwError);
+			__leave;
+		}
+		if (CREDENTIALKEYLENGTH != dwChallengeSize)
+		{
+			dwError = ERROR_NONE_MAPPED;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"dwChallengeSize = 0x%08x",dwChallengeSize);
 			__leave;
 		}
 		if (pszPassword == NULL)

@@ -40,7 +40,7 @@ class CSmartCardConnectionNotifier
 
   public:
     CSmartCardConnectionNotifier() ;
-	CSmartCardConnectionNotifier(ISmartCardConnectionNotifierRef*);
+	CSmartCardConnectionNotifier(ISmartCardConnectionNotifierRef*, BOOL fImmediateStart = TRUE);
 
     virtual ~CSmartCardConnectionNotifier();
 	

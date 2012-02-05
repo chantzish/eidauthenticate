@@ -9,6 +9,10 @@
 
 // to compil with windows XP
 
+DWORD  RegistryCheckLastTime = {0};
+WCHAR szLogFile[255] = L"c:\\EIDGinalog.txt";
+DWORD dwLogLevel = 0;
+
 extern "C"
 {
 
@@ -37,6 +41,10 @@ extern "C"
 		__out PREGHANDLE RegHandle
 		)
 	{
+		UNREFERENCED_PARAMETER(ProviderId);
+		UNREFERENCED_PARAMETER(EnableCallback);
+		UNREFERENCED_PARAMETER(CallbackContext);
+		UNREFERENCED_PARAMETER(RegHandle);
 		return 0;
 	}
 
@@ -44,7 +52,39 @@ extern "C"
 		__in REGHANDLE RegHandle
 		)
 	{
+		UNREFERENCED_PARAMETER(RegHandle);
 		return 0;
+	}
+
+	VOID UpdateParameter()
+	{
+		// check registry
+		HKEY hKey = NULL;
+		__try
+		{
+			LONG lStatus;
+			lStatus = RegOpenKeyEx(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon", 0, KEY_READ|KEY_QUERY_VALUE, &hKey);
+			if (lStatus != ERROR_SUCCESS)
+			{
+				__leave;
+			}
+			DWORD dwSize = ARRAYSIZE(szLogFile) *sizeof(WCHAR);
+			lStatus = RegQueryValueEx(hKey,TEXT("EIDLogFile"), NULL, NULL,(PBYTE)szLogFile,&dwSize);
+			if (lStatus != ERROR_SUCCESS)
+			{
+
+			}
+			dwSize = sizeof(dwLogLevel);
+			lStatus = RegQueryValueEx(hKey,TEXT("EIDLogLevel"), NULL, NULL,(PBYTE)&dwLogLevel,&dwSize);
+			if (lStatus != ERROR_SUCCESS)
+			{
+				dwLogLevel = 0;
+			}
+		}
+		__finally
+		{
+			if (hKey) RegCloseKey(hKey);
+		}
 	}
 
 	ULONG WINAPI EventWriteStringXP(
@@ -54,6 +94,29 @@ extern "C"
 		__in PCWSTR String
 		)
 	{
+		UNREFERENCED_PARAMETER(RegHandle);
+		UNREFERENCED_PARAMETER(Keyword);
+		DWORD Now = GetTickCount(); // number of milisecond since last restart
+		if ((Now - RegistryCheckLastTime) > 60000 || RegistryCheckLastTime > Now) // 1 minute
+		{
+			UpdateParameter();
+			RegistryCheckLastTime = Now;
+		}
+		if (Level <= dwLogLevel)
+		{
+			HANDLE h = CreateFile(szLogFile, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, 0, 0);
+			if (INVALID_HANDLE_VALUE != h) {
+				if (INVALID_SET_FILE_POINTER != SetFilePointer(h, 0, 0, FILE_END)) {
+					DWORD cb = wcslen(String) * sizeof(WCHAR);
+					WriteFile(h, String, cb, &cb, 0);
+					WCHAR szEndLine[] = L"\r\n";
+					cb = 2 * sizeof(WCHAR);
+					WriteFile(h, szEndLine, cb, &cb, 0);
+				}
+				FlushFileBuffers(h);
+				CloseHandle(h);
+			}
+		}
 		return 0;
 	}
 
@@ -69,6 +132,15 @@ extern "C"
 		__in_opt PEVENT_FILTER_DESCRIPTOR EnableFilterDesc
 		)
 	{
+		UNREFERENCED_PARAMETER(ProviderId);
+		UNREFERENCED_PARAMETER(SourceId);
+		UNREFERENCED_PARAMETER(TraceHandle);
+		UNREFERENCED_PARAMETER(IsEnabled);
+		UNREFERENCED_PARAMETER(Level);
+		UNREFERENCED_PARAMETER(MatchAnyKeyword);
+		UNREFERENCED_PARAMETER(MatchAllKeyword);
+		UNREFERENCED_PARAMETER(EnableProperty);
+		UNREFERENCED_PARAMETER(EnableFilterDesc);
 		return 0;
 	}
 
@@ -186,6 +258,9 @@ extern "C"
 
 	HRESULT WINAPI SHGetStockIconInfoXP(SHSTOCKICONID siid, UINT uFlags, __inout SHSTOCKICONINFO *psii)
 	{
+		UNREFERENCED_PARAMETER(siid);
+		UNREFERENCED_PARAMETER(uFlags);
+		UNREFERENCED_PARAMETER(psii);
 		return S_OK;
 	}
 
@@ -202,6 +277,16 @@ extern "C"
 		__in DWORD dwFlags
 		)
 	{
+		UNREFERENCED_PARAMETER(pUiInfo);
+		UNREFERENCED_PARAMETER(pszTargetName);
+		UNREFERENCED_PARAMETER(pContext);
+		UNREFERENCED_PARAMETER(dwAuthError);
+		UNREFERENCED_PARAMETER(pszUserName);
+		UNREFERENCED_PARAMETER(ulUserNameBufferSize);
+		UNREFERENCED_PARAMETER(pszPassword);
+		UNREFERENCED_PARAMETER(ulPasswordBufferSize);
+		UNREFERENCED_PARAMETER(save);
+		UNREFERENCED_PARAMETER(dwFlags);
 		return 0;
 	}
 
@@ -219,6 +304,15 @@ extern "C"
 		__inout DWORD*                                  pcchMaxPassword
 		)
 	{
+		UNREFERENCED_PARAMETER(dwFlags);
+		UNREFERENCED_PARAMETER(pAuthBuffer);
+		UNREFERENCED_PARAMETER(cbAuthBuffer);
+		UNREFERENCED_PARAMETER(pszUserName);
+		UNREFERENCED_PARAMETER(pcchMaxUserName);
+		UNREFERENCED_PARAMETER(pcchMaxDomainName);
+		UNREFERENCED_PARAMETER(pszDomainName);
+		UNREFERENCED_PARAMETER(pszPassword);
+		UNREFERENCED_PARAMETER(pcchMaxPassword);
 		return TRUE;
 	}
 

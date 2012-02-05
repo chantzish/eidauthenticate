@@ -10,6 +10,7 @@
 // from previous step
 // credentials
 extern CContainerHolderFactory<CContainerHolderTest> *pCredentialList;
+extern DWORD dwCurrentCredential;
 extern DWORD dwWizardError;
 
 void SetErrorMessage(HWND hWnd)
@@ -64,7 +65,9 @@ INT_PTR CALLBACK	WndProc_07TESTRESULTNOTOK(HWND hWnd, UINT message, WPARAM wPara
 					{
 						TCHAR szEmail[256];
 						GetWindowText(GetDlgItem(hWnd,IDC_07EMAIL),szEmail,ARRAYSIZE(szEmail));
-						if (!SendReport(dwWizardError, szEmail))
+						CContainerHolderTest* MyTest = pCredentialList->GetContainerHolderAt(dwCurrentCredential);
+						CContainer* container = MyTest->GetContainer();
+						if (!SendReport(dwWizardError, szEmail, container->GetCertificate()))
 						{
 							MessageBoxWin32(GetLastError());
 						}

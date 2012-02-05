@@ -101,8 +101,6 @@ void CheckIfCardHasADriver(HWND hWnd)
 			{
 				if (hCard != NULL)
 					SCardDisconnect(hCard, SCARD_LEAVE_CARD);
-				if (szReaders)
-					SCardFreeMemory(hSC, szReaders);
 				if (pbAtr)
 					SCardFreeMemory(hSC, pbAtr);
 				if (szCards)
@@ -114,6 +112,8 @@ void CheckIfCardHasADriver(HWND hWnd)
 	}
 	__finally
 	{
+		if (szReaders)
+			SCardFreeMemory(hSC, szReaders);
 		if (hSC)
 			SCardReleaseContext(hSC);
 	}

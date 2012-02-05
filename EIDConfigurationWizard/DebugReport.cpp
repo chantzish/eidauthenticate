@@ -440,7 +440,7 @@ VOID CreateReport(PTSTR szNamedPipeName)
 	}
 }
 
-BOOL SendReport(DWORD dwErrorCode, PTSTR szEmail)
+BOOL SendReport(DWORD dwErrorCode, PTSTR szEmail, PCCERT_CONTEXT pCertContext)
 {
 	DWORD dwRetVal;
 	UINT uRetVal;
@@ -467,7 +467,7 @@ BOOL SendReport(DWORD dwErrorCode, PTSTR szEmail)
 		{
 			__leave;
 		}
-		if (!CommunicateTestNotOK(dwErrorCode, szEmail, szTempFileName))
+		if (!CommunicateTestNotOK(dwErrorCode, szEmail, szTempFileName,pCertContext))
 		{
 			__leave;
 		}
