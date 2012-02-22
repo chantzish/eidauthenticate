@@ -152,7 +152,6 @@
     <ClCompile Include="removepolicy.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="EIDConfigurationWizard.h" />
     <ClInclude Include="EIDConfigurationWizardElevated.h" />
     <ClInclude Include="EIDConfigurationWizardElevated_fr.h" />
     <ClInclude Include="EIDConfigurationWizardElevated_ru.h" />
