@@ -1065,6 +1065,10 @@ extern "C"
 					__in PVOID Buffer,
 					__in ULONG BufferSize )
 	{
+		UNREFERENCED_PARAMETER(ContextHandle);
+		UNREFERENCED_PARAMETER(ContextAttribute);
+		UNREFERENCED_PARAMETER(Buffer);
+		UNREFERENCED_PARAMETER(BufferSize);
 		NTSTATUS Status = STATUS_NOT_IMPLEMENTED;
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Status = 0x%08X",Status);
 		return Status;
@@ -1076,6 +1080,10 @@ extern "C"
 					__in PVOID Buffer,
 					__in ULONG BufferSize )
 	{
+		UNREFERENCED_PARAMETER(CredentialHandle);
+		UNREFERENCED_PARAMETER(CredentialAttribute);
+		UNREFERENCED_PARAMETER(Buffer);
+		UNREFERENCED_PARAMETER(BufferSize);
 		NTSTATUS Status = STATUS_NOT_IMPLEMENTED;
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Status = 0x%08X",Status);
 		return Status;
@@ -1090,6 +1098,12 @@ extern "C"
 					__inout PSecBufferDesc   pOutput
 					)
 	{
+		UNREFERENCED_PARAMETER(pDomainName);
+		UNREFERENCED_PARAMETER(pAccountName);
+		UNREFERENCED_PARAMETER(pOldPassword);
+		UNREFERENCED_PARAMETER(pNewPassword);
+		UNREFERENCED_PARAMETER(Impersonating);
+		UNREFERENCED_PARAMETER(pOutput);
 		NTSTATUS Status = STATUS_NOT_IMPLEMENTED;
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Status = 0x%08X",Status);
 		return Status;
@@ -1104,6 +1118,12 @@ extern "C"
 					__inout PLSA_SEC_HANDLE ContextHandle
 					)
 	{
+		UNREFERENCED_PARAMETER(CredentialHandle);
+		UNREFERENCED_PARAMETER(TargetName);
+		UNREFERENCED_PARAMETER(ContextRequirements);
+		UNREFERENCED_PARAMETER(MetaDataLength);
+		UNREFERENCED_PARAMETER(MetaData);
+		UNREFERENCED_PARAMETER(ContextHandle);
 		NTSTATUS Status = STATUS_NOT_IMPLEMENTED;
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Status = 0x%08X",Status);
 		return Status;
@@ -1118,6 +1138,12 @@ extern "C"
 					__inout PLSA_SEC_HANDLE ContextHandle
 					)
 	{
+		UNREFERENCED_PARAMETER(CredentialHandle);
+		UNREFERENCED_PARAMETER(TargetName);
+		UNREFERENCED_PARAMETER(ContextRequirements);
+		UNREFERENCED_PARAMETER(MetaDataLength);
+		UNREFERENCED_PARAMETER(MetaData);
+		UNREFERENCED_PARAMETER(ContextHandle);
 		NTSTATUS Status = STATUS_NOT_IMPLEMENTED;
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Status = 0x%08X",Status);
 		return Status;
@@ -1130,6 +1156,10 @@ extern "C"
 				   __deref_out_bcount(*FlatCredUIContextLength)  PUCHAR* FlatCredUIContext
 				   )
 	  {
+		UNREFERENCED_PARAMETER(ContextHandle);
+		UNREFERENCED_PARAMETER(CredType);
+		UNREFERENCED_PARAMETER(FlatCredUIContextLength);
+		UNREFERENCED_PARAMETER(FlatCredUIContext);
 		NTSTATUS Status = STATUS_NOT_IMPLEMENTED;
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Status = 0x%08X",Status);
 		return Status;
@@ -1142,6 +1172,10 @@ extern "C"
 				  __in_bcount(FlatCredUIContextLength) PUCHAR FlatCredUIContext
 				  )
 	{
+		UNREFERENCED_PARAMETER(ContextHandle);
+		UNREFERENCED_PARAMETER(CredType);
+		UNREFERENCED_PARAMETER(FlatCredUIContextLength);
+		UNREFERENCED_PARAMETER(FlatCredUIContext);
 		NTSTATUS Status = STATUS_NOT_IMPLEMENTED;
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Status = 0x%08X",Status);
 		return Status;
@@ -1155,6 +1189,11 @@ extern "C"
 				__in PSECPKG_TARGETINFO TargetInfo
 				)
 	{
+		UNREFERENCED_PARAMETER(ClientRequest);
+		UNREFERENCED_PARAMETER(ProtocolSubmitBuffer);
+		UNREFERENCED_PARAMETER(ClientBufferBase);
+		UNREFERENCED_PARAMETER(SubmitBufferLength);
+		UNREFERENCED_PARAMETER(TargetInfo);
 		NTSTATUS Status = STATUS_NOT_IMPLEMENTED;
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Status = 0x%08X",Status);
 		return Status;

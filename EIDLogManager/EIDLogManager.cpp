@@ -9,6 +9,7 @@
 #include <Shobjidl.h>
 #include <Shlobj.h>
 #include "../EIDCardLibrary/Registration.h"
+#include "../EIDCardLibrary/Tracing.h"
 
 #pragma comment(lib,"comctl32")
 #pragma comment(lib,"Shell32")
@@ -31,7 +32,7 @@
 // Variables globales :
 HINSTANCE hInst;								// instance actuelle
 
-INT_PTR CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
 
 int APIENTRY _tWinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
@@ -41,10 +42,12 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
 
- 	DialogBox(hInst, MAKEINTRESOURCE(IDD_DIALOG), NULL, About);
+ 	DialogBox(hInst, MAKEINTRESOURCE(IDD_EIDLOGMANAGER_DIALOG), NULL, WndProc);
 }
 
 void SaveLog(HWND hDlg);
+void DeleteLog(HWND hDlg);
+
 void ShowHideLogButtons(HWND hDlg)
 {
 	if (IsLoggingEnabled())
@@ -73,7 +76,7 @@ void ShowHideCrashDumpButtons(HWND hDlg)
 	}
 }
 // Gestionnaire de messages pour la boîte de dialogue À propos de.
-INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+INT_PTR CALLBACK WndProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	UNREFERENCED_PARAMETER(lParam);
 	switch (message)
@@ -91,15 +94,32 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 			switch (LOWORD(wParam))
 			{
 				case IDC_ENABLELOG:
-					EnableLogging();
+					if (!EnableLogging())
+					{
+						MessageBoxWin32Ex(GetLastError(), hDlg);
+					}
+					/*else
+					{
+						MessageBoxWin32Ex(0, hDlg);
+					}*/
 					ShowHideLogButtons(hDlg);
 					break;	
 				case IDC_DISABLELOG:
-					DisableLogging();
+					if (!DisableLogging())
+					{
+						MessageBoxWin32Ex(GetLastError(), hDlg);
+					}
+					/*else
+					{
+						MessageBoxWin32Ex(0, hDlg);
+					}*/
 					ShowHideLogButtons(hDlg);
 					break;
 				case IDC_SAVELOG:
 					SaveLog(hDlg);
+					break;
+				case IDC_CLEARLOG:
+					DeleteLog(hDlg);
 					break;
 				case IDC_ENABLECRASHDUMP:
 					{
@@ -267,5 +287,25 @@ void SaveLog(HWND hDlg)
 			CloseHandle(hFile);
 			hFile = INVALID_HANDLE_VALUE;
 		}
+	}
+}
+
+void DeleteLog(HWND hDlg)
+{
+	if (IsLoggingEnabled())
+	{
+		MessageBox(hDlg, TEXT("Tracing must be disabled"),TEXT("Error"),0);
+	}
+	else
+	{
+		DeleteFile(TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl"));
+		DeleteFile(TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl.001"));
+		DeleteFile(TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl.002"));
+		DeleteFile(TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl.003"));
+		DeleteFile(TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl.004"));
+		DeleteFile(TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl.005"));
+		DeleteFile(TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl.006"));
+		DeleteFile(TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl.007"));
+		DeleteFile(TEXT("c:\\Windows\\system32\\LogFiles\\WMI\\EIDCredentialProvider.etl.008"));
 	}
 }

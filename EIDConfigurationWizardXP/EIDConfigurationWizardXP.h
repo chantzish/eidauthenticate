@@ -81,7 +81,7 @@
 #define IDC_02NEW                       116
 #define IDC_04C2_LINK                   116
 #define IDC_03_CREATE                   117
-#define IDC_SYSLINK3                    117
+#define IDC_04C3_LINK                   117
 #define IDC_07EMAIL                     118
 #define IDC_PIN                         118
 #define IDC_03CERTIFICATEPANEL          120

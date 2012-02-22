@@ -1,12 +1,9 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by EIDConfigurationWizardElevated_fr.rc
+// Used by EIDConfigurationWizardElevated.rc
 //
-
-
 #define IDD_DIALOGREMOVEPOLICY          70
 #define IDD_DIALOGFORCEPOLICY           71
-
 #define IDC_NOACTION                    141
 #define IDC_LOCK                        142
 #define IDC_LOGOFF                      143

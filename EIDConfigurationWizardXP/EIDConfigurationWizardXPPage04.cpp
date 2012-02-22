@@ -524,7 +524,7 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 			case PSN_SETACTIVE :
 				// list view
 				{
-					ListView_DeleteAllItems(GetDlgItem(hWnd, IDC_04CHECKS));
+//					ListView_DeleteAllItems(GetDlgItem(hWnd, IDC_04CHECKS));
 					ListView_DeleteAllItems(GetDlgItem(hWnd, IDC_04LIST));
 	
 					if (!pCredentialList)
@@ -576,7 +576,7 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 					delete pCredentialList;
 					pCredentialList = NULL;
 				}
-				ListView_DeleteAllItems(GetDlgItem(hWnd, IDC_04CHECKS));
+//				ListView_DeleteAllItems(GetDlgItem(hWnd, IDC_04CHECKS));
 				if (!fShowNewCertificatePanel)
 				{
 					PropSheet_PressButton(GetParent(hWnd), PSBTN_BACK);
@@ -614,7 +614,7 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 					}
 					else
 					{
-						ListView_DeleteAllItems(GetDlgItem(hWnd, IDC_04CHECKS));
+//						ListView_DeleteAllItems(GetDlgItem(hWnd, IDC_04CHECKS));
 						PropSheet_SetWizButtons(GetParent(hWnd), PSWIZB_BACK);
 						fHasDeselected = TRUE;
 						PostMessage(hWnd, WM_MYMESSAGE, 0, 0);
@@ -666,7 +666,7 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 						pCredentialList->DisconnectNotification(szReader);
 						dwCurrentCredential = 0xFFFFFFFF;
 						ListView_DeleteAllItems(GetDlgItem(hWnd, IDC_04LIST));
-						ListView_DeleteAllItems(GetDlgItem(hWnd, IDC_04CHECKS));
+//						ListView_DeleteAllItems(GetDlgItem(hWnd, IDC_04CHECKS));
 						if (AskForCard(szReader,dwReaderSize,szCard,dwCardSize))
 						{
 							NMHDR nmh;
@@ -683,7 +683,7 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 							}
 						}
 					}
-					if (wcsncmp(item.szID, L"action",6) == 0 && pCredentialList)
+					/*if (wcsncmp(item.szID, L"action",6) == 0 && pCredentialList)
 					{
 						int checkit = _wtoi(item.szID + 6);
 						BOOL fReturn;
@@ -706,7 +706,7 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 							SendMessage(hWnd,WM_NOTIFY,0,(LPARAM)&nmh);
 						}
 
-					}
+					}*/
 				}
 		}
     }

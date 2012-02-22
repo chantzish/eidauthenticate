@@ -63,4 +63,4 @@ LONG EIDExceptionHandler( PEXCEPTION_POINTERS pExceptPtrs );
 LONG EIDExceptionHandlerDebug( PEXCEPTION_POINTERS pExceptPtrs, BOOL fMustCrash );
 
 BOOL StartLogging();
-void StopLogging();
+BOOL StopLogging();
