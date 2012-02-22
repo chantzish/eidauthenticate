@@ -165,7 +165,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="EIDLogManager.ico" />
-    <None Include="ReadMe.txt" />
     <None Include="small.ico" />
   </ItemGroup>
   <ItemGroup>

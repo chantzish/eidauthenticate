@@ -29,6 +29,7 @@
 #include <winhttp.h>
 
 #include "EIDCardLibrary.h"
+#include "Tracing.h"
 #include "guid.h"
 
 #pragma comment(lib,"Dbghelp")
@@ -319,13 +320,13 @@ BOOL StartLogging()
 		err = StartTrace(&SessionHandle, TEXT("EIDCredentialProvider"), &(Properties.TraceProperties));
 		if (err != ERROR_SUCCESS)
 		{
-			MessageBoxWin32Ex2(err, NULL, __FILE__,__LINE__);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"StartTrace 0x%08x", err);
 			__leave;
 		}
 		err = EnableTraceEx(&CLSID_CEIDProvider,NULL,SessionHandle,TRUE,WINEVENT_LEVEL_VERBOSE,0,0,0,NULL);
 		if (err != ERROR_SUCCESS)
 		{
-			MessageBoxWin32Ex2(err, NULL, __FILE__,__LINE__);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EnableTraceEx 0x%08x", err);
 			__leave;
 		}
 		fReturn = TRUE;
@@ -336,9 +337,10 @@ BOOL StartLogging()
 	return fReturn;
 }
 
-void StopLogging()
+BOOL StopLogging()
 {
-	LONG err;
+	LONG err = 0;
+	BOOL fReturn = FALSE;
 	struct _Prop
 	{
 		EVENT_TRACE_PROPERTIES TraceProperties;
@@ -346,16 +348,25 @@ void StopLogging()
 		TCHAR LoggerName[1024];
 	} Properties;
 	memset(&Properties, 0, sizeof(Properties));
-	Properties.TraceProperties.Wnode.BufferSize = sizeof(Properties);
-	Properties.TraceProperties.Wnode.Guid = CLSID_CEIDProvider;
-	Properties.TraceProperties.Wnode.Flags = WNODE_FLAG_TRACED_GUID;
-	Properties.TraceProperties.LogFileMode = 4864; 
-	Properties.TraceProperties.LogFileNameOffset = sizeof(EVENT_TRACE_PROPERTIES);
-	Properties.TraceProperties.LoggerNameOffset = sizeof(EVENT_TRACE_PROPERTIES) + 1024 * sizeof(TCHAR);
-	Properties.TraceProperties.MaximumFileSize = 8;
-	err = ControlTrace(NULL, TEXT("EIDCredentialProvider"), &(Properties.TraceProperties),EVENT_TRACE_CONTROL_STOP);
-	if (err != ERROR_SUCCESS && err != 0x00001069)
+	__try
 	{
-		MessageBoxWin32Ex2(err, NULL, __FILE__,__LINE__);
+		Properties.TraceProperties.Wnode.BufferSize = sizeof(Properties);
+		Properties.TraceProperties.Wnode.Guid = CLSID_CEIDProvider;
+		Properties.TraceProperties.Wnode.Flags = WNODE_FLAG_TRACED_GUID;
+		Properties.TraceProperties.LogFileMode = 4864; 
+		Properties.TraceProperties.LogFileNameOffset = sizeof(EVENT_TRACE_PROPERTIES);
+		Properties.TraceProperties.LoggerNameOffset = sizeof(EVENT_TRACE_PROPERTIES) + 1024 * sizeof(TCHAR);
+		Properties.TraceProperties.MaximumFileSize = 8;
+		err = ControlTrace(NULL, TEXT("EIDCredentialProvider"), &(Properties.TraceProperties),EVENT_TRACE_CONTROL_STOP);
+		if (err != ERROR_SUCCESS && err != 0x00001069)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"ControlTrace 0x%08x", err);
+		}
+		fReturn = TRUE;
 	}
+	__finally
+	{
+	}
+	SetLastError(err);
+	return fReturn;
 }

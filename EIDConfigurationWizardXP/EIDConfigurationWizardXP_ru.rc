@@ -156,7 +156,7 @@ BEGIN
     LTEXT           "Static Static Static Static Static Static Static Static Static Static Static Static Static Static Static Static Static Static Static Static ",IDC_04C2_RATIONAL,28,138,242,18
     CONTROL         "<a>SysLink1</a>",IDC_04C2_LINK,"SysLink",WS_TABSTOP,29,158,241,8
     LTEXT           "Static Static Static Static Static Static Static Static Static Static Static Static Static Static Static Static Static Static Static Static ",IDC_04C3_RATIONAL,29,170,241,16
-    CONTROL         "<a>SysLink1</a>",IDC_SYSLINK3,"SysLink",WS_TABSTOP,30,191,240,8
+    CONTROL         "<a>SysLink1</a>",IDC_04C3_LINK,"SysLink",WS_TABSTOP,30,191,240,8
 END
 
 IDD_05PASSWORD DIALOGEX 0, 0, 273, 209

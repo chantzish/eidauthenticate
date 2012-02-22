@@ -49,12 +49,26 @@ extern "C"
 
 	void NTAPI DllEnableLogging()
 	{
-		EnableLogging();
+		if (!EnableLogging())
+		{
+			MessageBoxWin32(GetLastError());
+		}
+		else
+		{
+			MessageBoxWin32(0);
+		}
 	}
 
 	void NTAPI DllDisableLogging()
 	{
-		DisableLogging();
+		if (!DisableLogging())
+		{
+			MessageBoxWin32(GetLastError());
+		}
+		else
+		{
+			MessageBoxWin32(0);
+		}
 	}
 
 	int NTAPI Commit(MSIHANDLE hInstall)

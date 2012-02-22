@@ -181,7 +181,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	psh.hwndParent = NULL;
 	psh.phpage = ahpsp;
 	psh.dwFlags = PSH_USEHICON | PSH_WIZARD;
-	psh.pszbmWatermark = MAKEINTRESOURCE(IDB_LOGO);
+	psh.pszbmWatermark = 0;
 	psh.pszbmHeader = 0;
 	psh.nStartPage = 0;
 	psh.nPages = ARRAYSIZE(ahpsp);
