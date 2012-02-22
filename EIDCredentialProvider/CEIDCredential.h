@@ -38,7 +38,7 @@
 
 #include "helpers.h"
 #include "dll.h"
-#include "resource.h"
+#include "EIDCredentialProvider.h"
 #include "../EIDCardLibrary/Tracing.h"
 #include "../EIDCardLibrary/CContainer.h"
 
