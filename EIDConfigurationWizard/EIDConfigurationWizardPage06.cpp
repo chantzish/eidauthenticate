@@ -6,6 +6,7 @@
 #include "global.h"
 #include "EIDConfigurationWizard.h"
 #include "../EIDCardLibrary/GPO.h"
+#include "../EIDCardLibrary/OnlineDatabase.h"
 // from previous step
 // credentials
 extern CContainerHolderFactory<CContainerHolderTest> *pCredentialList;
@@ -27,6 +28,23 @@ INT_PTR CALLBACK	WndProc_06TESTRESULTOK(HWND hWnd, UINT message, WPARAM wParam, 
 			SendMessage(GetDlgItem(hWnd,IDC_05FORCEPOLICYICON),STM_SETICON ,(WPARAM)ShieldIcon,0);
 			SendMessage(GetDlgItem(hWnd,IDC_05REMOVEPOLICYICON),STM_SETICON ,(WPARAM)ShieldIcon,0);
 		}*/
+		break;
+	case WM_COMMAND:
+		// Analyse les sélections de menu :
+		switch (LOWORD(wParam))
+		{	
+		case IDC_06UPDATEDATABASE:
+			if (!CommunicateTestOK())
+			{
+				MessageBoxWin32Ex(GetLastError(), hWnd);
+			}
+			else
+			{
+				// success !
+				MessageBoxWin32Ex(0, hWnd);
+			}
+			break;
+		}
 		break;
 	case WM_NOTIFY :
 			LPNMHDR pnmh = (LPNMHDR)lParam;

@@ -1,6 +1,6 @@
 // Microsoft Visual C++ generated resource script.
 //
-#include "EIDConfigurationWizard.h"
+#include "EIDConfigurationWizard_fr.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
@@ -10,13 +10,14 @@
 #define APSTUDIO_HIDDEN_SYMBOLS
 #include "windows.h"
 #undef APSTUDIO_HIDDEN_SYMBOLS
-
+#include "EIDConfigurationWizard.h"
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
 
 /////////////////////////////////////////////////////////////////////////////
 // Français resources
 
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_FRA)
 LANGUAGE LANG_FRENCH, SUBLANG_NEUTRAL
 #pragma code_page(1252)
 
@@ -43,8 +44,10 @@ BEGIN
                     "Button",BS_COMMANDLINK | WS_TABSTOP,21,21,216,36
     CONTROL         "Définir un nouveau jeu d'informations d'authentification",IDC_02NEW,
                     "Button",BS_COMMANDLINK | WS_TABSTOP,21,69,216,45
-    CONTROL         "<a  HREF=""mailto:support@mysmartlogon.com?subject=Feedback"">Suggérer une amélioration</a>",IDC_SYSLINKHELP,
+    CONTROL         "<a  id=""idDatabase"">Rechercher en ligne des problèmes déjà signalés</a>",IDC_SYSLINKHELP,
                     "SysLink",WS_TABSTOP,25,185,223,8
+    CONTROL         "Désactiver l'ouverture de session par carte à puce",IDC_01DELETE,
+                    "Button",BS_COMMANDLINK | WS_TABSTOP,21,117,216,33
 END
 
 IDD_05PASSWORD DIALOGEX 0, 0, 273, 209
@@ -55,8 +58,6 @@ BEGIN
     EDITTEXT        IDC_05PASSWORD,99,112,109,11,ES_PASSWORD | ES_AUTOHSCROLL | NOT WS_BORDER,WS_EX_CLIENTEDGE
     CONTROL         "Exécuter un test de connection à la fin de cet assistant",IDC_05TEST,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,156,255,13
-    ICON            "",IDC_05REMOVEPOLICYICON,6,177,15,12,SS_CENTERIMAGE
-    ICON            "",IDC_05FORCEPOLICYICON,6,192,15,12,SS_CENTERIMAGE
     LTEXT           "Selectionner un certificat",IDC_STC4,0,0,272,20
     CONTROL         "",IDC_05LIST,"SysListView32",LVS_SINGLESEL | LVS_SHOWSELALWAYS | WS_TABSTOP,0,24,273,51,WS_EX_CLIENTEDGE
     LTEXT           "Veuillez saisir votre mot de passe",IDC_STC5,0,84,272,20
@@ -93,14 +94,17 @@ BEGIN
     CONTROL         "",IDC_04CHECKS,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_AUTOARRANGE | LVS_NOCOLUMNHEADER | WS_TABSTOP,0,108,273,99,WS_EX_CLIENTEDGE
     LTEXT           "Selectionner un certificat",IDC_STC1,0,0,272,20
     CONTROL         "<a id=""idrefresh"">Rafraîchir</a>",IDC_04REFRESH,
-                    "SysLink",0x1,240,78,30,9
+                    "SysLink",WS_TABSTOP,240,78,30,9
 END
 
 IDD_06TESTRESULTOK DIALOGEX 0, 0, 273, 209
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 FONT 9, "Segoe UI", 0, 0, 0x0
 BEGIN
-    LTEXT           "Le test s'est déroulé avec succès. Vous pouvez désormais utiliser votre carte à puce pour ouvrir une session.",IDC_TESTSUCCEFULL,6,6,262,32
+    LTEXT           "Le test s'est déroulé avec succès. Vous pouvez désormais utiliser votre carte à puce pour ouvrir une session.",IDC_STC7,6,6,262,32
+    LTEXT           "Tâches supplémentaires :",IDC_STATIC,13,107,204,13
+    CONTROL         "Envoyer un rapport selon lequel la carte fonctionne correctement",IDC_06UPDATEDATABASE,
+                    "Button",BS_COMMANDLINK | WS_TABSTOP,21,116,216,33
 END
 
 IDD_07TESTRESULTNOTOK DIALOGEX 0, 0, 273, 209
@@ -146,6 +150,10 @@ BEGIN
     BEGIN
     END
 
+    IDD_06TESTRESULTOK, DIALOG
+    BEGIN
+    END
+
     IDD_07TESTRESULTNOTOK, DIALOG
     BEGIN
     END
@@ -161,7 +169,7 @@ END
 
 1 TEXTINCLUDE 
 BEGIN
-    "EIDConfigurationWizard.h\0"
+    "EIDConfigurationWizard_fr.h\0"
 END
 
 2 TEXTINCLUDE 
@@ -169,7 +177,7 @@ BEGIN
     "#define APSTUDIO_HIDDEN_SYMBOLS\r\n"
     "#include ""windows.h""\r\n"
     "#undef APSTUDIO_HIDDEN_SYMBOLS\r\n"
-    "\0"
+    "#include ""EIDConfigurationWizard.h""\0"
 END
 
 3 TEXTINCLUDE 
@@ -212,16 +220,10 @@ BEGIN
     IDS_05CREDINFOCAPTION   "Test"
     IDS_05CREDINFOCONFIRMTITLE "Résultat"
     IDS_05CREDINFOCONFIRMMESSAGE "Information d'authentification valide"
-    IDS_04USERNAMEOK        "Le nom d'utilisateur du certificat correspond au nom d'utilisateur courant"
-    IDS_04USERNAMENOK       "Le nom d'utilisateur du certificat ne correspond pas au nom d'utilisateur courant"
     IDS_04TRUSTOK           "Le certificat est valide"
     IDS_04TRUSTNOK          "Erreur"
     IDS_04ENCRYPTIONOK      "La carte supporte d'encryption"
     IDS_04ENCRYPTIONNOK     "La carte ne supporte pas l'encryption"
-    IDS_05ACTIVATEREMOVE    "<a id=""idActRemove"">Activer la stratégie de retrait</a>"
-    IDS_05DESACTIVATEREMOVE "<a id=""idDesActRemove"">Desactiver la stratégie de retrait</a>"
-    IDS_05ACTIVATEFORCE     "<a id=""idActForce"">Forcer l'authentification par carte à puce</a>"
-    IDS_05DESACTIVATEFORCE  "<a id=""idDesActForce"">Ne plus forcer l'authentification par carte à puce</a>"
     IDS_04TESTUSERNAME      "Nom d'utilisateur"
 END
 
@@ -229,46 +231,33 @@ STRINGTABLE
 BEGIN
     IDS_04TESTTRUST         "Confiance"
     IDS_04TESTCRYPTO        "Crypto"
-    IDS_CERT_TRUST_NO_ERROR "Aucune erreur trouvée pour le certificat"
-    IDS_CERT_TRUST_IS_NOT_TIME_VALID 
-                            "Un certificat requis n'est pas dans sa période de validité selon la vérification par rapport à l'horloge système en cours"
-    IDS_CERT_TRUST_IS_NOT_TIME_NESTED 
-                            "Les périodes de validité de la chaîne de certification ne se suivent pas correctement."
-    IDS_CERT_TRUST_IS_REVOKED "Le certificat ou la signature a été révoqué."
-    IDS_CERT_TRUST_IS_NOT_SIGNATURE_VALID 
-                            "The certificate or one of the certificates in the certificate chain does not have a valid signature."
     IDS_04TRUSTENABLENOEKU  "Ne pas vérifier l'EKU"
     IDS_04TESTSIGNATURE     "Crypto"
     IDS_02EXISTINGNOTE      "Choississez cette option si vous disposez d'une carte à puce déjà configurée"
     IDS_02NEWNOTE           "Choississez cette option si vous disposez d'une carte à puce vierge"
+    IDS_TITLE5              "Résultat du test"
+    IDS_CHECKDRIVERONLINE   "EIDAuthenticate a détecté que la carte à puce que vous utilisez (ATR:%s) ne possède pas de pilote. Voulez-vous rechercher dans notre base de données une solution ?"
 END
 
 STRINGTABLE
 BEGIN
-    IDS_CERT_TRUST_IS_NOT_VALID_FOR_USAGE 
-                            "Le certificat n'est pas valide pour l'usage requis."
-    IDS_CERT_TRUST_IS_UNTRUSTED_ROOT 
-                            "Une chaîne de certificat traitée se termine par un certificat racine qui n'est pas approuvé par le fournisseur d'approbation."
-    IDS_CERT_TRUST_REVOCATION_STATUS_UNKNOWN 
-                            "The revocation status of the certificate or one of the certificates in the certificate chain is unknown."
-    IDS_CERT_TRUST_IS_CYCLIC 
-                            "One of the certificates in the chain was issued by a certification authority that the original certificate had certified."
-    IDS_CERT_TRUST_IS_PARTIAL_CHAIN "The certificate chain is not complete."
-    IDS_CERT_TRUST_CTL_IS_NOT_TIME_VALID 
-                            "A CTL used to create this chain was not time-valid."
-    IDS_CERT_TRUST_CTL_IS_NOT_SIGNATURE_VALID 
-                            "A CTL used to create this chain did not have a valid signature."
-    IDS_CERT_TRUST_CTL_IS_NOT_VALID_FOR_USAGE 
-                            "A CTL used to create this chain is not valid for this usage."
-    IDS_CERT_TRUST_UNKOWN_ERROR "Unknown error"
     IDS_NO_CERTIFICATE      "Il n'y a pas de certificat"
-    IDS_04USERNAMERENAME    "Renommer votre compte"
     IDS_04TRUSTMAKETRUSTED  "Faire confiance au certificat"
-    IDS_RENAME              "Votre session doit être fermée pour poursuivre. Voulez-vous continuer ?"
-    IDS_RENAMECONF          "Votre compte a été renommé sous le nom ""%s""."
-	IDS_NODOMAINACCOUNT     "EIDAuthenticate ne fonctionne pas sur des comptes appartenant à un domaine. EIDAuthenticate ne fonctionne que sur les postes non connectés à un domaine ou avec un compte local."
-	IDS_CHECKDRIVERONLINE   "EIDAuthenticate a détecté que la carte à puce que vous utilisez (ATR:%s) ne possède pas de pilote. Voulez-vous rechercher dans notre base de données une solution ?"
 END
+
+STRINGTABLE
+BEGIN
+    IDS_TURNREMOVALPOLICY   "Activer ou désactiver la politique de retrait"
+    IDS_TURNFORCEPOLICY     "Rendre ou ne pas rendre obligatoire l'utilisation de cartes à puce"
+END
+
+STRINGTABLE
+BEGIN
+    IDS_NODOMAINACCOUNT     "EIDAuthenticate ne fonctionne pas sur des comptes appartenant à un domaine. EIDAuthenticate ne fonctionne que sur les postes non connectés à un domaine ou avec un compte local."
+	IDS_WRONGPIN_RETRIES    "Un mauvais PIN a été présenté à la carte : il reste %d essais"
+END
+
+#endif    // Français resources
 /////////////////////////////////////////////////////////////////////////////
 
 

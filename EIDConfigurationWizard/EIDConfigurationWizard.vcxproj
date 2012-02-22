@@ -199,19 +199,18 @@
     <ClCompile Include="Common.cpp" />
     <ClCompile Include="DebugReport.cpp" />
     <ClCompile Include="EIDConfigurationWizard.cpp" />
-    <ClCompile Include="EIDConfigurationWizardPage01.cpp" />
     <ClCompile Include="EIDConfigurationWizardPage02.cpp" />
     <ClCompile Include="EIDConfigurationWizardPage03.cpp" />
     <ClCompile Include="EIDConfigurationWizardPage04.cpp" />
     <ClCompile Include="EIDConfigurationWizardPage05.cpp" />
     <ClCompile Include="EIDConfigurationWizardPage06.cpp" />
     <ClCompile Include="EIDConfigurationWizardPage07.cpp" />
-    <ClCompile Include="forcepolicy.cpp" />
-    <ClCompile Include="RemovePolicy.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CContainerHolder.h" />
     <ClInclude Include="EIDConfigurationWizard.h" />
+    <ClInclude Include="EIDConfigurationWizard_fr.h" />
+    <ClInclude Include="EIDConfigurationWizard_ru.h" />
     <ClInclude Include="global.h" />
   </ItemGroup>
   <ItemGroup>

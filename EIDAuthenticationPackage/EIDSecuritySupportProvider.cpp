@@ -36,6 +36,7 @@
 #include "../EIDCardLibrary/Tracing.h"
 #include "../EIDCardLibrary/CredentialManagement.h"
 #include "../EIDCardLibrary/CompleteToken.h"
+#include "../EIDCardLibrary/StoredCredentialManagement.h"
 
 void SetAlloc(PLSA_ALLOCATE_LSA_HEAP AllocateLsaHeap);
 void SetFree(PLSA_FREE_LSA_HEAP FreeHeap);
@@ -283,27 +284,21 @@ extern "C"
 		)
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter for account name = %wZ type=%d",AccountName, LogonType);
-		UNREFERENCED_PARAMETER(PrimaryCredentials);
 		UNREFERENCED_PARAMETER(SupplementalCredentials);
-		// DEBUG
-		if (PrimaryCredentials)
+		if ( PrimaryCredentials && (PrimaryCredentials->Flags & (PRIMARY_CRED_UPDATE | PRIMARY_CRED_CLEAR_PASSWORD)))
 		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"PrimaryCredentials");
-			//EIDCardLibraryDumpMemory(PrimaryCredentials, sizeof(SECPKG_PRIMARY_CRED));
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"PrimaryCredentials password = %wZ Flags = 0x%08X", &(PrimaryCredentials->Password), PrimaryCredentials->Flags);
-		}
-		else
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"PrimaryCredentials null");
-		}
-		if (SupplementalCredentials)
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"SupplementalCredentials");
-			EIDCardLibraryDumpMemory(SupplementalCredentials, sizeof(SECPKG_SUPPLEMENTAL_CRED));
-		}
-		else
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"SupplementalCredentials null");
+			// is here the password update
+			// note : this function is called for each session opened (even the networked one)
+			// and twice is the user is an administrator (elevated token and the normal one)
+			// so this function is called in average 4 times.
+			// the job is also done in the notification package, if the change password is done offline
+			// (for example using  net.exe)
+			// this function exists because a security package can be loaded immedialty after the install
+			// into LSASS.exe while a notification package requires a reboot.
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Password change");
+			CStoredCredentialManager* manager = CStoredCredentialManager::Instance();
+			manager->UpdateCredential(&(PrimaryCredentials->DomainName), AccountName, &(PrimaryCredentials->Password));
+			
 		}
 		return STATUS_SUCCESS;
 	}
@@ -872,7 +867,7 @@ extern "C"
 		UNICODE_STRING Prefix = {0,0,NULL};
 		PLSA_TOKEN_INFORMATION_V2 MyTokenInformation = NULL;
 		DWORD TokenLength;
-		WCHAR szComputer[256];
+		WCHAR szComputer[UNLEN+1];
 		WCHAR szUserName[256];
 		DWORD dwSize;
 		USER_INFO_3 *pInfo = NULL;

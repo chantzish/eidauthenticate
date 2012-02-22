@@ -42,6 +42,7 @@ BOOL WizardFinishButton(PTSTR szPassword)
 	return fReturn;
 }
 
+BOOL TestLogon(HWND hMainWnd);
 
 #define WM_MYMESSAGE WM_USER + 10
 INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -50,8 +51,9 @@ INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPAR
 	{
 	case WM_INITDIALOG:
 		InitListViewListIcon(GetDlgItem(hWnd,IDC_05LIST));
-		//SendMessage(GetDlgItem(hWnd,IDC_05TEST), BM_SETCHECK, BST_CHECKED,0);
+		SendMessage(GetDlgItem(hWnd,IDC_05TEST), BM_SETCHECK, BST_CHECKED,0);
 		PropSheet_SetWizButtons(GetParent(hWnd), PSWIZB_FINISH | PSWIZB_BACK);
+		PropSheet_SetTitle(GetParent(hWnd), 0, MAKEINTRESOURCE(IDS_TITLE4));
 		break;
 	case WM_MYMESSAGE:
 		if (fHasDeselected)
@@ -61,10 +63,8 @@ INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPAR
 		}
 		return TRUE;
 		break;
-/*	case WM_COMMAND:
-		wmId    = LOWORD(wParam);
-		wmEvent = HIWORD(wParam);
-		switch(wmId)
+	case WM_COMMAND:
+		switch(LOWORD(wParam))
 		{
 		case IDC_05TEST:
 			if (IsDlgButtonChecked(hWnd,IDC_05TEST))
@@ -77,7 +77,7 @@ INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPAR
 			}
 			break;
 		}
-		break;*/
+		break;
 
 	case WM_NOTIFY :
         LPNMHDR pnmh = (LPNMHDR)lParam;
@@ -105,10 +105,17 @@ INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPAR
 					// go to the error page
 					dwWizardError = GetLastError();
 					SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
-					PropSheet_SetCurSel(GetParent(hWnd), NULL,6);
+					if (pnmh->code == PSN_WIZNEXT)
+					{
+						PropSheet_SetCurSelByID(GetParent(hWnd), IDD_07TESTRESULTNOTOK);
+					}
+					else
+					{
+						MessageBoxWin32Ex(dwWizardError,hWnd);
+					}
 					return TRUE;
 				}
-				/*if (IsDlgButtonChecked(hWnd,IDC_05TEST))
+				if (IsDlgButtonChecked(hWnd,IDC_05TEST))
 				{
 					if (!TestLogon(hWnd))
 					{
@@ -121,11 +128,11 @@ INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPAR
 						}
 						// go to the error page
 						SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
-						PropSheet_SetCurSel(GetParent(hWnd), NULL,6);
+						PropSheet_SetCurSelByID(GetParent(hWnd), IDD_07TESTRESULTNOTOK);
 						return TRUE;
 					}
 					// go by default to the success page
-				}*/
+				}
 				break;
 			case PSN_RESET:
 				if (pCredentialList)

@@ -8,6 +8,9 @@
 #include "../EIDCardLibrary/CertificateUtilities.h"
 #include "../EIDCardLibrary/Tracing.h"
 #include "../EIDCardLibrary/OnlineDatabase.h"
+#include "../EIDCardLibrary/EIDCardLibrary.h"
+#include "../EIDCardLibrary/Package.h"
+
 
 void CheckIfCardHasADriver(HWND hWnd)
 {
@@ -83,9 +86,7 @@ void CheckIfCardHasADriver(HWND hWnd)
 					_stprintf_s(szMessage, ARRAYSIZE(szMessage), szMessageFormat, szATR);
 					if (IDOK == MessageBox(hWnd,szMessage,L"",MB_OKCANCEL|MB_DEFBUTTON1))
 					{
-						//TryToFindACSP(szATR);
-
-						// else http://test.catalog.update.microsoft.com/v7/site/Home.aspx
+						OpenBrowserOnDatabase(pbAtr, dwAtrSize, NULL);
 					}
 				}
 			}
@@ -104,10 +105,10 @@ void CheckIfCardHasADriver(HWND hWnd)
 	}
 	__finally
 	{
-		if (hSC)
-			SCardReleaseContext(hSC);
 		if (szReaders)
 			SCardFreeMemory(hSC, szReaders);
+		if (hSC)
+			SCardReleaseContext(hSC);
 	}
 }
 
@@ -116,18 +117,20 @@ INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 	switch(message)
 	{
 	case WM_INITDIALOG:
-		if (!fHasAlreadySmartCardCredential)
-		{
-			CenterWindow(GetParent(hWnd));
-		}
+		PropSheet_SetTitle(GetParent(hWnd), 0, MAKEINTRESOURCE(IDS_TITLE1));
+		CenterWindow(GetParent(hWnd));
 		CheckDlgButton(hWnd, IDC_02EXISTING, BST_CHECKED);
+		if (!LsaEIDHasStoredCredential(NULL))
+		{
+			EnableWindow(GetDlgItem(hWnd,IDC_01DELETE), FALSE);
+		}
 		break;
 	case WM_NOTIFY :
         LPNMHDR pnmh = (LPNMHDR)lParam;
         switch(pnmh->code)
         {
 			case PSN_SETACTIVE :
-				//this is an interior page
+				/*//this is an interior page
 				if (fHasAlreadySmartCardCredential)
 				{
 					PropSheet_SetWizButtons(GetParent(hWnd), PSWIZB_BACK | PSWIZB_NEXT);
@@ -135,7 +138,8 @@ INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 				else
 				{
 					PropSheet_SetWizButtons(GetParent(hWnd), PSWIZB_NEXT);
-				}
+				}*/
+				PropSheet_SetWizButtons(GetParent(hWnd), PSWIZB_NEXT);
 				break;
 			case PSN_WIZNEXT:
 				if (IsDlgButtonChecked(hWnd, IDC_02EXISTING) == BST_CHECKED)
@@ -162,6 +166,25 @@ INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 						SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
 						return TRUE;
 					}
+				}
+				else if (IsDlgButtonChecked(hWnd, IDC_01DELETE) == BST_CHECKED)
+				{
+					TCHAR szMessage[256] = TEXT("");
+					LoadString(g_hinst,IDS_AREYOUSURE,szMessage,ARRAYSIZE(szMessage));
+					if (IDYES == MessageBox(hWnd,szMessage,TEXT(""),MB_ICONWARNING|MB_YESNO))
+					{
+						if (!LsaEIDRemoveStoredCredential(NULL))
+						{
+							MessageBoxWin32Ex(GetLastError(),hWnd);
+						}
+						else
+						{
+							// delete
+							PropSheet_PressButton(GetParent(hWnd),PSBTN_CANCEL);
+						}
+					}
+					SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
+					return TRUE;
 				}
 				else
 				{
@@ -192,14 +215,26 @@ INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 				{
 					PNMLINK pNMLink = (PNMLINK)lParam;
 					LITEM item = pNMLink->item;
-					if ((((LPNMHDR)lParam)->hwndFrom == GetDlgItem(hWnd,IDC_SYSLINKHELP)) && (item.iLink == 0))
+					if (wcscmp(item.szID, L"idDatabase") == 0)
+					{
+						if (!OpenBrowserOnDatabase())
+						{
+							LONG lReturn = GetLastError();
+							if (lReturn != SCARD_W_CANCELLED_BY_USER)
+							{
+								MessageBoxWin32Ex(lReturn, hWnd);
+							}
+						}
+					}
+					/*if ((((LPNMHDR)lParam)->hwndFrom == GetDlgItem(hWnd,IDC_SYSLINKHELP)) && (item.iLink == 0))
 					{
 						ShellExecute(NULL, L"open", item.szUrl, NULL, NULL, SW_SHOW);
-					}
+					}*/
 					break;
 				}
 
 		}
+		break;
     }
 	return FALSE;
 }

@@ -24,9 +24,6 @@
     <ClCompile Include="EIDConfigurationWizard.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="EIDConfigurationWizardPage01.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="EIDConfigurationWizardPage02.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -45,12 +42,6 @@
     <ClCompile Include="EIDConfigurationWizardPage07.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="RemovePolicy.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="forcepolicy.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="DebugReport.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -63,6 +54,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="EIDConfigurationWizard.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="EIDConfigurationWizard_fr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="EIDConfigurationWizard_ru.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

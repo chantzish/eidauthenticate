@@ -84,12 +84,8 @@
             <RegistryValue Type="string" Value="EIDConfigurationWizardXP"/>
             <RegistryValue Type="string" Name="LocalizedString" Value="Smart Card Logon"/>
             <RegistryValue Type="string" Name="InfoTip" Value="Smart Card Logon"/>
-            <RegistryKey Key="DefaultIcon">
-              <RegistryValue Type="string" Value="%SystemRoot%\system32\shell32.dll,-13"/>
-            </RegistryKey>
-            <RegistryKey Key="Shell\Open\Command">
-              <RegistryValue Type="string" Value="[#EIDConfigurationWizardXP]"/>
-            </RegistryKey>
+            <RegistryValue Type="expandable" Key="DefaultIcon" Value="%SystemRoot%\system32\shell32.dll,-13"/>
+            <RegistryValue Type="expandable"  Key="Shell\Open\Command" Value="%SystemRoot%\system32\EIDConfigurationWizardXP.exe"/>
           </RegistryKey>
         </Component>
         

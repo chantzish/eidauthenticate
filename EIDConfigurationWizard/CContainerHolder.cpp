@@ -17,45 +17,53 @@
 
 //#define CHECK_USERNAME 0
 
-#if WINVER < 0x600
-// this function doesn't exists on xp, only since Vista.
-// already implemented in EIDCardLibrary
-// let the linker grab it
-LONG WINAPI RegSetKeyValueXP(
-  __in      HKEY hKey,
-  __in_opt  LPCTSTR lpSubKey,
-  __in_opt  LPCTSTR lpValueName,
-  __in      DWORD dwType,
-  __in_opt  LPCVOID lpData,
-  __in      DWORD cbData
-);
-#define RegSetKeyValue RegSetKeyValueXP
-#endif
-
-
 #define ERRORTOTEXT(ERROR) case ERROR: LoadString( g_hinst,IDS_##ERROR, szName, dwSize);                 break;
 BOOL GetTrustErrorMessage(DWORD dwError, PTSTR szName, DWORD dwSize)
 {
     BOOL fReturn = TRUE;
-	switch(dwError)
-    {
-		ERRORTOTEXT(CERT_TRUST_NO_ERROR)
-		ERRORTOTEXT(CERT_TRUST_IS_NOT_TIME_VALID)
-		ERRORTOTEXT(CERT_TRUST_IS_NOT_TIME_NESTED)
-		ERRORTOTEXT(CERT_TRUST_IS_REVOKED)
-		ERRORTOTEXT(CERT_TRUST_IS_NOT_SIGNATURE_VALID)
-		ERRORTOTEXT(CERT_TRUST_IS_NOT_VALID_FOR_USAGE)
-		ERRORTOTEXT(CERT_TRUST_IS_UNTRUSTED_ROOT)
-		ERRORTOTEXT(CERT_TRUST_REVOCATION_STATUS_UNKNOWN)
-		ERRORTOTEXT(CERT_TRUST_IS_CYCLIC)
-		ERRORTOTEXT(CERT_TRUST_IS_PARTIAL_CHAIN)
-		ERRORTOTEXT(CERT_TRUST_CTL_IS_NOT_TIME_VALID)
-		ERRORTOTEXT(CERT_TRUST_CTL_IS_NOT_SIGNATURE_VALID)
-		ERRORTOTEXT(CERT_TRUST_CTL_IS_NOT_VALID_FOR_USAGE)
-		default:                            
-			fReturn = FALSE;
-		break;
-    }
+	DWORD dwResourceId = 3305;
+	if (dwError == CERT_TRUST_NO_ERROR)
+	{
+		dwResourceId = 3299;
+	}
+	else if (dwError & CERT_TRUST_IS_NOT_TIME_VALID)
+	{
+		dwResourceId = 3301;
+	}
+	else if (dwError & CERT_TRUST_IS_NOT_TIME_NESTED)
+	{
+		dwResourceId = 3295;
+	}
+	else if (dwError & CERT_TRUST_IS_REVOKED)
+	{
+		dwResourceId = 3300;
+	}
+	else if (dwError & CERT_TRUST_IS_NOT_SIGNATURE_VALID)
+	{
+		dwResourceId = 3302;
+	}
+	else if (dwError & CERT_TRUST_IS_NOT_VALID_FOR_USAGE)
+	{
+		dwResourceId = 3342;
+	}
+	else if (dwError & CERT_TRUST_IS_UNTRUSTED_ROOT)
+	{
+		dwResourceId = 3298;
+	}
+	else if (dwError & CERT_TRUST_IS_PARTIAL_CHAIN)
+	{
+		dwResourceId = 3294;
+	}
+	HINSTANCE Handle = LoadLibrary(TEXT("cryptui.dll"));
+	if (Handle)
+	{
+		LoadStringW(Handle, dwResourceId, szName, dwSize);
+		FreeLibrary(Handle);
+	}
+	else
+	{
+		swprintf_s(szName, dwSize, L"Unknow Error");
+	}
 	return fReturn;
 } 
 

@@ -135,18 +135,18 @@ BOOL IsCurrentUserBelongToADomain()
 
 INT_PTR CALLBACK WndProc_ForcePolicy(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-BOOL DialogForceSmartCardLogonPolicy()
+BOOL DialogForceSmartCardLogonPolicy(HWND hWndParent)
 {
 	BOOL fReturn = FALSE;
-	DialogBox(g_hinst, MAKEINTRESOURCE(IDD_DIALOGFORCEPOLICY), NULL, WndProc_ForcePolicy);
+	DialogBox(g_hinst, MAKEINTRESOURCE(IDD_DIALOGFORCEPOLICY), hWndParent, WndProc_ForcePolicy);
 	return fReturn;
 }
 
 INT_PTR CALLBACK	WndProc_RemovePolicy(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-BOOL DialogRemovePolicy()
+BOOL DialogRemovePolicy(HWND hWndParent)
 {
 	BOOL fReturn = FALSE;
-	DialogBox(g_hinst, MAKEINTRESOURCE(IDD_DIALOGREMOVEPOLICY), NULL, WndProc_RemovePolicy);
+	DialogBox(g_hinst, MAKEINTRESOURCE(IDD_DIALOGREMOVEPOLICY), hWndParent, WndProc_RemovePolicy);
 	return fReturn;
 }

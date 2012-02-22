@@ -38,7 +38,6 @@ INT_PTR CALLBACK	WndProc_05PASSWORD(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK	WndProc_06TESTRESULTOK(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK	WndProc_07TESTRESULTNOTOK(HWND, UINT, WPARAM, LPARAM);
 
-BOOL fHasAlreadySmartCardCredential = FALSE;
 BOOL fShowNewCertificatePanel;
 BOOL fGotoNewScreen = FALSE;
 HINSTANCE g_hinst;
@@ -139,70 +138,55 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 		} 
 	}
 
-	HPROPSHEETPAGE ahpsp[7];
-	TCHAR szTitle[256] = TEXT("");
-	fHasAlreadySmartCardCredential = TRUE;
-
+	HPROPSHEETPAGE ahpsp[6];
+	
 	PROPSHEETPAGE psp = { sizeof(psp) };   
 	psp.hInstance = hInstance;
 	psp.dwFlags =  PSP_USEHEADERTITLE;
 	psp.lParam = 0;//(LPARAM) &wizdata;
-	
-	LoadString(g_hinst,IDS_TITLE0, szTitle, ARRAYSIZE(szTitle));
-	psp.pszHeaderTitle = szTitle;
-	psp.pszTemplate = MAKEINTRESOURCE(IDD_01MAIN);
-	psp.pfnDlgProc = WndProc_01MAIN;
-	ahpsp[0] = CreatePropertySheetPage(&psp);
 
-	LoadString(g_hinst,IDS_TITLE1, szTitle, ARRAYSIZE(szTitle));
-	psp.pszHeaderTitle = szTitle;
+	psp.pszHeaderTitle = MAKEINTRESOURCE(IDS_TITLE1);
 	psp.pszTemplate = MAKEINTRESOURCE(IDD_02ENABLE);
 	psp.pfnDlgProc = WndProc_02ENABLE;
-	ahpsp[1] = CreatePropertySheetPage(&psp);
+	ahpsp[0] = CreatePropertySheetPage(&psp);
 
-	LoadString(g_hinst,IDS_TITLE2, szTitle, ARRAYSIZE(szTitle));
-	psp.pszHeaderTitle = szTitle;
+	psp.pszHeaderTitle = MAKEINTRESOURCE(IDS_TITLE2);
 	psp.pszTemplate = MAKEINTRESOURCE(IDD_03NEW);
 	psp.pfnDlgProc = WndProc_03NEW;
-	ahpsp[2] = CreatePropertySheetPage(&psp);
+	ahpsp[1] = CreatePropertySheetPage(&psp);
 
-	LoadString(g_hinst,IDS_TITLE3, szTitle, ARRAYSIZE(szTitle));
-	psp.pszHeaderTitle = szTitle;
+	psp.pszHeaderTitle = MAKEINTRESOURCE(IDS_TITLE3);
 	psp.pszTemplate = MAKEINTRESOURCE(IDD_04CHECKS);
 	psp.pfnDlgProc = WndProc_04CHECKS;
-	ahpsp[3] = CreatePropertySheetPage(&psp);
+	ahpsp[2] = CreatePropertySheetPage(&psp);
 
-	LoadString(g_hinst,IDS_TITLE4, szTitle, ARRAYSIZE(szTitle));
-	psp.pszHeaderTitle = szTitle;
+	psp.pszHeaderTitle = MAKEINTRESOURCE(IDS_TITLE4);
 	psp.pszTemplate = MAKEINTRESOURCE(IDD_05PASSWORD);
 	psp.pfnDlgProc = WndProc_05PASSWORD;
-	ahpsp[4] = CreatePropertySheetPage(&psp);
+	ahpsp[3] = CreatePropertySheetPage(&psp);
 
-	LoadString(g_hinst,IDS_TITLE5, szTitle, ARRAYSIZE(szTitle));
-	psp.pszHeaderTitle = szTitle;
+	psp.pszHeaderTitle = MAKEINTRESOURCE(IDS_TITLE5);
 	psp.pszTemplate = MAKEINTRESOURCE(IDD_06TESTRESULTOK);
 	psp.pfnDlgProc = WndProc_06TESTRESULTOK;
-	ahpsp[5] = CreatePropertySheetPage(&psp);
+	ahpsp[4] = CreatePropertySheetPage(&psp);
 
-	LoadString(g_hinst,IDS_TITLE5, szTitle, ARRAYSIZE(szTitle));
-	psp.pszHeaderTitle = szTitle;
+	psp.pszHeaderTitle = MAKEINTRESOURCE(IDS_TITLE5);
 	psp.pszTemplate = MAKEINTRESOURCE(IDD_07TESTRESULTNOTOK);
 	psp.pfnDlgProc = WndProc_07TESTRESULTNOTOK;
-	ahpsp[6] = CreatePropertySheetPage(&psp);
+	ahpsp[5] = CreatePropertySheetPage(&psp);
 
 	PROPSHEETHEADER psh;
 	psh.dwSize = sizeof(psh);
 	psh.hInstance = hInstance;
 	psh.hwndParent = NULL;
 	psh.phpage = ahpsp;
-	psh.dwFlags = PSH_WIZARD | PSH_USEHICON ;
-	psh.pszbmWatermark = 0;
+	psh.dwFlags = PSH_USEHICON | PSH_WIZARD;
+	psh.pszbmWatermark = MAKEINTRESOURCE(IDB_LOGO);
 	psh.pszbmHeader = 0;
-	psh.nStartPage = 1;
+	psh.nStartPage = 0;
 	psh.nPages = ARRAYSIZE(ahpsp);
 	psh.hIcon = NULL;
-	LoadString(g_hinst,IDS_CAPTION, szTitle, ARRAYSIZE(szTitle));
-	psh.pszCaption = szTitle;
+	//psh.pszCaption = MAKEINTRESOURCE(IDS_CAPTION);
 
 	HMODULE hDll = LoadLibrary(TEXT("shell32.dll") );
 	if (hDll)
@@ -211,28 +195,14 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 		FreeLibrary(hDll);
 	}
 
-	fHasAlreadySmartCardCredential = LsaEIDHasStoredCredential(NULL);
 	if (fGotoNewScreen)
 	{
 		if (AskForCard(szReader, dwReaderSize, szCard, dwCardSize))
 		{
-			psh.nStartPage = 2;
-		}
-		else
-		{
 			psh.nStartPage = 1;
 		}
 	}
-	else if (fHasAlreadySmartCardCredential)
-	{
-		// 01MAIN
-		psh.nStartPage = 0;
-	}
-	else
-	{
-		// 02ENABLE
-		psh.nStartPage = 1;
-	}
+
 	INT_PTR rc = PropertySheet(&psh);
 	if (rc == -1)
 	{

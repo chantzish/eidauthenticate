@@ -12,6 +12,7 @@
 
 #pragma comment(lib,"comctl32")
 #pragma comment(lib,"Shell32")
+#pragma comment(lib,"crypt32")
 
 #ifdef UNICODE
 #if defined _M_IX86

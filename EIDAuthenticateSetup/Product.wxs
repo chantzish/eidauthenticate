@@ -85,25 +85,22 @@
         </Component>
               
 				<Component Id="EIDConfigurationWizard" Guid="d3dec3cd-db08-4377-9d4d-2459c457eff5">
-           <File Id="EIDConfigurationWizard" Name="EIDConfigurationWizard.exe" KeyPath="yes" DiskId="1" Source="$(var.SourceDir)\EIDConfigurationWizard.exe" Checksum="yes"/>
+          <File Id="EIDConfigurationWizard" Name="EIDConfigurationWizard.exe" KeyPath="yes" DiskId="1" Source="$(var.SourceDir)\EIDConfigurationWizard.exe" Checksum="yes"/>
+          <File Id="EIDConfigurationWizardElevated" Name="EIDConfigurationWizardElevated.exe" DiskId="1" Source="$(var.SourceDir)\EIDConfigurationWizardElevated.exe" Checksum="yes"/>
           <RegistryKey Root="HKLM"
                   Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\ControlPanel\NameSpace\{F5D846B4-14B0-11DE-B23C-27A355D89593}">
             <RegistryValue Type="string" Value="EIDConfigurationWizard"/>
           </RegistryKey>
           <RegistryKey Root="HKCR" Key="CLSID\{F5D846B4-14B0-11DE-B23C-27A355D89593}">
             <RegistryValue Type="string" Value="EIDConfigurationWizard"/>
-            <RegistryValue Type="string" Key="System.ApplicationName" Value="EID.EIDConfigurationWizard"/>
-            <RegistryValue Type="string" Key="System.ControlPanel.Category" Value="10"/>
-            <RegistryValue Type="string" Key="LocalizedString" Value="Smart Card Logon"/>
-            <RegistryValue Type="string" Key="InfoTip" Value="Smart Card Logon"/>
-            <RegistryValue Type="string" Key="System.Software.TasksFileUrl" Value="%SystemRoot%\system32\EIDConfigurationWizard.exe,-68"/>
-            <RegistryKey Key="DefaultIcon">
-              <RegistryValue Type="string" Value="%SystemRoot%\system32\imageres.dll,-58"/>
-            </RegistryKey>
-            <RegistryKey Key="Shell\Open\Command">
-              <RegistryValue Type="string" Value="%SystemRoot%\system32\EIDConfigurationWizard.exe"/>
-            </RegistryKey>
-          </RegistryKey>          
+            <RegistryValue Type="string" Name="System.ApplicationName" Value="EID.EIDConfigurationWizard"/>
+            <RegistryValue Type="string" Name="System.ControlPanel.Category" Value="10"/>
+            <RegistryValue Type="string" Name="LocalizedString" Value="Smart Card Logon"/>
+            <RegistryValue Type="string" Name="InfoTip" Value="Smart Card Logon"/>
+            <RegistryValue Type="expandable" Name="System.Software.TasksFileUrl" Value="%SystemRoot%\system32\EIDConfigurationWizard.exe,-68"/>
+            <RegistryValue Type="expandable" Key="DefaultIcon" Value="%SystemRoot%\system32\imageres.dll,-58"/>
+            <RegistryValue Type="expandable" Key="Shell\Open\Command" Value="%SystemRoot%\system32\EIDConfigurationWizard.exe"/>
+          </RegistryKey>   
         </Component>
               
 				<Component Id="EIDPasswordChangeNotification" Guid="8a8368f9-c785-427f-906c-d17ba5dbdb52">
@@ -122,6 +119,7 @@
 					</Component>
 					<Component Id="EIDConfigurationWizardDebug" Guid="707dac8a-9487-4a61-a364-05c30be64747">
 						<File Id="EIDConfigurationWizardDebug" Name="EIDConfigurationWizard.pdb" KeyPath="yes" DiskId="1" Source="$(var.SourceDir)\EIDConfigurationWizard.pdb" Checksum="yes"/>
+            <File Id="EIDConfigurationWizardElevatedDebug" Name="EIDConfigurationWizardElevated.pdb" DiskId="1" Source="$(var.SourceDir)\EIDConfigurationWizardElevated.pdb" Checksum="yes"/>
 					</Component>
 					<Component Id="EIDPasswordChangeNotificationDebug" Guid="4665d665-2c5a-4300-9661-4478b9e96f42">
 						<File Id="EIDPasswordChangeNotificationDebug" Name="EIDPasswordChangeNotification.pdb" KeyPath="yes" DiskId="1" Source="$(var.SourceDir)\EIDPasswordChangeNotification.pdb" Checksum="yes"/>
@@ -150,9 +148,8 @@
 			<RemoveExistingProducts After="InstallFinalize" />
 			<Custom Action='UninstallEIDAuthenticate' Before="RemoveFiles">REMOVE="ALL"</Custom>
 			<Custom Action='CommitEIDAuthenticate' Before='InstallFinalize'>Not REMOVE</Custom>
-			<!-- No more reboot with AddSecurityPackage
-				<ScheduleReboot After="InstallFinalize" />
-			-->
+      <ScheduleReboot After="InstallFinalize">EIDInstallMustReboot</ScheduleReboot>
+      <Custom Action="WixCheckRebootRequired" After="InstallFinalize"></Custom>
 		</InstallExecuteSequence>
 
 	</Product>

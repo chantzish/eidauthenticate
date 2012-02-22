@@ -183,6 +183,9 @@ INT_PTR CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 	BOOL fPropertiesChanged = FALSE;
 	switch(message)
 	{
+		case WM_INITDIALOG:
+			PropSheet_SetTitle(GetParent(hWnd), 0, MAKEINTRESOURCE(IDS_TITLE2));
+			break;
 		case WM_NOTIFY :
         pnmh = (LPNMHDR)lParam;
         switch(pnmh->code)

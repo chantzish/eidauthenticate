@@ -10,6 +10,7 @@
 // from previous step
 // credentials
 extern CContainerHolderFactory<CContainerHolderTest> *pCredentialList;
+extern DWORD dwCurrentCredential;
 extern DWORD dwWizardError;
 
 void SetErrorMessage(HWND hWnd)
@@ -27,10 +28,33 @@ INT_PTR CALLBACK	WndProc_07TESTRESULTNOTOK(HWND hWnd, UINT message, WPARAM wPara
 	switch(message)
 	{
 		case WM_INITDIALOG:
+			PropSheet_SetTitle(GetParent(hWnd), 0, MAKEINTRESOURCE(IDS_TITLE5));
 			break;
 		case WM_NOTIFY :
 			switch(pnmh->code)
 			{
+				case NM_CLICK:
+				case NM_RETURN:
+				{
+					PNMLINK pNMLink = (PNMLINK)lParam;
+					LITEM item = pNMLink->item;
+					if (wcscmp(item.szID, L"idReport") == 0)
+					{
+						TCHAR szEmail[256];
+						GetWindowText(GetDlgItem(hWnd,IDC_07EMAIL),szEmail,ARRAYSIZE(szEmail));
+						CContainerHolderTest* MyTest = pCredentialList->GetContainerHolderAt(dwCurrentCredential);
+						CContainer* container = MyTest->GetContainer();
+						if (!SendReport(dwWizardError, szEmail, container->GetCertificate()))
+						{
+							MessageBoxWin32Ex(GetLastError(), hWnd);
+						}
+						else
+						{
+							//success !
+							MessageBoxWin32Ex(0, hWnd);
+						}
+					}
+				}
 				case PSN_SETACTIVE:
 					PropSheet_SetWizButtons(GetParent(hWnd), PSWIZB_BACK | PSWIZB_FINISH);
 					SetErrorMessage(hWnd);

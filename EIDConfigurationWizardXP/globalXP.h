@@ -1,7 +1,6 @@
 
 extern HINSTANCE g_hinst;
 
-extern BOOL fHasAlreadySmartCardCredential;
 extern BOOL fShowNewCertificatePanel;
 extern BOOL fGotoNewScreen;
 
@@ -18,6 +17,8 @@ extern DWORD dwPasswordSize;
 VOID CenterWindow(HWND hWnd);
 BOOL IsElevated();
 BOOL IsCurrentUserBelongToADomain();
-BOOL DialogForceSmartCardLogonPolicy();
-BOOL DialogRemovePolicy();
+BOOL DialogForceSmartCardLogonPolicy(HWND hWndParent = NULL);
+BOOL DialogRemovePolicy(HWND hWndParent = NULL);
 VOID SetIcon(HWND hWnd);
+BOOL SendReport(DWORD dwErrorCode, PTSTR szEmail, PCCERT_CONTEXT pCertContext);
+

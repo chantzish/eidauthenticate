@@ -1,14 +1,25 @@
 // Microsoft Visual C++ generated resource script.
 //
-#include "EIDConfigurationWizardXP.h"
+#include "EIDConfigurationWizardXP_ru.h"
 
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
 #define APSTUDIO_HIDDEN_SYMBOLS
 #include "windows.h"
 #undef APSTUDIO_HIDDEN_SYMBOLS
-/////////////////////////////////////////////////////////////////////////////
-// Russe (Russe) resources
+#include "EIDConfigurationWizardXP.h"
 
-LANGUAGE LANG_RUSSIAN, SUBLANG_DEFAULT
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// Russe resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_RUS)
+LANGUAGE LANG_RUSSIAN, SUBLANG_NEUTRAL
 #pragma code_page(1251)
 
 /////////////////////////////////////////////////////////////////////////////
@@ -19,7 +30,19 @@ LANGUAGE LANG_RUSSIAN, SUBLANG_DEFAULT
 #ifdef APSTUDIO_INVOKED
 GUIDELINES DESIGNINFO
 BEGIN
+    IDD_01MAIN, DIALOG
+    BEGIN
+    END
+
     IDD_02ENABLE, DIALOG
+    BEGIN
+    END
+
+    IDD_03NEW, DIALOG
+    BEGIN
+    END
+
+    IDD_04CHECKS, DIALOG
     BEGIN
     END
 
@@ -50,6 +73,10 @@ BEGIN
         TOPMARGIN, 7
         BOTTOMMARGIN, 176
     END
+
+    IDD_ASKFORPIN, DIALOG
+    BEGIN
+    END
 END
 #endif    // APSTUDIO_INVOKED
 
@@ -63,7 +90,7 @@ IDD_01MAIN DIALOGEX 0, 0, 273, 209
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
-	CONTROL         "Изменение учетных данных смарт-карты",IDC_01CHANGE,
+    CONTROL         "Изменение учетных данных смарт-карты",IDC_01CHANGE,
                     "Button",BS_AUTORADIOBUTTON,17,25,240,13
     CONTROL         "Отключить авторизацию по смарт-карте",IDC_01DELETE,
                     "Button",BS_AUTORADIOBUTTON,18,95,240,13
@@ -72,20 +99,23 @@ BEGIN
 END
 
 IDD_02ENABLE DIALOGEX 0, 0, 273, 209
-STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
-	CONTROL         "Использовать настроенную смарт-карту",IDC_02EXISTING,
-                    "Button",BS_AUTORADIOBUTTON,17,25,240,13
+    GROUPBOX        "",IDC_STATIC,8,13,256,49
+    CONTROL         "Использовать настроенную смарт-карту",IDC_02EXISTING,
+                    "Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,17,25,240,13
     CONTROL         "Настройка нового набора учетных данных",IDC_02NEW,
-                    "Button",BS_AUTORADIOBUTTON,18,95,240,13
-    CONTROL         "<a  HREF=""mailto:support@mysmartlogon.com?subject=Feedback"">Give fedback</a> or <a  HREF=""mailto:support@mysmartlogon.com?subject=Translate"">help translate this wizard</a>",IDC_SYSLINKHELP,
+                    "Button",BS_AUTORADIOBUTTON | WS_TABSTOP,17,78,240,13
+    CONTROL         "Отключить авторизацию по смарт-карте",IDC_01DELETE,
+                    "Button",BS_AUTORADIOBUTTON | WS_TABSTOP,17,130,240,13
+    LTEXT           "Выберите эту опцию, если вы хотите использовать уже настроенную смарт-карту",IDC_STATIC,27,41,234,17
+    GROUPBOX        "",IDC_STATIC,8,66,256,49
+    LTEXT           "Выберите эту опцию, если вы хотите использовать новую смарт-карту",IDC_STATIC,25,94,235,11
+    GROUPBOX        "",IDC_STATIC,8,119,256,49
+    CONTROL         "<a  id=""idDatabase"">Check online database for known incompatibilities</a>",IDC_SYSLINKHELP,
                     "SysLink",WS_TABSTOP,25,185,223,8
-    LTEXT           "Выберите эту опцию, если вы хотите использовать уже настроенную смарт-карту",IDC_STATIC,27,41,234,22
-    LTEXT           "Выберите эту опцию, если вы хотите использовать новую смарт-карту",IDC_STATIC,25,111,235,11
-
 END
-
 
 IDD_03NEW DIALOGEX 65535, 65523, 273, 209
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
@@ -116,8 +146,8 @@ FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
     CONTROL         "",IDC_04LIST,"SysListView32",LVS_SINGLESEL | LVS_SHOWSELALWAYS | WS_TABSTOP,0,24,273,51,WS_EX_CLIENTEDGE
     LTEXT           "Выбор сертификата",IDC_STC1,0,0,272,20
-    CONTROL         "<a id=""idrefresh"">Обновить</a>",IDC_04REFRESH,"SysLink",0x1,246,78,24,9
-	GROUPBOX        "Checks",IDC_STATIC,2,94,270,110
+    CONTROL         "<a id=""idrefresh"">Обновить</a>",IDC_04REFRESH,"SysLink",WS_TABSTOP,246,78,24,9
+    GROUPBOX        "Checks",IDC_STATIC,2,94,270,110
     ICON            "",IDC_04C1_ICON,11,107,18,17
     ICON            "",IDC_04C2_ICON,11,139,18,17
     ICON            "",IDC_04C3_ICON,11,171,18,17
@@ -138,20 +168,33 @@ BEGIN
     LTEXT           "Выбор сертификата",IDC_STC4,0,0,272,20
     CONTROL         "",IDC_05LIST,"SysListView32",LVS_SINGLESEL | LVS_SHOWSELALWAYS | WS_TABSTOP,0,24,273,51,WS_EX_CLIENTEDGE
     LTEXT           "Ввод пароля",IDC_STC5,0,84,272,20
+    CONTROL         "Запуск теста после завершения работы мастера",IDC_05TEST,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,156,255,13
 END
-
 
 IDD_06TESTRESULTOK DIALOGEX 0, 0, 273, 209
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
     LTEXT           "Тестовый запуск прошел успешно. Теперь Вы можете использовать Вашу смарт-карту для входа в систему.",IDC_STC7,6,6,262,32
+    LTEXT           "Additional tasks :",IDC_STATIC,13,107,204,13
+    CONTROL         "<a id=""idUpdate"">Update the status of this card as ""Working"" on the internet site</a>",IDC_06UPDATEDATABASE,
+                    "SysLink",WS_TABSTOP,21,120,216,11
+    CONTROL         "<a id=""idRemove"">Включить/выключить политику извлечения смарт-карты</a>",IDC_06REMOVALPOLICY,
+                    "SysLink",WS_TABSTOP,21,153,216,11
+    CONTROL         "<a id=""idForce"">Включить/выключит групповые политики смарт-карт</a>",IDC_06FORCEPOLICY,
+                    "SysLink",WS_TABSTOP,21,136,216,11
 END
 
 IDD_07TESTRESULTNOTOK DIALOGEX 0, 0, 273, 209
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
+    CONTROL         "<a id=""idReport"">Отправить отчет в службу поддержки</a>",IDC_07SENDREPORT,
+                    "SysLink",WS_TABSTOP,21,125,216,13
+    LTEXT           "Укажите адрес для получения обновлений от службы поддержки:",IDC_EMAILLBL,21,141,237,12
+    EDITTEXT        IDC_07EMAIL,76,154,118,13,ES_AUTOHSCROLL
+    LTEXT           "Email(необяз.):",IDC_EMAILSEND,21,155,53,11
     LTEXT           "Тест не был пройден. Вы можете запустить тест еще раз или отправить отчет в службу поддержки.",IDC_STC6,21,6,228,22
     LTEXT           "Описание ошибки:",IDC_WIZARDERROR,21,41,233,33
     LTEXT           "Детали:",IDC_STATIC,21,27,105,9
@@ -190,6 +233,56 @@ BEGIN
     LTEXT           "Включение этого параметра не рекомендовано. Вы не сможете войти в систему, если Вы потеряли Вашу смарт-карту или срок действия сертификата истек.",IDC_STATIC,7,25,273,35
 END
 
+IDD_ASKFORPIN DIALOGEX 0, 0, 167, 68
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "PIN"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,56,47,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,110,47,50,14
+    EDITTEXT        IDC_PIN,7,28,153,13,ES_PASSWORD | ES_AUTOHSCROLL
+    LTEXT           "Пожалуйста, введите ваш ПИН-код смарт-карта:",IDC_STATIC,7,7,153,17
+END
+
+#endif    // Russe resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// Russe (Russe) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_RUS)
+LANGUAGE LANG_RUSSIAN, SUBLANG_DEFAULT
+#pragma code_page(1251)
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "EIDConfigurationWizardXP_ru.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#define APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "#include ""windows.h""\r\n"
+    "#undef APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "#include ""EIDConfigurationWizardXP.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -223,16 +316,16 @@ BEGIN
     IDS_05CREDINFOCAPTION   "Тест"
     IDS_05CREDINFOCONFIRMTITLE "результат"
     IDS_05CREDINFOCONFIRMMESSAGE "Учетные данные верны"
-    IDS_04USERNAMEOK        "Имя пользователя совпадает с имнем пользователя в сертификате"
-    IDS_04USERNAMENOK       "Имя пользователя в сертификате не совпадает с текущим пользователем"
     IDS_04TRUSTOK           "Сертификат верный"
     IDS_04TRUSTNOK          "ошибка"
     IDS_04ENCRYPTIONOK      "Карта поддерживает шифрование"
     IDS_04ENCRYPTIONNOK     "Карта не поддерживает шифрование"
-    IDS_05ACTIVATEREMOVE    "<a id=""idActRemove"">Задать политику извлечения смарт-карты</a>"
-	IDS_NODOMAINACCOUNT     "Внимание! EIDAuthenticate не поддерживает работу в домене. Используйте EIDAuthenticate только для локальных компьютеров и пользователей."
-    IDS_05ACTIVATEFORCE     "<a id=""idActForce"">Задать групповые политики смарт-карт</a>"
     IDS_04TESTUSERNAME      "Пользователь"
+END
+
+STRINGTABLE
+BEGIN
+    IDS_NODOMAINACCOUNT     "Внимание! EIDAuthenticate не поддерживает работу в домене. Используйте EIDAuthenticate только для локальных компьютеров и пользователей."
 END
 
 STRINGTABLE
@@ -277,38 +370,11 @@ BEGIN
                             "СДС используемый для создания этой цепочки не действителен."
     IDS_CERT_TRUST_UNKOWN_ERROR "Неизвестный тип ошибки"
     IDS_NO_CERTIFICATE      "Сертификаты не существуют"
-    IDS_04USERNAMERENAME    "Переименовать Вашу учетную запись"
     IDS_04TRUSTMAKETRUSTED  "Сделать этот сертификат доверенным"
-    IDS_RENAME              "Ваша сессия должна быть закрыта для переименования учетной записи пользователя. Вы хотите продолжить?"
-    IDS_RENAMECONF          "Ваш аккаунт был переименован в ""%s""."
 END
 
-
-#ifdef APSTUDIO_INVOKED
+#endif    // Russe (Russe) resources
 /////////////////////////////////////////////////////////////////////////////
-//
-// TEXTINCLUDE
-//
-
-1 TEXTINCLUDE 
-BEGIN
-    "EIDConfigurationWizardXP.h\0"
-END
-
-2 TEXTINCLUDE 
-BEGIN
-    "#define APSTUDIO_HIDDEN_SYMBOLS\r\n"
-    "#include ""windows.h""\r\n"
-    "#undef APSTUDIO_HIDDEN_SYMBOLS\r\n"
-    "\0"
-END
-
-3 TEXTINCLUDE 
-BEGIN
-    "\r\n"
-    "\0"
-END
-#endif    // APSTUDIO_INVOKED
 
 
 

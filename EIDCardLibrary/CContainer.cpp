@@ -356,17 +356,17 @@ PEID_INTERACTIVE_LOGON CContainer::AllocateLogonStruct(PWSTR szPin, PDWORD pdwSi
 		dwSize = ARRAYSIZE(szDomainName);
 		GetComputerName(szDomainName,&dwSize);
 
-		DWORD dwCspBufferLength = wcslen(_szCardName)+1
+		DWORD dwCspBufferLength = (DWORD) (wcslen(_szCardName)+1
 						+ wcslen(_szContainerName)+1
 						+ wcslen(_szProviderName)+1
-						+ wcslen(_szReaderName)+1;
+						+ wcslen(_szReaderName)+1);
 		DWORD dwCspDataLength = sizeof(EID_SMARTCARD_CSP_INFO)
 						+ (dwCspBufferLength) * sizeof(WCHAR);
-		dwTotalSize = sizeof(EID_INTERACTIVE_LOGON) 
+		dwTotalSize = (DWORD) (sizeof(EID_INTERACTIVE_LOGON) 
 						+ wcslen(szUserName) * sizeof(WCHAR)
 						+ wcslen(szDomainName) * sizeof(WCHAR)
 						+ wcslen(szPin) * sizeof(WCHAR)
-						+ dwCspDataLength;
+						+ dwCspDataLength);
     
 		pRequest = (PEID_INTERACTIVE_LOGON) EIDAlloc(dwTotalSize);
 		if (!pRequest)
@@ -408,9 +408,9 @@ PEID_INTERACTIVE_LOGON CContainer::AllocateLogonStruct(PWSTR szPin, PDWORD pdwSi
 		pCspInfo->MessageType = 1;
 		pCspInfo->KeySpec = _KeySpec;
 		pCspInfo->nCardNameOffset = ARRAYSIZE(pCspInfo->bBuffer);
-		pCspInfo->nReaderNameOffset = pCspInfo->nCardNameOffset + wcslen(_szCardName) + 1 ;
-		pCspInfo->nContainerNameOffset = pCspInfo->nReaderNameOffset + wcslen(_szReaderName) + 1 ;
-		pCspInfo->nCSPNameOffset = pCspInfo->nContainerNameOffset + wcslen(_szContainerName) + 1 ;
+		pCspInfo->nReaderNameOffset = (DWORD) (pCspInfo->nCardNameOffset + wcslen(_szCardName) + 1 );
+		pCspInfo->nContainerNameOffset = (DWORD) (pCspInfo->nReaderNameOffset + wcslen(_szReaderName) + 1 );
+		pCspInfo->nCSPNameOffset = (DWORD) (pCspInfo->nContainerNameOffset + wcslen(_szContainerName) + 1 );
 		_ASSERTE( _CrtCheckMemory( ) );
 		wcscpy_s(&pCspInfo->bBuffer[pCspInfo->nCardNameOffset] , dwCspBufferLength +  ARRAYSIZE(pCspInfo->bBuffer) - pCspInfo->nCardNameOffset, _szCardName);
 		_ASSERTE( _CrtCheckMemory( ) );

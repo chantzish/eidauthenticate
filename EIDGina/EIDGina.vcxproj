@@ -87,7 +87,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="EIDGina.def" />
-    <None Include="logo.bmp" />
+    <None Include="images\logo.bmp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CWinlogon.cpp" />

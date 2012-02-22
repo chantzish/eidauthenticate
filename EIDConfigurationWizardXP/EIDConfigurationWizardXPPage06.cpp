@@ -6,6 +6,8 @@
 #include "globalXP.h"
 #include "EIDConfigurationWizardXP.h"
 #include "../EIDCardLibrary/GPO.h"
+#include "../EIDCardLibrary/OnlineDatabase.h"
+
 // from previous step
 // credentials
 extern CContainerHolderFactory<CContainerHolderTest> *pCredentialList;
@@ -16,6 +18,7 @@ INT_PTR CALLBACK	WndProc_06TESTRESULTOK(HWND hWnd, UINT message, WPARAM wParam, 
 	switch(message)
 	{
 	case WM_INITDIALOG:
+		PropSheet_SetTitle(GetParent(hWnd), 0, MAKEINTRESOURCE(IDS_TITLE5));
 		/*if (!IsElevated())
 		{
 			// Set shield icon
@@ -36,17 +39,28 @@ INT_PTR CALLBACK	WndProc_06TESTRESULTOK(HWND hWnd, UINT message, WPARAM wParam, 
 			case NM_RETURN:
 				{
 					// enable / disable policy
-					/*PNMLINK pNMLink = (PNMLINK)lParam;
-					TCHAR szMessage[256] = TEXT("");
+					PNMLINK pNMLink = (PNMLINK)lParam;
 					LITEM item = pNMLink->item;
-					if (wcscmp(item.szID, L"idActRemove") == 0)
+					if (wcscmp(item.szID, L"idRemove") == 0)
 					{
-						DialogRemovePolicy();
+						DialogRemovePolicy(hWnd);
 					}
-					else if (wcscmp(item.szID, L"idActForce") == 0)
+					else if (wcscmp(item.szID, L"idForce") == 0)
 					{
-						DialogForceSmartCardLogonPolicy();
-					}*/
+						DialogForceSmartCardLogonPolicy(hWnd);
+					}
+					else if (wcscmp(item.szID, L"idUpdate") == 0)
+					{
+						if (!CommunicateTestOK())
+						{
+							MessageBoxWin32Ex(GetLastError(), hWnd);
+						}
+						else
+						{
+							// success !
+							MessageBoxWin32Ex(0, hWnd);
+						}
+					}
 				}	
 			case PSN_SETACTIVE:
 					PropSheet_SetWizButtons(GetParent(hWnd), PSWIZB_BACK | PSWIZB_FINISH);

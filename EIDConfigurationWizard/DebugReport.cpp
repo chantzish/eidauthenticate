@@ -346,7 +346,7 @@ BOOL CreateDebugReport(PTSTR szLogFile)
 				__leave;
 			}
 			// send to the process the log file name
-			WriteFile(hNamedPipe,szLogFile,(_tcslen(szLogFile) +1) * sizeof(TCHAR),&dwWrite,NULL);
+			WriteFile(hNamedPipe,szLogFile,(DWORD) ((_tcslen(szLogFile) +1) * sizeof(TCHAR)),&dwWrite,NULL);
 			Sleep(1000);
 			// do the action ...
 			DoTheActionToBeTraced();

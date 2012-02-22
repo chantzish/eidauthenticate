@@ -1,8 +1,10 @@
 #include <Windows.h>
 #include <tchar.h>
-#include "global.h"
 #include "../EIDCardLibrary/GPO.h"
-#include "EIDConfigurationWizard.h"
+#include "EIDConfigurationWizardElevated.h"
+
+VOID CenterWindow(HWND hWnd);
+VOID SetIcon(HWND hWnd);
 
 INT_PTR CALLBACK WndProc_ForcePolicy(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
