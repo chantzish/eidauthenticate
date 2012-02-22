@@ -39,15 +39,15 @@
 #define IDS_TITLE5                      59
 #define IDD_06TESTRESULTOK              60
 #define IDS_CHECKDRIVERONLINE           61
-#define IDD_07TESTRESULTNOTOK           69
-#define IDD_05PASSWORD                  70
+#define IDS_TURNREMOVALPOLICY           62
+#define IDS_TURNFORCEPOLICY             63
 #define IDD_04CHECKS                    64
 #define IDD_03NEW                       65
 #define IDD_02ENABLE                    66
 #define IDD_01MAIN                      67
 #define IDR_TASKFILEURL                 68
-#define IDS_TURNREMOVALPOLICY           62
-#define IDS_TURNFORCEPOLICY             63
+#define IDD_07TESTRESULTNOTOK           69
+#define IDD_05PASSWORD                  70
 #define IDC_STC3                        102
 #define IDC_STC2                        103
 #define IDC_03IMPORTPASSWORD            104
@@ -83,6 +83,8 @@
 #define IDC_07SENDREPORT                148
 #define IDS_NODOMAINACCOUNT             149
 #define IDC_06UPDATEDATABASE            149
+#define IDC_06SHIELD                    150
+#define IDC_07SHIELD                    151
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -91,7 +93,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        72
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         150
+#define _APS_NEXT_CONTROL_VALUE         152
 #define _APS_NEXT_SYMED_VALUE           241
 #endif
 #endif

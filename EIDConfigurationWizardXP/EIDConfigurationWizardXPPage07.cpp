@@ -29,6 +29,16 @@ INT_PTR CALLBACK	WndProc_07TESTRESULTNOTOK(HWND hWnd, UINT message, WPARAM wPara
 	{
 		case WM_INITDIALOG:
 			PropSheet_SetTitle(GetParent(hWnd), 0, MAKEINTRESOURCE(IDS_TITLE5));
+			{
+				HMODULE hDll = LoadLibrary(TEXT("wuaucpl.cpl") );
+				if (hDll)
+				{
+					HICON hIcon = LoadIcon(hDll, MAKEINTRESOURCE(5)); 
+					SendMessage(GetDlgItem(hWnd,IDC_07SHIELD),STM_SETIMAGE,IMAGE_ICON, (LPARAM) hIcon);
+					DestroyIcon(hIcon);
+					FreeLibrary(hDll);
+				}
+			}
 			break;
 		case WM_NOTIFY :
 			switch(pnmh->code)
@@ -44,7 +54,10 @@ INT_PTR CALLBACK	WndProc_07TESTRESULTNOTOK(HWND hWnd, UINT message, WPARAM wPara
 						GetWindowText(GetDlgItem(hWnd,IDC_07EMAIL),szEmail,ARRAYSIZE(szEmail));
 						CContainerHolderTest* MyTest = pCredentialList->GetContainerHolderAt(dwCurrentCredential);
 						CContainer* container = MyTest->GetContainer();
-						if (!SendReport(dwWizardError, szEmail, container->GetCertificate()))
+						SetCursor(LoadCursor(NULL,MAKEINTRESOURCE(IDC_WAIT)));
+						BOOL fReturn = SendReport(dwWizardError, szEmail, container->GetCertificate());
+						SetCursor(LoadCursor(NULL,MAKEINTRESOURCE(IDC_ARROW)));
+						if (!fReturn)
 						{
 							MessageBoxWin32Ex(GetLastError(), hWnd);
 						}

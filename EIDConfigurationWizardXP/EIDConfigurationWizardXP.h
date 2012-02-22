@@ -107,7 +107,9 @@
 #define IDC_WIZARDERROR                 147
 #define IDC_07SENDREPORT                148
 #define IDS_NODOMAINACCOUNT             149
+#define IDC_06SHIELD                    150
 #define IDC_04C1_ICON                   151
+#define IDC_07SHIELD                    151
 #define IDC_04C2_ICON                   152
 #define IDC_04C3_ICON                   153
 #define IDC_04C1_RATIONAL               154

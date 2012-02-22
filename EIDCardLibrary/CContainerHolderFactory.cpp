@@ -224,7 +224,7 @@ BOOL CContainerHolderFactory<T>::CreateItemFromCertificateBlob(__in LPCTSTR szRe
 {
 	BOOL fReturn = FALSE;
 	PCCERT_CONTEXT pCertContext = NULL;
-	pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, Data, DataSize);
+	pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, Data, DataSize);
 	if (pCertContext)
 	{
 		BOOL fAdd = TRUE;

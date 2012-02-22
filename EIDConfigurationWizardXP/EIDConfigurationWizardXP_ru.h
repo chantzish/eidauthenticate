@@ -2,6 +2,7 @@
 // Microsoft Visual C++ generated include file.
 // Used by EIDConfigurationWizardXP_ru.rc
 //
+#define IDC_07SHIELD                    151
 
 // Next default values for new objects
 // 

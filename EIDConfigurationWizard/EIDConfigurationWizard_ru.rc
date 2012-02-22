@@ -100,10 +100,11 @@ IDD_06TESTRESULTOK DIALOGEX 0, 0, 273, 209
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 FONT 9, "Segoe UI", 0, 0, 0x0
 BEGIN
-    LTEXT           "Тестовый запуск прошел успешно. Теперь Вы можете использовать Вашу смарт-карту для входа в систему.",IDC_STC7,6,6,262,32
+    LTEXT           "Тестовый запуск прошел успешно. Теперь Вы можете использовать Вашу смарт-карту для входа в систему.",IDC_STC7,35,11,233,32
     LTEXT           "Additional tasks :",IDC_STATIC,13,107,204,13
     CONTROL         "Update the status of this card as ""Working"" on the internet site",IDC_06UPDATEDATABASE,
                     "Button",BS_COMMANDLINK | WS_TABSTOP,21,116,216,33
+    ICON            "",IDC_06SHIELD,10,10,20,20
 END
 
 IDD_07TESTRESULTNOTOK DIALOGEX 0, 0, 273, 209
@@ -111,14 +112,34 @@ STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSME
 FONT 9, "Segoe UI", 0, 0, 0x0
 BEGIN
     CONTROL         "Отправить отчет в службу поддержки",IDC_07SENDREPORT,
-                    "Button",BS_COMMANDLINK | WS_TABSTOP,21,96,216,39
+                    "Button",BS_COMMANDLINK | WS_TABSTOP,21,113,216,22
     LTEXT           "Укажите адрес для получения обновлений от службы поддержки:",IDC_EMAILLBL,21,141,237,12
     EDITTEXT        IDC_07EMAIL,76,154,118,13,ES_AUTOHSCROLL
     LTEXT           "Email(необяз.):",IDC_EMAILSEND,21,155,53,11
-    LTEXT           "Тест не был пройден. Вы можете запустить тест еще раз или отправить отчет в службу поддержки.",IDC_STC6,21,6,228,22
-    LTEXT           "Описание ошибки:",IDC_WIZARDERROR,21,41,233,33
-    LTEXT           "Детали:",IDC_STATIC,21,27,105,9
+    LTEXT           "Тест не был пройден. Вы можете запустить тест еще раз или отправить отчет в службу поддержки.",IDC_STC6,34,6,228,22
+    LTEXT           "Описание ошибки:",IDC_WIZARDERROR,34,41,233,33
+    LTEXT           "Детали:",IDC_STATIC,35,27,105,9
+    ICON            "",IDC_07SHIELD,10,10,20,20
 END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_06TESTRESULTOK, DIALOG
+    BEGIN
+    END
+
+    IDD_07TESTRESULTNOTOK, DIALOG
+    BEGIN
+    END
+END
+#endif    // APSTUDIO_INVOKED
 
 #endif    // Russe resources
 /////////////////////////////////////////////////////////////////////////////

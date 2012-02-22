@@ -593,7 +593,7 @@ VOID WINAPI ProcessEvents(PEVENT_TRACE pEvent)
   {
     //Process the event. The pEvent->MofData member is a pointer to 
     //the event specific data, if it exists.
-	  if (pEvent->MofLength)
+	  if (pEvent->MofLength && pEvent->Header.Class.Level > 0)
 	  {
 		DisplayTrace(hTracingWindow, (PTSTR) pEvent->MofData);
 		DisplayTrace(hTracingWindow, (PTSTR) L"\r\n");

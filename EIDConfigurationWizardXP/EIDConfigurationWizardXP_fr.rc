@@ -115,10 +115,10 @@ BEGIN
 END
 
 IDD_06TESTRESULTOK DIALOGEX 0, 0, 273, 209
-STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
-    LTEXT           "Le test s'est déroulé avec succès. Vous pouvez désormais utiliser votre carte à puce pour ouvrir une session.",IDC_STC7,6,6,262,32
+    LTEXT           "Le test s'est déroulé avec succès. Vous pouvez désormais utiliser votre carte à puce pour ouvrir une session.",IDC_STC7,41,14,225,32
     LTEXT           "Tâches supplémentaires :",IDC_STATIC,13,107,204,13
     CONTROL         "<a id=""idUpdate"">Envoyer un rapport selon lequel la carte fonctionne correctement</a>",IDC_06UPDATEDATABASE,
                     "SysLink",WS_TABSTOP,21,120,216,11
@@ -126,10 +126,11 @@ BEGIN
                     "SysLink",WS_TABSTOP,21,153,216,11
     CONTROL         "<a id=""idForce"">Turn the force smart card policy on or off</a>",IDC_06FORCEPOLICY,
                     "SysLink",WS_TABSTOP,21,136,216,11
+    ICON            "",IDC_06SHIELD,10,12,21,20
 END
 
 IDD_07TESTRESULTNOTOK DIALOGEX 0, 0, 273, 209
-STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
     CONTROL         "<a id=""idReport"">Soumettre un rapport à l'équipe de support</a>",IDC_07SENDREPORT,
@@ -137,9 +138,10 @@ BEGIN
     LTEXT           "Vous pouvez indiquer de manière optionnelle un email :",IDC_EMAILLBL,21,141,237,12
     EDITTEXT        IDC_07EMAIL,76,154,118,13,ES_AUTOHSCROLL
     LTEXT           "Email (optionnel) :",IDC_EMAILSEND,21,155,53,11
-    LTEXT           "Le test a échoué. Vous pouvez effectuer un nouveau test ou contacter notre support.",IDC_STC6,21,6,228,22
-    LTEXT           "Description de l'erreur",IDC_WIZARDERROR,21,41,233,33
-    LTEXT           "Détails :",IDC_STATIC,21,27,105,9
+    LTEXT           "Le test a échoué. Vous pouvez effectuer un nouveau test ou contacter notre support.",IDC_STC6,40,15,228,22
+    LTEXT           "Description de l'erreur",IDC_WIZARDERROR,40,50,225,33
+    LTEXT           "Détails :",IDC_STATIC,40,36,105,9
+    ICON            "",IDC_07SHIELD,12,12,23,23
 END
 
 IDD_DIALOGREMOVEPOLICY DIALOGEX 0, 0, 292, 235

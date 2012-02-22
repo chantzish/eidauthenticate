@@ -65,6 +65,7 @@ PTSTR GetWebSite()
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Unable to get the module name 0x%08X",GetLastError());
 			__leave;
 		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Using %s as module name", szExeName);
         hFile = CreateFile(szExeName, FILE_READ_DATA , FILE_SHARE_READ, NULL, OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL , NULL);
         if (INVALID_HANDLE_VALUE == hFile)
         {
@@ -72,8 +73,7 @@ PTSTR GetWebSite()
             __leave;
         }
         // Note : here "Certificate" doesn't mean X509 certificate but authenticode signature instead
-        fIsTest = ImageEnumerateCertificates(hFile, CERT_SECTION_TYPE_ANY, &dwCertsCount, dwIndices, ARRAYSIZE(dwIndices));
-        if (!fIsTest)
+        if (!ImageEnumerateCertificates(hFile, CERT_SECTION_TYPE_ANY, &dwCertsCount, dwIndices, ARRAYSIZE(dwIndices)))
         {
             EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Unable to find a digital signature 0x%08X",GetLastError());
             __leave;
@@ -90,8 +90,10 @@ PTSTR GetWebSite()
 	}
 	if (fIsTest)
 	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Test configuration");
 		return TEST_DATABASE_SITE;
 	}
+	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Release configuration");
 	return DATABASE_SITE;
 }
 
@@ -104,6 +106,7 @@ BOOL PostDataToTheSupportSite(PSTR szPostData)
 	DWORD statusCode = 0;
     DWORD statusCodeSize = sizeof(DWORD);
 	BOOL fReturn = FALSE;
+	PTSTR szWebSite = NULL;
 	TCHAR szUrl[256];
 	WINHTTP_AUTOPROXY_OPTIONS  AutoProxyOptions;
 	WINHTTP_PROXY_INFO         ProxyInfo;
@@ -130,7 +133,9 @@ BOOL PostDataToTheSupportSite(PSTR szPostData)
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed WinHttpOpen 0x%08X",dwError);
 			__leave;
 		}
-		hConnect = WinHttpConnect(hSession, GetWebSite(),INTERNET_DEFAULT_PORT, 0);
+		szWebSite = GetWebSite();
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"website : %s", szWebSite);
+		hConnect = WinHttpConnect(hSession, szWebSite, INTERNET_DEFAULT_PORT, 0);
 		if (!hConnect)
 		{
 			dwError = GetLastError();
@@ -138,6 +143,7 @@ BOOL PostDataToTheSupportSite(PSTR szPostData)
 			__leave;
 		}
 		// WINHTTP_FLAG_SECURE
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"url : %s", SUBMIT_REPORT_PAGE);
 		hRequest = WinHttpOpenRequest(hConnect,TEXT("POST"),SUBMIT_REPORT_PAGE,NULL,WINHTTP_NO_REFERER,WINHTTP_DEFAULT_ACCEPT_TYPES,0);
 		if (!hRequest)
 		{
@@ -148,6 +154,7 @@ BOOL PostDataToTheSupportSite(PSTR szPostData)
 		// wpad autoconfiguration or autodect
 		if (ProxyConfig.fAutoDetect || ProxyConfig.lpszAutoConfigUrl)
 		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"autoproxy");
 			AutoProxyOptions.fAutoLogonIfChallenged = TRUE;
 			if (ProxyConfig.fAutoDetect)
 			{
@@ -162,7 +169,7 @@ BOOL PostDataToTheSupportSite(PSTR szPostData)
 				AutoProxyOptions.dwFlags |= WINHTTP_AUTOPROXY_CONFIG_URL;
 			}
 
-			_stprintf_s(szUrl, ARRAYSIZE(szUrl),TEXT("http://%s%s"),GetWebSite(),SUBMIT_REPORT_PAGE);
+			_stprintf_s(szUrl, ARRAYSIZE(szUrl),TEXT("http://%s%s"),szWebSite,SUBMIT_REPORT_PAGE);
 			if( WinHttpGetProxyForUrl( hRequest, szUrl, &AutoProxyOptions, &ProxyInfo))
 			{
 			  // A proxy configuration was found, set it on the
@@ -207,6 +214,10 @@ BOOL PostDataToTheSupportSite(PSTR szPostData)
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"statusCode %d",statusCode);
 			dwError = (DWORD) SPAPI_E_MACHINE_UNAVAILABLE;
 			__leave;
+		}
+		else
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"statusCode %d",statusCode);
 		}
 		fReturn = TRUE;
 	}
@@ -363,6 +374,7 @@ void UrlLogCertificateEncoder(__inout PCHAR *ppPointer, __inout PDWORD pdwRemain
 
 BOOL CommunicateTestNotOK(DWORD dwErrorCode, PTSTR szEmail, PTSTR szTracingFile, PCCERT_CONTEXT pCertContext)
 {
+	if (dwErrorCode) EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"enter");
 	BOOL fReturn = FALSE;
 	TCHAR szReaderName[256] = TEXT("Unknown");
 	TCHAR szCardName[256] = TEXT("Unknown");
@@ -546,6 +558,7 @@ BOOL CommunicateTestNotOK(DWORD dwErrorCode, PTSTR szEmail, PTSTR szTracingFile,
 
 BOOL CommunicateTestOK()
 {
+	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"enter");
 	return CommunicateTestNotOK(0, NULL, NULL, NULL);
 }
 

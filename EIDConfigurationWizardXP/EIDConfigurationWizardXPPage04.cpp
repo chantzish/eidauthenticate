@@ -531,7 +531,9 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 					{
 						pCredentialList = new CContainerHolderFactory<CContainerHolderTest>;
 						pCredentialList->SetUsageScenario(CPUS_INVALID,0);
+						SetCursor(LoadCursor(NULL,MAKEINTRESOURCE(IDC_WAIT)));
 						pCredentialList->ConnectNotification(szReader,szCard,0);
+						SetCursor(LoadCursor(NULL,MAKEINTRESOURCE(IDC_ARROW)));
 					}
 					
 					if (pCredentialList->HasContainerHolder())
@@ -671,7 +673,9 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 						{
 							NMHDR nmh;
 							nmh.code = PSN_SETACTIVE;
+							SetCursor(LoadCursor(NULL,MAKEINTRESOURCE(IDC_WAIT)));
 							pCredentialList->ConnectNotification(szReader,szCard,0);
+							SetCursor(LoadCursor(NULL,MAKEINTRESOURCE(IDC_ARROW)));
 							SendMessage(hWnd, WM_NOTIFY, 0, (LPARAM)&nmh);
 						}
 						else

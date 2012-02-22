@@ -101,10 +101,11 @@ IDD_06TESTRESULTOK DIALOGEX 0, 0, 273, 209
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 FONT 9, "Segoe UI", 0, 0, 0x0
 BEGIN
-    LTEXT           "Le test s'est déroulé avec succès. Vous pouvez désormais utiliser votre carte à puce pour ouvrir une session.",IDC_STC7,6,6,262,32
+    LTEXT           "Le test s'est déroulé avec succès. Vous pouvez désormais utiliser votre carte à puce pour ouvrir une session.",IDC_STC7,35,11,231,32
     LTEXT           "Tâches supplémentaires :",IDC_STATIC,13,107,204,13
     CONTROL         "Envoyer un rapport selon lequel la carte fonctionne correctement",IDC_06UPDATEDATABASE,
                     "Button",BS_COMMANDLINK | WS_TABSTOP,21,116,216,33
+    ICON            "",IDC_06SHIELD,10,10,18,17
 END
 
 IDD_07TESTRESULTNOTOK DIALOGEX 0, 0, 273, 209
@@ -112,13 +113,14 @@ STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSME
 FONT 9, "Segoe UI", 0, 0, 0x0
 BEGIN
     CONTROL         "Soumettre un rapport à l'équipe de support",IDC_07SENDREPORT,
-                    "Button",BS_COMMANDLINK | WS_TABSTOP,21,96,216,39
+                    "Button",BS_COMMANDLINK | WS_TABSTOP,21,112,216,23
     LTEXT           "Vous pouvez indiquer de manière optionnelle un email :",IDC_EMAILLBL,21,141,237,12
     EDITTEXT        IDC_07EMAIL,76,154,118,13,ES_AUTOHSCROLL
     LTEXT           "Email (optionnel) :",IDC_EMAILSEND,21,155,53,11
-    LTEXT           "Le test a échoué. Vous pouvez effectuer un nouveau test ou contacter notre support.",IDC_STC6,21,6,228,22
-    LTEXT           "Description de l'erreur",IDC_WIZARDERROR,21,41,233,33
-    LTEXT           "Détails :",IDC_STATIC,21,27,105,9
+    LTEXT           "Le test a échoué. Vous pouvez effectuer un nouveau test ou contacter notre support.",IDC_STC6,37,7,228,22
+    LTEXT           "Description de l'erreur",IDC_WIZARDERROR,37,41,221,33
+    LTEXT           "Détails :",IDC_STATIC,37,27,105,9
+    ICON            "",IDC_07SHIELD,10,10,20,20
 END
 
 
@@ -217,6 +219,7 @@ END
 STRINGTABLE
 BEGIN
     IDS_03CERTVIEWTITLE     "Info"
+    IDS_WRONGPIN_RETRIES    "Un mauvais PIN a été présenté à la carte : il reste %d essais"
     IDS_05CREDINFOCAPTION   "Test"
     IDS_05CREDINFOCONFIRMTITLE "Résultat"
     IDS_05CREDINFOCONFIRMMESSAGE "Information d'authentification valide"
@@ -237,6 +240,8 @@ BEGIN
     IDS_02NEWNOTE           "Choississez cette option si vous disposez d'une carte à puce vierge"
     IDS_TITLE5              "Résultat du test"
     IDS_CHECKDRIVERONLINE   "EIDAuthenticate a détecté que la carte à puce que vous utilisez (ATR:%s) ne possède pas de pilote. Voulez-vous rechercher dans notre base de données une solution ?"
+    IDS_TURNREMOVALPOLICY   "Activer ou désactiver la politique de retrait"
+    IDS_TURNFORCEPOLICY     "Rendre ou ne pas rendre obligatoire l'utilisation de cartes à puce"
 END
 
 STRINGTABLE
@@ -247,14 +252,7 @@ END
 
 STRINGTABLE
 BEGIN
-    IDS_TURNREMOVALPOLICY   "Activer ou désactiver la politique de retrait"
-    IDS_TURNFORCEPOLICY     "Rendre ou ne pas rendre obligatoire l'utilisation de cartes à puce"
-END
-
-STRINGTABLE
-BEGIN
     IDS_NODOMAINACCOUNT     "EIDAuthenticate ne fonctionne pas sur des comptes appartenant à un domaine. EIDAuthenticate ne fonctionne que sur les postes non connectés à un domaine ou avec un compte local."
-	IDS_WRONGPIN_RETRIES    "Un mauvais PIN a été présenté à la carte : il reste %d essais"
 END
 
 #endif    // Français resources
