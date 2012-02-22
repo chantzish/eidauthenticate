@@ -29,7 +29,7 @@
 
 #include "helpers.h"
 #include "dll.h"
-#include "resource.h"
+#include "EIDCredentialProvider.h"
 #include <intsafe.h>
 #include <wincred.h>
 #include <lm.h>
