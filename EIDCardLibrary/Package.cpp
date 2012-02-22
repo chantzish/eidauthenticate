@@ -109,7 +109,7 @@ VOID EIDFreeEx(PCSTR szFile, DWORD dwLine, PCSTR szFunction,PVOID buffer)
 	}
 	else
 	{
-#ifdef _DEBUG	
+#ifndef _DEBUG	
 		free(buffer);
 #else
 		_free_dbg(buffer, _NORMAL_BLOCK);
@@ -742,6 +742,7 @@ BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPasswo
 	PBYTE pPointer;
 	DWORD dwPasswordSize;
 	DWORD dwError = 0;
+	PCRYPT_KEY_PROV_INFO pProvInfo = NULL;
 	__try
 	{
 		if (!szPassword) 
@@ -749,6 +750,23 @@ BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPasswo
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"szPassword null");
 			dwError = ERROR_INVALID_PARAMETER;
 			__leave;
+		}
+		// add the CRYPT_KEY_PROV_INFO to the log if it exists
+		dwSize = 0;
+		if (CertGetCertificateContextProperty(pContext, CERT_KEY_PROV_INFO_PROP_ID, NULL, &dwSize))
+		{
+			pProvInfo = (PCRYPT_KEY_PROV_INFO) EIDAlloc(dwSize);
+			if (!pProvInfo)
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pBuffer null");
+				dwError = ERROR_OUTOFMEMORY;
+				__leave;
+			}
+			if (CertGetCertificateContextProperty(pContext, CERT_KEY_PROV_INFO_PROP_ID, pProvInfo, &dwSize))
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE, L"Keyspec %S container %s provider %s", (pProvInfo->dwKeySpec == AT_SIGNATURE ?"AT_SIGNATURE":"AT_KEYEXCHANGE"),
+					pProvInfo->pwszContainerName, pProvInfo->pwszProvName);
+			}
 		}
 	
 		dwPasswordSize = (DWORD) (wcslen(szPassword) + 1) * sizeof(WCHAR);
@@ -838,6 +856,7 @@ BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPasswo
 	{
 		if (hLsa) LsaClose(hLsa);
 		if (pBuffer) EIDFree(pBuffer);
+		if (pProvInfo) EIDFree(pProvInfo);
 	}
 	SetLastError(dwError);
 	return fReturn;

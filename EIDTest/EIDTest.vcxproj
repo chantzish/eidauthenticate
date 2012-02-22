@@ -125,7 +125,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>$(OutDir)EIDCardLibrary.lib;Winscard.lib;Crypt32.lib;Netapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Winscard.lib;Crypt32.lib;Netapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>%(DelayLoadDLLs)</DelayLoadDLLs>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
@@ -253,6 +253,12 @@
     </ProjectReference>
     <ProjectReference Include="..\EIDCardLibrary\EIDCardLibrary.vcxproj">
       <Project>{67e4c602-56d2-407e-84da-c8f75642d01a}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\EIDConfigurationWizardElevated\EIDConfigurationWizardElevated.vcxproj">
+      <Project>{8858bb8d-7798-4fbf-915b-b0ae69dd51ab}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\EIDConfigurationWizard\EIDConfigurationWizard.vcxproj">
+      <Project>{cb9fdc3e-d1ee-45ef-ba61-be50065d07a4}</Project>
     </ProjectReference>
     <ProjectReference Include="..\EIDCredentialProvider\EIDCredentialProvider.vcxproj">
       <Project>{7348aee0-1f4a-4436-b782-6abb694911ae}</Project>

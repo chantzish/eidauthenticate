@@ -52,6 +52,7 @@ public:
     BOOL GetUsernameFromCertContext(__in PCCERT_CONTEXT pContext, __out PWSTR *szUsername, __out PDWORD pdwRid);
 	BOOL GetCertContextFromHash(__in PBYTE pbHash, __out PCCERT_CONTEXT* ppContext, __out PDWORD pdwRid);
 	BOOL CreateCredential(__in DWORD dwRid, __in PCCERT_CONTEXT pContext, __in PWSTR szPassword, __in_opt USHORT usPasswordLen, __in BOOL fEncryptPassword);
+	BOOL UpdateCredential(__in PUNICODE_STRING ComputerName, __in PUNICODE_STRING UserName, __in PUNICODE_STRING Password);
 	BOOL UpdateCredential(__in DWORD dwRid, __in PWSTR szPassword, __in_opt USHORT usPasswordLen);
 	BOOL GetChallenge(__in DWORD dwRid, __out PBYTE* ppChallenge, __out PDWORD pdwChallengeSize, __out PDWORD pdwType);
 	BOOL GetResponseFromChallenge(__in PBYTE ppChallenge, __in DWORD dwChallengeSize, __in DWORD dwChallengeType, __in PCCERT_CONTEXT pContext, __in PWSTR szPin, __out PBYTE *ppResponse, __out PDWORD pdwResponseSize);

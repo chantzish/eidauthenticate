@@ -69,12 +69,12 @@ INT_PTR CALLBACK	WndProc_07TESTRESULTNOTOK(HWND hWnd, UINT message, WPARAM wPara
 						CContainer* container = MyTest->GetContainer();
 						if (!SendReport(dwWizardError, szEmail, container->GetCertificate()))
 						{
-							MessageBoxWin32(GetLastError());
+							MessageBoxWin32Ex(GetLastError(), hWnd);
 						}
 						else
 						{
 							//success !
-							MessageBoxWin32(0);
+							MessageBoxWin32Ex(0, hWnd);
 						}
 					}
 					break;

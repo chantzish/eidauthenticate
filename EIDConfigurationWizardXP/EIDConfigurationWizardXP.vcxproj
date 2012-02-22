@@ -105,8 +105,8 @@
   <ItemGroup>
     <ClCompile Include="CContainerHolderXP.cpp" />
     <ClCompile Include="CommonXP.cpp" />
+    <ClCompile Include="DebugReportXP.cpp" />
     <ClCompile Include="EIDConfigurationWizardXP.cpp" />
-    <ClCompile Include="EIDConfigurationWizardXPPage01.cpp" />
     <ClCompile Include="EIDConfigurationWizardXPPage02.cpp" />
     <ClCompile Include="EIDConfigurationWizardXPPage03.cpp" />
     <ClCompile Include="EIDConfigurationWizardXPPage04.cpp" />
@@ -119,6 +119,8 @@
   <ItemGroup>
     <ClInclude Include="CContainerHolderXP.h" />
     <ClInclude Include="EIDConfigurationWizardXP.h" />
+    <ClInclude Include="EIDConfigurationWizardXP_fr.h" />
+    <ClInclude Include="EIDConfigurationWizardXP_ru.h" />
     <ClInclude Include="globalXP.h" />
   </ItemGroup>
   <ItemGroup>

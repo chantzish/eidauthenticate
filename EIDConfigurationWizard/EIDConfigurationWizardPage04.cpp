@@ -24,56 +24,6 @@ BOOL fHasDeselected = TRUE;
 PTSTR Columns[] = {TEXT("Comment")};
 #define COLUMN_NUM ARRAYSIZE(Columns)
 
-#if WINVER < 0x600
-#define LVGF_TASK               0x00000200
-#define LVN_LINKCLICK           (LVN_FIRST-84)
-#define LVS_EX_JUSTIFYCOLUMNS   0x00200000  // Icons are lined up in columns that use up the whole view area.
-#define LVM_SETEXTENDEDLISTVIEWSTYLE (LVM_FIRST + 54)   // optional wParam == mask
-#define ListView_SetExtendedListViewStyle(hwndLV, dw)\
-        (DWORD)SNDMSG((hwndLV), LVM_SETEXTENDEDLISTVIEWSTYLE, 0, dw)
-typedef struct tagNMLVLINK
-{
-    NMHDR       hdr;
-    LITEM       link;
-    int         iItem;
-    int         iSubItem;
-} NMLVLINK,  *PNMLVLINK;
-
-typedef struct tagLVGROUP_XP
-{
-    UINT    cbSize;
-    UINT    mask;
-    LPWSTR  pszHeader;
-    int     cchHeader;
-
-    LPWSTR  pszFooter;
-    int     cchFooter;
-
-    int     iGroupId;
-
-    UINT    stateMask;
-    UINT    state;
-    UINT    uAlign;
-	// new since Vista
-    LPWSTR  pszSubtitle;
-    UINT    cchSubtitle;
-    LPWSTR  pszTask;
-    UINT    cchTask;
-    LPWSTR  pszDescriptionTop;
-    UINT    cchDescriptionTop;
-    LPWSTR  pszDescriptionBottom;
-    UINT    cchDescriptionBottom;
-    int     iTitleImage;
-    int     iExtendedImage;
-    int     iFirstItem;         // Read only
-    UINT    cItems;             // Read only
-    LPWSTR  pszSubsetTitle;     // NULL if group is not subset
-    UINT    cchSubsetTitle;
-} LVGROUP_XP, *PLVGROUP_XP;
-#define LVGROUP LVGROUP_XP
-#define PLVGROUP PLVGROUP_XP
-#endif
-
 BOOL InitListViewColumns(HWND hWndListView) 
 { 
     LVCOLUMN lvc; 

@@ -8,15 +8,10 @@
 #include "../EIDCardLibrary/CertificateUtilities.h"
 #include "../EIDCardLibrary/Tracing.h"
 #include "../EIDCardLibrary/OnlineDatabase.h"
+#include "../EIDCardLibrary/EIDCardLibrary.h"
+#include "../EIDCardLibrary/Package.h"
+#include "../EIDCardLibrary/OnlineDatabase.h"
 
-#if WINVER < 0x600
-#define BCM_SETSHIELD            (BCM_FIRST + 0x000C)
-#define Button_SetElevationRequiredState(hwnd, fRequired) \
-    (LRESULT)SNDMSG((hwnd), BCM_SETSHIELD, 0, (LPARAM)fRequired)
-#define BCM_SETNOTE              (BCM_FIRST + 0x0009)
-#define Button_SetNote(hwnd, psz) \
-    (BOOL)SNDMSG((hwnd), BCM_SETNOTE, 0, (LPARAM)(psz))
-#endif
 void CheckIfCardHasADriver(HWND hWnd)
 {
 	LONG             lReturn = 0;
@@ -91,9 +86,7 @@ void CheckIfCardHasADriver(HWND hWnd)
 					_stprintf_s(szMessage, ARRAYSIZE(szMessage), szMessageFormat, szATR);
 					if (IDOK == MessageBox(hWnd,szMessage,L"",MB_OKCANCEL|MB_DEFBUTTON1))
 					{
-						//TryToFindACSP(szATR);
-
-						// else http://test.catalog.update.microsoft.com/v7/site/Home.aspx
+						OpenBrowserOnDatabase(pbAtr, dwAtrSize, NULL);
 					}
 				}
 			}
@@ -126,10 +119,7 @@ INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 	switch(message)
 	{
 	case WM_INITDIALOG:
-		if (!fHasAlreadySmartCardCredential)
-		{
-			CenterWindow(GetParent(hWnd));
-		}
+		CenterWindow(GetParent(hWnd));
 		if (!IsElevated())
 		{
 			Button_SetElevationRequiredState(GetDlgItem(hWnd,IDC_02NEW),TRUE);
@@ -140,6 +130,10 @@ INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 			Button_SetNote(GetDlgItem(hWnd,IDC_02NEW),szNote);
 			LoadString(g_hinst,IDS_02EXISTINGNOTE, szNote, ARRAYSIZE(szNote));
 			Button_SetNote(GetDlgItem(hWnd,IDC_02EXISTING),szNote);
+		}
+		if (!LsaEIDHasStoredCredential(NULL))
+		{
+			EnableWindow(GetDlgItem(hWnd,IDC_01DELETE), FALSE);
 		}
 		break;
 	case WM_COMMAND:
@@ -215,7 +209,22 @@ INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 				}
 			}
 			break;
-
+		case IDC_01DELETE:
+			{
+				TCHAR szMessage[256] = TEXT("");
+				LoadString(g_hinst,IDS_AREYOUSURE,szMessage,ARRAYSIZE(szMessage));
+				if (IDYES == MessageBox(hWnd,szMessage,TEXT(""),MB_ICONWARNING|MB_YESNO))
+				{
+					if (!LsaEIDRemoveStoredCredential(NULL))
+					{
+						MessageBoxWin32Ex(GetLastError(),hWnd);
+						break;
+					}
+					// delete
+					PropSheet_PressButton(hWnd,PSBTN_CANCEL);
+				}
+			}
+			break;
 		}
 		break;
 	case WM_NOTIFY :
@@ -224,27 +233,30 @@ INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM
         {
 			case PSN_SETACTIVE :
 				//this is an interior page
-				if (fHasAlreadySmartCardCredential)
-				{
-					PropSheet_SetWizButtons(hWnd, PSWIZB_BACK);
-				}
-				else
-				{
-					PropSheet_SetWizButtons(hWnd, 0);
-				}
+				PropSheet_SetWizButtons(hWnd, 0);
 				break;
 			case NM_CLICK:
 			case NM_RETURN:
 				{
 					PNMLINK pNMLink = (PNMLINK)lParam;
 					LITEM item = pNMLink->item;
-					if ((((LPNMHDR)lParam)->hwndFrom == GetDlgItem(hWnd,IDC_SYSLINKHELP)) && (item.iLink == 0))
+					if (wcscmp(item.szID, L"idDatabase") == 0)
+					{
+						if (!OpenBrowserOnDatabase())
+						{
+							LONG lReturn = GetLastError();
+							if (lReturn != SCARD_W_CANCELLED_BY_USER)
+							{
+								MessageBoxWin32Ex(lReturn, hWnd);
+							}
+						}
+					}
+					/*if ((((LPNMHDR)lParam)->hwndFrom == GetDlgItem(hWnd,IDC_SYSLINKHELP)) && (item.iLink == 0))
 					{
 						ShellExecute(NULL, L"open", item.szUrl, NULL, NULL, SW_SHOW);
-					}
+					}*/
 					break;
 				}
-
 		}
     }
 	return FALSE;

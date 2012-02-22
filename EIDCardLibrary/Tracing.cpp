@@ -96,11 +96,6 @@ void MessageBoxWin32Ex2(DWORD status, HWND hWnd, LPCSTR szFile, DWORD dwLine) {
 	LocalFree(Error);
 }
 
-INT_PTR FAR WINAPI DoNothing()
-{
-	return 0;
-}
-
 BOOL IsTracingEnabled = FALSE;
 
 void NTAPI EnableCallback(

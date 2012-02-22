@@ -165,12 +165,14 @@ void RemoveValueFromMultiSz(HKEY hKey, PTSTR szKey, PTSTR szValue, PTSTR szData)
 
 
 
-void RegisterTheSecurityPackage()
+BOOL RegisterTheSecurityPackage()
 {
 	NTSTATUS Status;
 	DWORD dwNbPackage;
 	PSecPkgInfo pPackageInfo;
 	BOOL fFound = FALSE;
+	BOOL fReturn = FALSE;
+	DWORD dwError = 0;
 	__try
 	{
 		
@@ -178,6 +180,7 @@ void RegisterTheSecurityPackage()
 		Status = EnumerateSecurityPackages(&dwNbPackage, &pPackageInfo);
 		if (Status != SEC_E_OK)
 		{
+			dwError = LsaNtStatusToWinError(Status);
 			__leave;
 		}
 		for(DWORD dwI = 0; dwI < dwNbPackage; dwI++)
@@ -192,6 +195,7 @@ void RegisterTheSecurityPackage()
 		if (fFound)
 		{
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"The security package was loaded before");
+			dwError = ERROR_FAIL_NOACTION_REBOOT;
 			__leave;
 		}
 		SECURITY_PACKAGE_OPTIONS options = {sizeof(SECURITY_PACKAGE_OPTIONS)};
@@ -199,13 +203,67 @@ void RegisterTheSecurityPackage()
 		if (Status != SEC_E_OK)
 		{
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Unable to register the package 0x%08X 0x%08X",Status, GetLastError());
+			dwError = LsaNtStatusToWinError(Status);
 			__leave;
 		}
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Sucessfully registered the package");
+		fReturn = TRUE;
 	}
 	__finally
 	{
 	}	
+	SetLastError(dwError);
+	return fReturn;
+}
+
+BOOL UnRegisterTheSecurityPackage()
+{
+	NTSTATUS Status;
+	DWORD dwNbPackage;
+	PSecPkgInfo pPackageInfo;
+	BOOL fFound = FALSE;
+	BOOL fReturn = FALSE;
+	DWORD dwError = 0;
+	__try
+	{
+		
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Starting...");
+		Status = EnumerateSecurityPackages(&dwNbPackage, &pPackageInfo);
+		if (Status != SEC_E_OK)
+		{
+			dwError = LsaNtStatusToWinError(Status);
+			__leave;
+		}
+		for(DWORD dwI = 0; dwI < dwNbPackage; dwI++)
+		{
+			PTSTR szPackage = pPackageInfo[dwI].Name;
+			if (_tcscmp(szPackage, AUTHENTICATIONPACKAGENAMET) == 0)
+			{
+				fFound = TRUE;
+			}
+		}
+		FreeContextBuffer(pPackageInfo);
+		if (!fFound)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"The security package was not loaded before");
+			fReturn = TRUE;
+			__leave;
+		}
+		Status = DeleteSecurityPackage(AUTHENTICATIONPACKAGENAMET);
+		if (Status != SEC_E_OK)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Unable to unregister the package 0x%08X 0x%08X",Status, GetLastError());
+			dwError = ERROR_FAIL_NOACTION_REBOOT;
+			__leave;
+		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Sucessfully unregistered the package");
+		fReturn = TRUE;
+	}
+	__finally
+	{
+	}	
+	SetLastError(dwError);
+	return fReturn;
 }
 
 /** Installation and uninstallation routine

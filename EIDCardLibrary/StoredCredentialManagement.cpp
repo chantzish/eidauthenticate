@@ -470,6 +470,52 @@ BOOL CStoredCredentialManager::CreateCredential(__in DWORD dwRid, __in PCCERT_CO
 	SetLastError(dwError);
 	return fReturn;
 }
+
+BOOL CStoredCredentialManager::UpdateCredential(__in PUNICODE_STRING ComputerName, __in PUNICODE_STRING UserName, __in PUNICODE_STRING Password)
+{
+	DWORD dwRid = 0;
+	WCHAR szComputer[UNLEN+1];
+	WCHAR szUser[256];
+	DWORD dwSize = ARRAYSIZE(szComputer);
+	DWORD dwError = 0;
+	BOOL fReturn = FALSE;
+	USER_INFO_3* pUserInfo = NULL;
+	__try
+	{
+		GetComputerName(szComputer,&dwSize);
+		if ((ComputerName->Length != dwSize * sizeof(WCHAR))
+				|| memcmp(ComputerName->Buffer,szComputer,dwSize) != 0 )
+		{
+			dwError = ERROR_NONE_MAPPED;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"not a local account");
+			__leave;
+		}
+		// get the user ID (RID)
+				
+		memcpy(szUser, UserName->Buffer,UserName->Length);
+		szUser[UserName->Length/2] = L'\0';
+		dwError = NetUserGetInfo(szComputer, szUser, 3, (LPBYTE*) &pUserInfo);
+		if (NERR_Success != dwError)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"NetUserEnum 0x%08x",dwError);
+			__leave;
+		}
+		dwRid = pUserInfo->usri3_user_id;
+		if (!UpdateCredential(dwRid, Password->Buffer, Password->Length))
+		{
+			dwError = GetLastError();
+			__leave;
+		}
+		fReturn = TRUE;
+	}
+	__finally
+	{
+		if (pUserInfo) NetApiBufferFree(pUserInfo);
+	}
+	SetLastError(dwError);
+	return fReturn;
+}
+
 BOOL CStoredCredentialManager::UpdateCredential(__in DWORD dwRid, __in PWSTR szPassword, __in_opt USHORT usPasswordLen)
 {
 	BOOL fReturn = FALSE, fStatus;
@@ -1704,12 +1750,11 @@ BOOL CStoredCredentialManager::VerifySignatureChallengeResponse(__in DWORD dwRid
 BOOL CStoredCredentialManager::StorePrivateData(__in DWORD dwRid, __in_opt PBYTE pbSecret, __in_opt USHORT usSecretSize)
 {
 
-#ifdef _DEBUG
 	if (!EIDIsComponentInLSAContext())
  	{
 		return StorePrivateDataDebug(dwRid,pbSecret, usSecretSize);
 	}
-#endif 
+
 	LSA_OBJECT_ATTRIBUTES ObjectAttributes;
     LSA_HANDLE LsaPolicyHandle = NULL;
 
@@ -1782,12 +1827,19 @@ BOOL CStoredCredentialManager::StorePrivateData(__in DWORD dwRid, __in_opt PBYTE
 BOOL CStoredCredentialManager::StorePrivateDataDebug(__in DWORD dwRid, __in_opt PBYTE pbSecret, __in_opt USHORT usSecretSize)
 {
 	HANDLE hFile = INVALID_HANDLE_VALUE;
-	TCHAR szFileName[256];
+	TCHAR szFileName[MAX_PATH];
+	TCHAR szTempPath[MAX_PATH];
 	BOOL fReturn = FALSE;
 	DWORD dwError = 0, dwWritten;
 	__try
 	{
-		_stprintf_s(szFileName, ARRAYSIZE(szFileName),TEXT("EIDCredential%4x.txt"),dwRid);
+		if (!GetTempPath(ARRAYSIZE(szTempPath), szTempPath))
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetTempPath 0x%08x", dwError);
+			__leave;
+		}
+		_stprintf_s(szFileName, ARRAYSIZE(szFileName),TEXT("%sEIDCredential%4x.txt"),szTempPath,dwRid);
 		if (!pbSecret)
 		{
 			DeleteFile(szFileName);
@@ -1823,12 +1875,10 @@ BOOL CStoredCredentialManager::StorePrivateDataDebug(__in DWORD dwRid, __in_opt 
 
 BOOL CStoredCredentialManager::RetrievePrivateData(__in DWORD dwRid, __out PEID_PRIVATE_DATA *ppPrivateData)
 {
-#ifdef _DEBUG
 	if (!EIDIsComponentInLSAContext())
  	{
 		return RetrievePrivateDataDebug(dwRid,ppPrivateData);
 	}
-#endif 
 
 	LSA_OBJECT_ATTRIBUTES ObjectAttributes;
     LSA_HANDLE LsaPolicyHandle = NULL;
@@ -1893,13 +1943,20 @@ BOOL CStoredCredentialManager::RetrievePrivateData(__in DWORD dwRid, __out PEID_
 
 BOOL CStoredCredentialManager::RetrievePrivateDataDebug(__in DWORD dwRid, __out PEID_PRIVATE_DATA *ppPrivateData)
 {
-	TCHAR szFileName[256];
+	TCHAR szFileName[MAX_PATH];
+	TCHAR szTempPath[MAX_PATH];
 	HANDLE hFile = INVALID_HANDLE_VALUE;
 	BOOL fReturn = FALSE;
 	DWORD dwError = 0, dwRead, dwSize;
 	__try
 	{
-		_stprintf_s(szFileName, ARRAYSIZE(szFileName),TEXT("EIDCredential%4x.txt"),dwRid);
+		if (!GetTempPath(ARRAYSIZE(szTempPath), szTempPath))
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetTempPath 0x%08x", dwError);
+			__leave;
+		}
+		_stprintf_s(szFileName, ARRAYSIZE(szFileName),TEXT("%sEIDCredential%4x.txt"),szTempPath,dwRid);
 		hFile = CreateFile(szFileName, GENERIC_READ, 0, NULL, OPEN_EXISTING, 0,NULL);
 		if (hFile == INVALID_HANDLE_VALUE)
 		{

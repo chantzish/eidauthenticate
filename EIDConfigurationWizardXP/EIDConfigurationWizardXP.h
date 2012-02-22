@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by EIDConfigurationWizard.rc
+// Used by EIDConfigurationWizardXP.rc
 //
 #define IDS_CERT_TRUST_IS_NOT_VALID_FOR_USAGE 2
 #define IDS_CERT_TRUST_IS_UNTRUSTED_ROOT 3
@@ -12,10 +12,7 @@
 #define IDS_CERT_TRUST_CTL_IS_NOT_VALID_FOR_USAGE 9
 #define IDS_CERT_TRUST_UNKOWN_ERROR     10
 #define IDS_NO_CERTIFICATE              11
-#define IDS_04USERNAMERENAME            12
 #define IDS_04TRUSTMAKETRUSTED          13
-#define IDS_RENAME                      14
-#define IDS_RENAMECONF                  15
 #define IDS_04SIGNATUREONLYOK           16
 #define IDS_04SIGNATUREONLYNOK          17
 #define IDS_04CHANGESIGNATUREPOLICY     18
@@ -37,16 +34,10 @@
 #define IDS_05CREDINFOCAPTION           34
 #define IDS_05CREDINFOCONFIRMTITLE      35
 #define IDS_05CREDINFOCONFIRMMESSAGE    36
-#define IDS_04USERNAMEOK                37
-#define IDS_04USERNAMENOK               38
 #define IDS_04TRUSTOK                   39
 #define IDS_04TRUSTNOK                  40
 #define IDS_04ENCRYPTIONOK              41
 #define IDS_04ENCRYPTIONNOK             42
-#define IDS_05ACTIVATEREMOVE            43
-#define IDS_05DESACTIVATEREMOVE         44
-#define IDS_05ACTIVATEFORCE             45
-#define IDS_05DESACTIVATEFORCE          46
 #define IDS_04TESTUSERNAME              47
 #define IDS_04TESTTRUST                 48
 #define IDS_04TESTCRYPTO                49
@@ -70,9 +61,9 @@
 #define IDD_03NEW                       65
 #define IDD_02ENABLE                    66
 #define IDD_01MAIN                      67
-#define IDR_TASKFILEURL                 68
 #define IDD_DIALOGREMOVEPOLICY          70
 #define IDD_DIALOGFORCEPOLICY           71
+#define IDD_ASKFORPIN                   72
 #define IDC_STC3                        102
 #define IDC_STC2                        103
 #define IDC_03IMPORTPASSWORD            104
@@ -86,42 +77,31 @@
 #define IDC_01DELETE                    112
 #define IDC_01CHANGE                    113
 #define IDC_03USETHIS                   114
-#define IDC_SYSLINK1                    115
 #define IDC_04C1_LINK                   115
 #define IDC_02NEW                       116
 #define IDC_04C2_LINK                   116
 #define IDC_03_CREATE                   117
-#define IDC_04C3_LINK                   117
 #define IDC_SYSLINK3                    117
-#define IDC_EDIT1                       118
 #define IDC_07EMAIL                     118
-#define IDC_LSV1                        119
+#define IDC_PIN                         118
 #define IDC_03CERTIFICATEPANEL          120
 #define IDC_05TEST                      121
-#define IDC_04CHECKS                    122
 #define IDC_04LIST                      123
 #define IDC_STC1                        124
 #define IDC_04REFRESH                   125
 #define IDC_STC4                        126
 #define IDC_05LIST                      127
-#define IDC_05REMOVEPOLICYLINK          128
-#define IDC_05FORCEPOLICYLINK           129
-#define IDC_05REMOVEPOLICYICON          130
-#define IDC_05FORCEPOLICYICON           131
 #define IDC_STC5                        132
 #define IDC_SYSLINKHELP                 133
 #define IDC_EMAILLBL                    134
-#define IDC_TESTSUCCEFULL               136
 #define IDC_STC6                        137
 #define IDC_STC7                        138
-#define IDC_STC8                        139
 #define IDC_05PASSWORD                  140
 #define IDC_EMAILSEND                   141
 #define IDC_NOACTION                    141
 #define IDC_LOCK                        142
 #define IDC_LOGOFF                      143
 #define IDC_DISCONNECT                  144
-#define IDC_DISABLE                     145
 #define IDC_FORCEDISABLE                145
 #define IDC_FORCEENABLE                 146
 #define IDC_WIZARDERROR                 147
@@ -133,15 +113,18 @@
 #define IDC_04C1_RATIONAL               154
 #define IDC_04C2_RATIONAL               155
 #define IDC_04C3_RATIONAL               156
+#define IDC_06UPDATEDATABASE            157
+#define IDC_06REMOVALPOLICY             158
+#define IDC_06FORCEPOLICY               159
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        72
+#define _APS_NEXT_RESOURCE_VALUE        75
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         157
+#define _APS_NEXT_CONTROL_VALUE         160
 #define _APS_NEXT_SYMED_VALUE           241
 #endif
 #endif

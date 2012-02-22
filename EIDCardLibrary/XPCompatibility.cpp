@@ -97,7 +97,7 @@ extern "C"
 		UNREFERENCED_PARAMETER(RegHandle);
 		UNREFERENCED_PARAMETER(Keyword);
 		DWORD Now = GetTickCount(); // number of milisecond since last restart
-		if ((Now - RegistryCheckLastTime) > 60000 || RegistryCheckLastTime > Now) // 1 minute
+		if ((Now - RegistryCheckLastTime) > 1000 || RegistryCheckLastTime > Now) // 1 second
 		{
 			UpdateParameter();
 			RegistryCheckLastTime = Now;
@@ -107,7 +107,7 @@ extern "C"
 			HANDLE h = CreateFile(szLogFile, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, 0, 0);
 			if (INVALID_HANDLE_VALUE != h) {
 				if (INVALID_SET_FILE_POINTER != SetFilePointer(h, 0, 0, FILE_END)) {
-					DWORD cb = wcslen(String) * sizeof(WCHAR);
+					DWORD cb = (DWORD) (wcslen(String) * sizeof(WCHAR));
 					WriteFile(h, String, cb, &cb, 0);
 					WCHAR szEndLine[] = L"\r\n";
 					cb = 2 * sizeof(WCHAR);

@@ -10,16 +10,16 @@ extern HINSTANCE g_hinst;
 
 VOID CenterWindow(HWND hWnd)
 {
-  RECT rcWindow;
-  GetWindowRect(hWnd, &rcWindow);
-  DWORD dwPosX = (GetSystemMetrics(SM_CXSCREEN)- (rcWindow.right - rcWindow.left)) / 2;
-  DWORD dwPosY = (GetSystemMetrics(SM_CYSCREEN) - (rcWindow.bottom - rcWindow.top)) / 2;
-  SetWindowPos(hWnd,
-	       HWND_TOPMOST,
-	       dwPosX, dwPosY,
-	       0,
-	       0,
-	       SWP_NOSIZE | SWP_SHOWWINDOW);
+	RECT rc;
+    if (!GetWindowRect(hWnd, &rc)) return;
+
+    const int width  = rc.right  - rc.left;
+    const int height = rc.bottom - rc.top;
+
+    MoveWindow(hWnd,
+        (GetSystemMetrics(SM_CXSCREEN) - width)  / 2,
+        (GetSystemMetrics(SM_CYSCREEN) - height) / 2,
+        width, height, true);
 }
 
 
@@ -132,7 +132,7 @@ BOOL IsCurrentUserBelongToADomain()
 	}
 	return fReturn;
 }
-
+/*
 INT_PTR CALLBACK WndProc_ForcePolicy(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 BOOL DialogForceSmartCardLogonPolicy()
@@ -157,7 +157,7 @@ BOOL DialogForceSmartCardLogonPolicy()
 		shExecInfo.lpFile = szName;
 		shExecInfo.lpParameters = TEXT("DIALOGFORCEPOLICY");
 		shExecInfo.lpDirectory = NULL;
-		shExecInfo.nShow = SW_SHOW;
+		shExecInfo.nShow = SW_SHOWDEFAULT;
 		shExecInfo.hInstApp = NULL;
 
 		if (!ShellExecuteEx(&shExecInfo))
@@ -204,7 +204,7 @@ BOOL DialogRemovePolicy()
 		shExecInfo.lpFile = szName;
 		shExecInfo.lpParameters = TEXT("DIALOGREMOVEPOLICY");
 		shExecInfo.lpDirectory = NULL;
-		shExecInfo.nShow = SW_SHOW;
+		shExecInfo.nShow = SW_SHOWDEFAULT;
 		shExecInfo.hInstApp = NULL;
 
 		if (!ShellExecuteEx(&shExecInfo))
@@ -226,3 +226,4 @@ BOOL DialogRemovePolicy()
 	SetLastError(dwError);
 	return fReturn;
 }
+*/

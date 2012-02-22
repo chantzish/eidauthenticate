@@ -109,7 +109,14 @@ INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPAR
 					// go to the error page
 					dwWizardError = GetLastError();
 					SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
-					PropSheet_SetCurSel(hWnd, NULL,6);
+					if (pnmh->code == PSN_WIZNEXT)
+					{
+						PropSheet_SetCurSelByID(hWnd, IDD_07TESTRESULTNOTOK);
+					}
+					else
+					{
+						MessageBoxWin32Ex(dwWizardError,hWnd);
+					}
 					return TRUE;
 				}
 				if (IsDlgButtonChecked(hWnd,IDC_05TEST))
@@ -125,7 +132,7 @@ INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPAR
 						}
 						// go to the error page
 						SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
-						PropSheet_SetCurSel(hWnd, NULL,6);
+						PropSheet_SetCurSelByID(hWnd, IDD_07TESTRESULTNOTOK);
 						return TRUE;
 					}
 					// go by default to the success page

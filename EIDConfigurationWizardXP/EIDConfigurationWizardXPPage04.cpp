@@ -507,6 +507,7 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 		//InitListViewCheckIcon(GetDlgItem(hWnd, IDC_04CHECKS));
 		InitListViewListIcon(GetDlgItem(hWnd, IDC_04LIST));
 		//InitListViewView(GetDlgItem(hWnd, IDC_04CHECKS));
+		PropSheet_SetTitle(GetParent(hWnd), 0, MAKEINTRESOURCE(IDS_TITLE3));
 		break;
 	case WM_MYMESSAGE:
 		if (fHasDeselected)

@@ -2,13 +2,21 @@
 #include <tchar.h>
 #include <stdio.h>
 #include <Winhttp.h>
+#include <Imagehlp.h>
 
 #include "CertificateUtilities.h"
 #include "Tracing.h"
+#include "../EIDCardLibrary/EIDCardLibrary.h"
 
 #pragma comment(lib,"Version.lib")
 #pragma comment(lib,"Winhttp.lib")
 #pragma comment(lib,"Wininet.lib")
+#pragma comment(lib,"Imagehlp.lib")
+
+#define DATABASE_SITE           TEXT("database.mysmartlogon.com")
+#define TEST_DATABASE_SITE      TEXT("database-test.mysmartlogon.com")
+#define SUBMIT_REPORT_PAGE      TEXT("/submitReport.aspx")
+#define FIND_REPORT_BY_ATR_PAGE TEXT("/FindReportByAtr.aspx")
 
 extern "C"
 {
@@ -34,25 +42,95 @@ extern "C"
 	#endif // !UNICODE
 }
 
+// see http://www.codeproject.com/Articles/16598/Get-Your-DLL-s-Path-Name for the "__ImageBase"
+EXTERN_C IMAGE_DOS_HEADER __ImageBase;
+PTSTR GetWebSite()
+{
+	// we must have 2 sites :
+	// one for production use and one for test
+	// but if someone compile this code, it will reach the production site.
+	// We don't want that the production site is polluted with false report !
+	// So, we are getting the digital signature of the binary in use.
+	// if there are one, we contact the production site, else, the test site
+	TCHAR szExeName[MAX_PATH];
+	HANDLE hFile = INVALID_HANDLE_VALUE;
+	BOOL fIsTest = FALSE;
+	DWORD dwIndices[128];
+	DWORD dwCertsCount = 0;
+    __try
+    {
+        // Retrieve the digital signature of the package if available
+		if (!GetModuleFileName((HINSTANCE)&__ImageBase, szExeName, ARRAYSIZE(szExeName)))
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Unable to get the module name 0x%08X",GetLastError());
+			__leave;
+		}
+        hFile = CreateFile(szExeName, FILE_READ_DATA , FILE_SHARE_READ, NULL, OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL , NULL);
+        if (INVALID_HANDLE_VALUE == hFile)
+        {
+            EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Unable to open the file 0x%08X",GetLastError());
+            __leave;
+        }
+        // Note : here "Certificate" doesn't mean X509 certificate but authenticode signature instead
+        fIsTest = ImageEnumerateCertificates(hFile, CERT_SECTION_TYPE_ANY, &dwCertsCount, dwIndices, ARRAYSIZE(dwIndices));
+        if (!fIsTest)
+        {
+            EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Unable to find a digital signature 0x%08X",GetLastError());
+            __leave;
+        }
+        if (dwCertsCount == 0)
+        {
+			fIsTest = TRUE;
+		}
+	}
+	__finally
+	{
+		if (hFile != INVALID_HANDLE_VALUE)
+			CloseHandle(hFile);
+	}
+	if (fIsTest)
+	{
+		return TEST_DATABASE_SITE;
+	}
+	return DATABASE_SITE;
+}
+
 BOOL PostDataToTheSupportSite(PSTR szPostData)
 {
 	HINTERNET hSession = NULL;
 	HINTERNET hConnect = NULL;
 	HINTERNET hRequest = NULL;
 	DWORD dwError = 0;
+	DWORD statusCode = 0;
+    DWORD statusCodeSize = sizeof(DWORD);
 	BOOL fReturn = FALSE;
+	TCHAR szUrl[256];
+	WINHTTP_AUTOPROXY_OPTIONS  AutoProxyOptions;
+	WINHTTP_PROXY_INFO         ProxyInfo;
+	WINHTTP_CURRENT_USER_IE_PROXY_CONFIG ProxyConfig;
+	DWORD cbProxyInfoSize = sizeof(ProxyInfo);
+	ZeroMemory( &AutoProxyOptions, sizeof(AutoProxyOptions) );
+	ZeroMemory( &ProxyInfo, sizeof(ProxyInfo) );
+	ZeroMemory( &ProxyConfig, sizeof(ProxyConfig) );
 	__try
 	{ 
+		if (!WinHttpGetIEProxyConfigForCurrentUser(&ProxyConfig))
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed WinHttpGetIEProxyConfigForCurrentUser 0x%08X",dwError);
+			__leave;
+		}
+
 		hSession = WinHttpOpen(TEXT("EIDAuthenticate"), 
-				WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, 
-				WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+				(ProxyConfig.lpszProxy?WINHTTP_ACCESS_TYPE_NAMED_PROXY:WINHTTP_ACCESS_TYPE_DEFAULT_PROXY), 
+				ProxyConfig.lpszProxy, ProxyConfig.lpszProxyBypass, 0);
 		if (!hSession)
 		{
 			dwError = GetLastError();
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed WinHttpOpen 0x%08X",dwError);
 			__leave;
 		}
-		hConnect = WinHttpConnect(hSession, TEXT("www.mysmartlogon.com"),INTERNET_DEFAULT_PORT, 0);
+		hConnect = WinHttpConnect(hSession, GetWebSite(),INTERNET_DEFAULT_PORT, 0);
 		if (!hConnect)
 		{
 			dwError = GetLastError();
@@ -60,18 +138,74 @@ BOOL PostDataToTheSupportSite(PSTR szPostData)
 			__leave;
 		}
 		// WINHTTP_FLAG_SECURE
-		hRequest = WinHttpOpenRequest(hConnect,TEXT("POST"),TEXT("/support/submitReport.aspx"),NULL,WINHTTP_NO_REFERER,WINHTTP_DEFAULT_ACCEPT_TYPES,0);
+		hRequest = WinHttpOpenRequest(hConnect,TEXT("POST"),SUBMIT_REPORT_PAGE,NULL,WINHTTP_NO_REFERER,WINHTTP_DEFAULT_ACCEPT_TYPES,0);
 		if (!hRequest)
 		{
 			dwError = GetLastError();
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed WinHttpOpenRequest 0x%08X",dwError);
 			__leave;
 		}
+		// wpad autoconfiguration or autodect
+		if (ProxyConfig.fAutoDetect || ProxyConfig.lpszAutoConfigUrl)
+		{
+			AutoProxyOptions.fAutoLogonIfChallenged = TRUE;
+			if (ProxyConfig.fAutoDetect)
+			{
+				AutoProxyOptions.dwFlags = WINHTTP_AUTOPROXY_AUTO_DETECT;
+				AutoProxyOptions.dwAutoDetectFlags = 
+									 WINHTTP_AUTO_DETECT_TYPE_DHCP |
+									 WINHTTP_AUTO_DETECT_TYPE_DNS_A;
+			}
+			if (ProxyConfig.lpszAutoConfigUrl)
+			{
+				AutoProxyOptions.lpszAutoConfigUrl = ProxyConfig.lpszAutoConfigUrl;
+				AutoProxyOptions.dwFlags |= WINHTTP_AUTOPROXY_CONFIG_URL;
+			}
+
+			_stprintf_s(szUrl, ARRAYSIZE(szUrl),TEXT("http://%s%s"),GetWebSite(),SUBMIT_REPORT_PAGE);
+			if( WinHttpGetProxyForUrl( hRequest, szUrl, &AutoProxyOptions, &ProxyInfo))
+			{
+			  // A proxy configuration was found, set it on the
+			  // request handle.
+				if( !WinHttpSetOption( hRequest, 
+								WINHTTP_OPTION_PROXY,
+								&ProxyInfo,
+								cbProxyInfoSize ) )
+				{
+					dwError = GetLastError();
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed WinHttpSetOption 0x%08X",dwError);
+					__leave;
+				}
+			}
+		}
+
 		LPCTSTR additionalHeaders = TEXT("Content-Type: application/x-www-form-urlencoded\r\n");
 		if (!WinHttpSendRequest(hRequest, additionalHeaders, (DWORD) -1, (LPVOID)szPostData, (DWORD) strlen(szPostData), (DWORD) strlen(szPostData), 0))
 		{
 			dwError = GetLastError();
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed WinHttpSendRequest 0x%08X",dwError);
+			__leave;
+		}
+		if (!WinHttpReceiveResponse(hRequest, NULL))
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed WinHttpReceiveResponse 0x%08X",dwError);
+			__leave;
+		}
+		if (!WinHttpQueryHeaders(hRequest,  WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+							   WINHTTP_HEADER_NAME_BY_INDEX,
+							   &statusCode,
+							   &statusCodeSize,
+							   WINHTTP_NO_HEADER_INDEX))
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed WinHttpQueryHeaders 0x%08X",dwError);
+			__leave;
+		}
+		if ( statusCode >= 400 )
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"statusCode %d",statusCode);
+			dwError = (DWORD) SPAPI_E_MACHINE_UNAVAILABLE;
 			__leave;
 		}
 		fReturn = TRUE;
@@ -80,6 +214,16 @@ BOOL PostDataToTheSupportSite(PSTR szPostData)
 	{
 		if (hSession)
 			WinHttpCloseHandle(hSession);
+		if( ProxyInfo.lpszProxy != NULL )
+			GlobalFree(ProxyInfo.lpszProxy);
+		if( ProxyInfo.lpszProxyBypass != NULL )
+			GlobalFree( ProxyInfo.lpszProxyBypass );
+		if (ProxyConfig.lpszAutoConfigUrl)
+			GlobalFree(ProxyConfig.lpszAutoConfigUrl);
+		if (ProxyConfig.lpszProxy)
+			GlobalFree(ProxyConfig.lpszProxy);
+		if (ProxyConfig.lpszProxyBypass)
+			GlobalFree(ProxyConfig.lpszProxyBypass);
 	}
 	SetLastError(dwError);
 	return fReturn;
@@ -173,10 +317,24 @@ void UrlLogFileEncoder(__inout PCHAR *ppPointer, __inout PDWORD pdwRemainingSize
 
 void UrlLogCertificateEncoder(__inout PCHAR *ppPointer, __inout PDWORD pdwRemainingSize, __in PCCERT_CONTEXT pCertContext)
 {
-	PBYTE pbBuffer = pCertContext->pbCertEncoded;
+	DWORD dwSize = 0;
+	PSTR pbBuffer = NULL;
 	__try
 	{
-		for(DWORD i = 0; i< pCertContext->cbCertEncoded; i++)
+		if (!CryptBinaryToStringA( pCertContext->pbCertEncoded, pCertContext->cbCertEncoded, CRYPT_STRING_BASE64HEADER, NULL, &dwSize))
+		{
+			__leave;
+		}
+		pbBuffer = (PSTR) EIDAlloc(dwSize);
+		if (!pbBuffer)
+		{
+			__leave;
+		}
+		if (!CryptBinaryToStringA( pCertContext->pbCertEncoded, pCertContext->cbCertEncoded, CRYPT_STRING_BASE64HEADER, pbBuffer, &dwSize))
+		{
+			__leave;
+		}
+		for(DWORD i = 0; i< dwSize; i++)
 		{
 			if (((pbBuffer[i] >= L'A' && pbBuffer[i] <= L'Z') 
 						|| (pbBuffer[i] >= L'a' && pbBuffer[i] <= L'z')
@@ -198,6 +356,7 @@ void UrlLogCertificateEncoder(__inout PCHAR *ppPointer, __inout PDWORD pdwRemain
 	}
 	__finally
 	{
+		if (pbBuffer) EIDFree(pbBuffer);
 	}
 	**ppPointer = '\0';
 }
@@ -220,7 +379,6 @@ BOOL CommunicateTestNotOK(DWORD dwErrorCode, PTSTR szEmail, PTSTR szTracingFile,
 	CHAR szPostData[1000000]= "";
 	DWORD dwRemainingSize = ARRAYSIZE(szPostData);
 	PCHAR ppPointer = szPostData;
-
 	if (AskForCard(szReaderName,256,szCardName,256))
 	{
 		SchGetProviderNameFromCardName(szCardName, szProviderName, &dwProviderNameLen);
@@ -232,16 +390,18 @@ BOOL CommunicateTestNotOK(DWORD dwErrorCode, PTSTR szEmail, PTSTR szTracingFile,
 			DWORD dwSize = sizeof(bATR);
 			if (!RegOpenKeyEx(hRegKeyCalais, szCardName, 0, KEY_READ, &hRegKey))
 			{
-				RegQueryValueEx(hRegKey,TEXT("ATR"), NULL, NULL,(PBYTE)&bATR,&dwSize);
-				for(DWORD i=0; i< dwSize; i++)
+				if (!RegQueryValueEx(hRegKey,TEXT("ATR"), NULL, NULL,(PBYTE)&bATR,&dwSize))
 				{
-					_stprintf_s(szATR + 2*i, ARRAYSIZE(szATR) - 2*i,TEXT("%02X"),bATR[i]);
-				}
-				dwSize = sizeof(bATR);
-				RegQueryValueEx(hRegKey,TEXT("ATRMask"), NULL, NULL,(PBYTE)&bATR,&dwSize);
-				for(DWORD i=0; i< dwSize; i++)
-				{
-					_stprintf_s(szATRMask + 2*i, ARRAYSIZE(szATRMask) - 2*i,TEXT("%02X"),bATR[i]);
+					for(DWORD i=0; i< dwSize; i++)
+					{
+						_stprintf_s(szATR + 2*i, ARRAYSIZE(szATR) - 2*i,TEXT("%02X"),bATR[i]);
+					}
+					dwSize = sizeof(bATR);
+					RegQueryValueEx(hRegKey,TEXT("ATRMask"), NULL, NULL,(PBYTE)&bATR,&dwSize);
+					for(DWORD i=0; i< dwSize; i++)
+					{
+						_stprintf_s(szATRMask + 2*i, ARRAYSIZE(szATRMask) - 2*i,TEXT("%02X"),bATR[i]);
+					}
 				}
 				if (_tcscmp(TEXT("Microsoft Base Smart Card Crypto Provider"), szProviderName) == 0)
 				{
@@ -320,6 +480,10 @@ BOOL CommunicateTestNotOK(DWORD dwErrorCode, PTSTR szEmail, PTSTR szTracingFile,
 				free(versionInfo);
 			}
 		}
+		if (wcscmp(szATR, TEXT("Unknown")) == 0)
+		{
+			// ATR can be unknown, as for PIV card
+		}
 	}
 	// os version
 	OSVERSIONINFOEX version;
@@ -383,4 +547,84 @@ BOOL CommunicateTestNotOK(DWORD dwErrorCode, PTSTR szEmail, PTSTR szTracingFile,
 BOOL CommunicateTestOK()
 {
 	return CommunicateTestNotOK(0, NULL, NULL, NULL);
+}
+
+
+BOOL OpenBrowserOnDatabase(__in PBYTE pbAtr, __in DWORD dwAtrSize, __in_opt PTSTR szCardName)
+{
+	TCHAR szUrl[256];
+	TCHAR szATR[100];
+	for(DWORD i=0; i< dwAtrSize; i++)
+	{
+		_stprintf_s(szATR + 2*i, ARRAYSIZE(szATR) - 2*i,TEXT("%02X"),pbAtr[i]);
+	}
+	_stprintf_s(szUrl, ARRAYSIZE(szUrl),TEXT("http://%s%s?Atr=%s"),GetWebSite(),FIND_REPORT_BY_ATR_PAGE, szATR);
+	if (szCardName)
+	{
+		_tcscat_s(szUrl, ARRAYSIZE(szUrl), TEXT("&Name="));
+		_tcscat_s(szUrl, ARRAYSIZE(szUrl), szCardName);
+	}
+	ShellExecute(NULL, L"open", szUrl, NULL, NULL, SW_SHOW);
+	SetLastError(0);
+	return TRUE;
+}
+
+
+BOOL OpenBrowserOnDatabase()
+{
+	LONG lReturn = 0;
+	BOOL fReturn = FALSE;
+	SCARDCONTEXT     hSC = NULL;
+	SCARDHANDLE hCard = NULL;
+	DWORD dwProtocol;
+	PBYTE pbAtr = NULL;
+	DWORD dwAtrSize = SCARD_AUTOALLOCATE;
+	TCHAR szReader[256];
+	DWORD dwReaderSize = ARRAYSIZE(szReader);
+	TCHAR szCard[256];
+	DWORD dwCardSize = ARRAYSIZE(szCard);
+	__try
+	{
+		if (!AskForCard(szReader, dwReaderSize, szCard, dwCardSize))
+		{
+			lReturn = GetLastError();
+			__leave;
+		}
+		lReturn = SCardEstablishContext(SCARD_SCOPE_USER, NULL, NULL, &hSC );
+		if ( SCARD_S_SUCCESS != lReturn )
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed SCardReleaseContext 0x%08X",lReturn);
+			__leave;
+		}
+		lReturn = SCardConnect(hSC, szReader, SCARD_SHARE_SHARED, SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1, &hCard, &dwProtocol);
+		if ( SCARD_S_SUCCESS != lReturn )
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed SCardConnect 0x%08X",lReturn);
+			__leave;
+		}
+		// get the ATR
+		lReturn = SCardStatus(hCard, (PTSTR) &szReader, &dwReaderSize, NULL, NULL, (PBYTE)&pbAtr, &dwAtrSize);
+		if ( SCARD_S_SUCCESS != lReturn )
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed SCardStatus 0x%08X",lReturn);
+			__leave;
+		}
+		if (!OpenBrowserOnDatabase(pbAtr, dwAtrSize, szCard))
+		{
+			lReturn = GetLastError();
+			__leave;
+		}
+		fReturn = TRUE;
+	}
+	__finally
+	{
+		if (hCard != NULL)
+			SCardDisconnect(hCard, SCARD_LEAVE_CARD);
+		if (pbAtr)
+			SCardFreeMemory(hSC, pbAtr);
+		if (hSC)
+			SCardReleaseContext(hSC);
+	}
+	SetLastError(lReturn);
+	return fReturn;
 }

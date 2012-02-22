@@ -22,6 +22,7 @@
 
 #include "../EIDCardLibrary/Registration.h"
 #include "../EIDCardLibrary/XPCompatibility.h"
+#include "../EIDCardLibrary/Tracing.h"
 
 BOOL LsaEIDRemoveAllStoredCredential();
 
@@ -43,6 +44,7 @@ extern "C"
 		EIDCredentialProviderDllUnRegister();
 		EIDPasswordChangeNotificationDllUnRegister();
 		EIDConfigurationWizardDllUnRegister();
+		UnRegisterTheSecurityPackage();
 	}
 
 	void NTAPI DllEnableLogging()
@@ -62,8 +64,32 @@ extern "C"
 		EIDCredentialProviderDllRegister();
 		EIDPasswordChangeNotificationDllRegister();
 		EIDConfigurationWizardDllRegister();*/
-		RegisterTheSecurityPackage();
-		return ERROR_SUCCESS;
+		DWORD dwError = 0;
+		int ret = ERROR_INSTALL_FAILURE;
+		__try
+		{
+			if (!RegisterTheSecurityPackage())
+			{
+				dwError = GetLastError();
+				__leave;
+			}
+			ret = ERROR_SUCCESS;
+		}
+		__finally
+		{
+			if (dwError == ERROR_FAIL_NOACTION_REBOOT)
+			{
+				// a deferred action cannot order a reboot through MSI functions (setmode, set property, ...)
+				// hopefully, Wix has a immediate action which checks an ATOM to set the reboot flag
+				GlobalAddAtom(TEXT("WcaDeferredActionRequiresReboot"));
+				ret = ERROR_SUCCESS;
+			}
+			else if (dwError != 0)
+			{
+				MessageBoxWin32(dwError);
+			}
+		}
+		return ret;
 	}
 
 	int NTAPI Uninstall(MSIHANDLE hInstall)
@@ -73,7 +99,30 @@ extern "C"
 		EIDCredentialProviderDllUnRegister();
 		EIDPasswordChangeNotificationDllUnRegister();
 		EIDConfigurationWizardDllUnRegister();*/
-		LsaEIDRemoveAllStoredCredential();
-		return ERROR_SUCCESS;
+		DWORD dwError = 0;
+		int ret = ERROR_INSTALL_FAILURE;
+		__try
+		{
+			LsaEIDRemoveAllStoredCredential();
+			if (!UnRegisterTheSecurityPackage())
+			{
+				dwError = GetLastError();
+				__leave;
+			}
+			ret = ERROR_SUCCESS;
+		}
+		__finally
+		{
+			if (dwError == ERROR_FAIL_NOACTION_REBOOT)
+			{
+				GlobalAddAtom(TEXT("WcaDeferredActionRequiresReboot"));
+				ret = ERROR_SUCCESS;
+			}
+			else if (dwError != 0)
+			{
+				MessageBoxWin32(dwError);
+			}
+		}
+		return ret;
 	}
 }
