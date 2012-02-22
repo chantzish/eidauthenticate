@@ -173,10 +173,10 @@ BEGIN
 END
 
 IDD_06TESTRESULTOK DIALOGEX 0, 0, 273, 209
-STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
-    LTEXT           "Тестовый запуск прошел успешно. Теперь Вы можете использовать Вашу смарт-карту для входа в систему.",IDC_STC7,6,6,262,32
+    LTEXT           "Тестовый запуск прошел успешно. Теперь Вы можете использовать Вашу смарт-карту для входа в систему.",IDC_STC7,41,14,226,24
     LTEXT           "Additional tasks :",IDC_STATIC,13,107,204,13
     CONTROL         "<a id=""idUpdate"">Update the status of this card as ""Working"" on the internet site</a>",IDC_06UPDATEDATABASE,
                     "SysLink",WS_TABSTOP,21,120,216,11
@@ -184,10 +184,11 @@ BEGIN
                     "SysLink",WS_TABSTOP,21,153,216,11
     CONTROL         "<a id=""idForce"">Включить/выключит групповые политики смарт-карт</a>",IDC_06FORCEPOLICY,
                     "SysLink",WS_TABSTOP,21,136,216,11
+    ICON            "",IDC_06SHIELD,8,12,20,20
 END
 
 IDD_07TESTRESULTNOTOK DIALOGEX 0, 0, 273, 209
-STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
     CONTROL         "<a id=""idReport"">Отправить отчет в службу поддержки</a>",IDC_07SENDREPORT,
@@ -195,9 +196,10 @@ BEGIN
     LTEXT           "Укажите адрес для получения обновлений от службы поддержки:",IDC_EMAILLBL,21,141,237,12
     EDITTEXT        IDC_07EMAIL,76,154,118,13,ES_AUTOHSCROLL
     LTEXT           "Email(необяз.):",IDC_EMAILSEND,21,155,53,11
-    LTEXT           "Тест не был пройден. Вы можете запустить тест еще раз или отправить отчет в службу поддержки.",IDC_STC6,21,6,228,22
-    LTEXT           "Описание ошибки:",IDC_WIZARDERROR,21,41,233,33
-    LTEXT           "Детали:",IDC_STATIC,21,27,105,9
+    LTEXT           "Тест не был пройден. Вы можете запустить тест еще раз или отправить отчет в службу поддержки.",IDC_STC6,37,13,228,22
+    LTEXT           "Описание ошибки:",IDC_WIZARDERROR,37,48,227,33
+    LTEXT           "Детали:",IDC_STATIC,37,34,105,9
+    ICON            "",IDC_07SHIELD,12,12,21,20
 END
 
 IDD_DIALOGREMOVEPOLICY DIALOGEX 0, 0, 292, 235

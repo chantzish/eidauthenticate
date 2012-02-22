@@ -207,7 +207,7 @@ extern "C"
 				pBuffer->szPassword = (PWSTR) pPointer;
 				pPointer = (PBYTE) pBuffer->pbCertificate - (ULONG) ClientBufferBase + (ULONG) pBuffer;
 				pBuffer->pbCertificate = (PBYTE) pPointer;
-				pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, pBuffer->pbCertificate, pBuffer->dwCertificateSize);
+				pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, pBuffer->pbCertificate, pBuffer->dwCertificateSize);
 				if (!pCertContext)
 				{
 					pBuffer->dwError = GetLastError();
@@ -295,7 +295,7 @@ extern "C"
 				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"EIDCMGetStoredCredentialRid");
 				pPointer = (PBYTE) pBuffer->pbCertificate - (ULONG) ClientBufferBase + (ULONG) pBuffer;
 				pBuffer->pbCertificate = (PBYTE) pPointer;
-				pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, pBuffer->pbCertificate, pBuffer->dwCertificateSize);
+				pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, pBuffer->pbCertificate, pBuffer->dwCertificateSize);
 				if (!pCertContext)
 				{
 					pBuffer->dwError = GetLastError();

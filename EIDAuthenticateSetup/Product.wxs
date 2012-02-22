@@ -79,7 +79,7 @@
             <RegistryValue Type="string" Value="EidCredentialProvider"/>
             <RegistryKey Key="InprocServer32">
               <RegistryValue Type="string" Value="EidCredentialProvider.dll"/>
-              <RegistryValue Type="string" Key="ThreadingModel" Value="Apartment"/>
+              <RegistryValue Type="string" Name="ThreadingModel" Value="Apartment"/>
             </RegistryKey>
           </RegistryKey>
         </Component>

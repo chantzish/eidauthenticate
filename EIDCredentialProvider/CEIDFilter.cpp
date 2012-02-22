@@ -41,7 +41,11 @@ HRESULT CEIDFilter::Filter(
     DWORD cProviders
 )
 {
+	UNREFERENCED_PARAMETER(cpus);
 	UNREFERENCED_PARAMETER(dwFlags);
+	UNREFERENCED_PARAMETER(rgclsidProviders);
+	UNREFERENCED_PARAMETER(rgbAllow);
+	UNREFERENCED_PARAMETER(cProviders);
 	/*BOOL fFilter = FALSE;
 	if (cpus == CPUS_LOGON || cpus == CPUS_UNLOCK_WORKSTATION)
 	{

@@ -6,12 +6,16 @@ Run Virtual PC -> not working : use vmware
 http://www.microsoft.com/downloads/details.aspx?FamilyId=28C97D22-6EB8-4A09-A7F7-F6C7A1F000B5
 
 Enable kernel debugging on the virtual machine
+Vista :
 bcdedit /debug yes
+Xp :
+......
 
 Run kernel debugger
 1) don't forget to set symbol path (path to .dll & .pdb) and source path,
 else you will find only asm, not cpp code.
 2) Run "ed nt!Kd_DEFAULT_MASK  0xFFFFFFFF" to see Debugging with debug release (OutputDebug)
+(needed only for Vista & later)
 
 Set a breakpoint in a function called by lsass
 ================================================

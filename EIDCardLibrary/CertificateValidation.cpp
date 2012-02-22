@@ -64,7 +64,7 @@ PCCERT_CONTEXT GetCertificateFromCspInfo(__in PEID_SMARTCARD_CSP_INFO pCspInfo)
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptGetKeyParam : 0x%08x",GetLastError());
 			__leave;
 		}
-		pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, Data, DataSize); 
+		pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, Data, DataSize); 
 		if (!pCertContext)
 		{
 			dwError = GetLastError();

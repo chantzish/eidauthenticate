@@ -124,7 +124,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 			CryptStringToBinary(pszCommandLine[1],0,CRYPT_STRING_BASE64,NULL,&dwSize,NULL,NULL);
 			PBYTE pbCertificate = (PBYTE) EIDAlloc(dwSize);
 			CryptStringToBinary(pszCommandLine[1],0,CRYPT_STRING_BASE64,pbCertificate,&dwSize,NULL,NULL);
-			PCCERT_CONTEXT pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING,pbCertificate, dwSize);
+			PCCERT_CONTEXT pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,pbCertificate, dwSize);
 			if (pCertContext)
 			{
 				MakeTrustedCertifcate(pCertContext);

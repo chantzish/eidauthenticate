@@ -59,7 +59,7 @@ BOOL CanSmartCardBeUsedByEIDAuthenticate(PWLX_SC_NOTIFICATION_INFO pNotification
 						0))
 				{
 					EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"with i = %d", i);
-					pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, Data, DataSize);
+					pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, Data, DataSize);
 					if (pCertContext)
 					{
 						*pdwKeySpec = pKeySpecs[i];

@@ -188,7 +188,7 @@ BOOL CStoredCredentialManager::GetCertContextFromHash(__in PBYTE pbHash, __out P
 				{
 					// found
 					*pdwRid = pUserInfo[dwI].usri3_user_id;
-					*ppContext = CertCreateCertificateContext(X509_ASN_ENCODING,
+					*ppContext = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
 								pPrivateData->Data + pPrivateData->dwCertificatOffset, pPrivateData->dwCertificatSize);
 					if (*ppContext)
 					{
@@ -247,7 +247,7 @@ BOOL CStoredCredentialManager::GetCertContextFromRid(__in DWORD dwRid, __out PCC
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"RetrievePrivateData 0x%08x",dwError);
 			__leave;
 		}
-		*ppContext = CertCreateCertificateContext(X509_ASN_ENCODING, 
+		*ppContext = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, 
 						pEidPrivateData->Data + pEidPrivateData->dwCertificatOffset,
 						pEidPrivateData->dwCertificatSize);
 		if (!*ppContext) 
@@ -314,7 +314,7 @@ BOOL CStoredCredentialManager::CreateCredential(__in DWORD dwRid, __in PCCERT_CO
 		if (!usPasswordSize) fEncryptPassword = FALSE;
 		if (fEncryptPassword)
 		{
-			fStatus = CryptDecodeObject(X509_ASN_ENCODING, RSA_CSP_PUBLICKEYBLOB, 
+			fStatus = CryptDecodeObject(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, RSA_CSP_PUBLICKEYBLOB, 
 				pCertContext->pCertInfo->SubjectPublicKeyInfo.PublicKey.pbData,
 				pCertContext->pCertInfo->SubjectPublicKeyInfo.PublicKey.cbData,
 				0, NULL, &dwSize);
@@ -331,7 +331,7 @@ BOOL CStoredCredentialManager::CreateCredential(__in DWORD dwRid, __in PCCERT_CO
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EIDAlloc 0x%08x",GetLastError());
 				__leave;
 			}
-			fStatus = CryptDecodeObject(X509_ASN_ENCODING, RSA_CSP_PUBLICKEYBLOB, 
+			fStatus = CryptDecodeObject(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, RSA_CSP_PUBLICKEYBLOB, 
 				pCertContext->pCertInfo->SubjectPublicKeyInfo.PublicKey.pbData,
 				pCertContext->pCertInfo->SubjectPublicKeyInfo.PublicKey.cbData,
 				0, pbPublicKey, &dwSize);
@@ -1539,7 +1539,7 @@ BOOL CStoredCredentialManager::GetPasswordFromSignatureChallengeResponse(__in DW
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CertGetCertificateContextProperty", GetLastError());
 			__leave;
 		}*/
-		pCertContextVerif = CertCreateCertificateContext(X509_ASN_ENCODING, 
+		pCertContextVerif = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, 
 			(PBYTE)pEidPrivateData->Data + pEidPrivateData->dwCertificatOffset, pEidPrivateData->dwCertificatSize);
 		if (!pCertContextVerif)
 		{
@@ -1666,7 +1666,7 @@ BOOL CStoredCredentialManager::VerifySignatureChallengeResponse(__in DWORD dwRid
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"RetrievePrivateData 0x%08x",dwError);
 			__leave;
 		}
-		pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, 
+		pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, 
 			(PBYTE)pEidPrivateData->Data + pEidPrivateData->dwCertificatOffset, pEidPrivateData->dwCertificatSize);
 		if (!pCertContext)
 		{

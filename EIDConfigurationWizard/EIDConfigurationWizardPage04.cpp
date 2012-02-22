@@ -269,21 +269,25 @@ BOOL InitListViewCheckIcon(HWND hWndListView)
 	//Check if hIcon is valid
 	if (hDll)
 	{
+		// red shield
 		hiconItem = LoadIcon(hDll, MAKEINTRESOURCE(105)); 
 		ImageList_AddIcon(hLarge, hiconItem); 
 		ImageList_AddIcon(hSmall, hiconItem); 
 		DestroyIcon(hiconItem); 
 	    
+		// yellow shield
 		hiconItem = LoadIcon(hDll, MAKEINTRESOURCE(107)); 
 		ImageList_AddIcon(hLarge, hiconItem); 
 		ImageList_AddIcon(hSmall, hiconItem); 
 		DestroyIcon(hiconItem); 
 	    
+		// green shield
 		hiconItem = LoadIcon(hDll, MAKEINTRESOURCE(106)); 
 		ImageList_AddIcon(hLarge, hiconItem); 
 		ImageList_AddIcon(hSmall, hiconItem); 
 		DestroyIcon(hiconItem); 
 
+		// blue circle with a "i" inside
 		hiconItem = LoadIcon(hDll, MAKEINTRESOURCE(81)); 
 		ImageList_AddIcon(hLarge, hiconItem); 
 		ImageList_AddIcon(hSmall, hiconItem); 
@@ -446,7 +450,9 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 					{
 						pCredentialList = new CContainerHolderFactory<CContainerHolderTest>;
 						pCredentialList->SetUsageScenario(CPUS_INVALID,0);
+						SetCursor(LoadCursor(NULL,MAKEINTRESOURCE(IDC_WAIT)));
 						pCredentialList->ConnectNotification(szReader,szCard,0);
+						SetCursor(LoadCursor(NULL,MAKEINTRESOURCE(IDC_ARROW)));
 					}
 					
 					if (pCredentialList->HasContainerHolder())
@@ -585,7 +591,9 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 						{
 							NMHDR nmh;
 							nmh.code = PSN_SETACTIVE;
+							SetCursor(LoadCursor(NULL,MAKEINTRESOURCE(IDC_WAIT)));
 							pCredentialList->ConnectNotification(szReader,szCard,0);
+							SetCursor(LoadCursor(NULL,MAKEINTRESOURCE(IDC_ARROW)));
 							SendMessage(hWnd, WM_NOTIFY, 0, (LPARAM)&nmh);
 						}
 						else

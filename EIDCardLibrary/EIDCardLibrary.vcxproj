@@ -178,6 +178,7 @@
     <ClInclude Include="CompleteToken.h" />
     <ClInclude Include="CredentialManagement.h" />
     <ClInclude Include="CSmartCardNotifier.h" />
+    <ClInclude Include="EIDAuthenticateVersion.h" />
     <ClInclude Include="EIDCardLibrary.h" />
     <ClInclude Include="GPO.h" />
     <ClInclude Include="guid.h" />
