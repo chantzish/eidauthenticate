@@ -146,7 +146,9 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 
 	HPROPSHEETPAGE ahpsp[6];
 	
-	PROPSHEETPAGE psp = { sizeof(psp) };   
+	PROPSHEETPAGE psp;
+	ZeroMemory(&psp,sizeof(PROPSHEETPAGE));
+	psp.dwSize = sizeof(PROPSHEETPAGE);
 	psp.hInstance = hInstance;
 	psp.dwFlags =  PSP_USEHEADERTITLE;
 	psp.lParam = 0;//(LPARAM) &wizdata;
@@ -182,6 +184,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	ahpsp[5] = CreatePropertySheetPage(&psp);
 
 	PROPSHEETHEADER psh;
+	ZeroMemory(&psh,sizeof(PROPSHEETHEADER));
 	psh.dwSize = sizeof(psh);
 	psh.hInstance = hInstance;
 	psh.hwndParent = NULL;

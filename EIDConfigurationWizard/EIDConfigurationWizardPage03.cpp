@@ -241,6 +241,12 @@ INT_PTR CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 							return TRUE;
 						}
 					}
+					else
+					{
+						MessageBoxWin32Ex(GetLastError(),hWnd);
+						SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
+						return TRUE;
+					}
 					// cancel
 					break;
 				}

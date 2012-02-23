@@ -2120,12 +2120,10 @@ NTSTATUS LoadSamSrv()
 NTSTATUS CStoredCredentialManager::CheckPassword( __in DWORD dwRid, __in PWSTR szPassword)
 {
 	NTSTATUS Status = STATUS_SUCCESS;
-#ifdef _DEBUG
 	if (!EIDIsComponentInLSAContext())
  	{
 		return Status;
 	}
-#endif 
 
 	LSA_OBJECT_ATTRIBUTES connectionAttrib;
     LSA_HANDLE handlePolicy = NULL;

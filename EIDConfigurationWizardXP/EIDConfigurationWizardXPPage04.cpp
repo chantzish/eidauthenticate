@@ -105,10 +105,10 @@ BOOL LoadCheckIcon(HWND hWnd, int ControlId, int CheckId)
 		id = 5; // red shield
 		break;
 	case 1:
-		id = 4; // green shild
+		id = 4; // yellow shild
 		break;
 	case 2:
-		id = 3; // yellow shield
+		id = 3; // green shield
 		break;
 /*	case 3:
 		id = 81; // info
@@ -687,7 +687,7 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 							}
 						}
 					}
-					/*if (wcsncmp(item.szID, L"action",6) == 0 && pCredentialList)
+					if (wcsncmp(item.szID, L"action",6) == 0 && pCredentialList)
 					{
 						int checkit = _wtoi(item.szID + 6);
 						BOOL fReturn;
@@ -700,17 +700,17 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 						{
 							// refresh
 							NMLINK nmh;
+							memset(&nmh,0,sizeof(NMLINK));
 							LITEM item;
 							nmh.hdr.code = NM_CLICK;
 							nmh.hdr.hwndFrom = hWnd;
-							nmh.hdr.idFrom = IDC_04CHECKS;
 							memset(&item,0,sizeof(LITEM));
 							nmh.item = item;
 							wcscpy_s(nmh.item.szID,MAX_LINKID_TEXT,L"idrefresh");
 							SendMessage(hWnd,WM_NOTIFY,0,(LPARAM)&nmh);
 						}
 
-					}*/
+					}
 				}
 		}
     }
