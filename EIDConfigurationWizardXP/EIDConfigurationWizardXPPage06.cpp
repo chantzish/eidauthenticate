@@ -34,7 +34,7 @@ INT_PTR CALLBACK	WndProc_06TESTRESULTOK(HWND hWnd, UINT message, WPARAM wParam, 
 			HMODULE hDll = LoadLibrary(TEXT("wuaucpl.cpl") );
 			if (hDll)
 			{
-				HICON hIcon = LoadIcon(hDll, MAKEINTRESOURCE(4)); 
+				HICON hIcon = LoadIcon(hDll, MAKEINTRESOURCE(3)); 
 				SendMessage(GetDlgItem(hWnd,IDC_06SHIELD),STM_SETIMAGE,IMAGE_ICON, (LPARAM) hIcon);
 				DestroyIcon(hIcon);
 				FreeLibrary(hDll);
