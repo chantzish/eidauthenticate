@@ -21,6 +21,7 @@
 #include "../EIDCardLibrary/Tracing.h"
 #include "../EIDCardLibrary/StoredCredentialManagement.h"
 #include "../EIDCardLibrary/Registration.h"
+#include "../EIDCardLibrary/XPCompatibility.h"
 /*
 The InitializeChangeNotify function is implemented by a password filter DLL.
 This function initializes the DLL.
