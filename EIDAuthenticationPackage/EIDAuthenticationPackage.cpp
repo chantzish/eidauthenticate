@@ -359,14 +359,14 @@ extern "C"
 		PBYTE pbChallenge = NULL;
 		DWORD dwChallengeSize = 0, dwType = 0;
 		EID_MSGINA_AUTHENTICATION_CHALLENGE_ANSWER response = {0};
+		memset(&response, 0, sizeof(EID_MSGINA_AUTHENTICATION_CHALLENGE_ANSWER));
+		if (SubmitBufferLength < sizeof(EID_MSGINA_AUTHENTICATION_CHALLENGE_REQUEST))
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"SubmitBufferLength");
+			return STATUS_INVALID_PARAMETER;
+		}
 		__try
 		{
-			memset(&response, 0, sizeof(EID_MSGINA_AUTHENTICATION_CHALLENGE_ANSWER));
-			if (SubmitBufferLength < sizeof(EID_MSGINA_AUTHENTICATION_CHALLENGE_REQUEST))
-			{
-				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"SubmitBufferLength");
-				return STATUS_INVALID_PARAMETER;
-			}
 			// go look for the password stored
 			CStoredCredentialManager* manager = CStoredCredentialManager::Instance();
 			if (!manager)
@@ -431,14 +431,14 @@ extern "C"
 		PEID_MSGINA_AUTHENTICATION_RESPONSE_REQUEST pGina = (PEID_MSGINA_AUTHENTICATION_RESPONSE_REQUEST) ProtocolSubmitBuffer;
 		PWSTR szPassword = NULL;
 		EID_MSGINA_AUTHENTICATION_RESPONSE_ANSWER response = {0};
+		memset(&response, 0, sizeof(EID_MSGINA_AUTHENTICATION_RESPONSE_ANSWER));
+		if (SubmitBufferLength < sizeof(EID_MSGINA_AUTHENTICATION_RESPONSE_REQUEST))
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SubmitBufferLength");
+			return STATUS_INVALID_PARAMETER;
+		}
 		__try
 		{
-			memset(&response, 0, sizeof(EID_MSGINA_AUTHENTICATION_RESPONSE_ANSWER));
-			if (SubmitBufferLength < sizeof(EID_MSGINA_AUTHENTICATION_RESPONSE_REQUEST))
-			{
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SubmitBufferLength");
-				return STATUS_INVALID_PARAMETER;
-			}
 			// go look for the password stored
 			CStoredCredentialManager* manager = CStoredCredentialManager::Instance();
 			if (!manager)

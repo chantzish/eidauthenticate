@@ -471,7 +471,7 @@ BOOL CStoredCredentialManager::CreateCredential(__in DWORD dwRid, __in PCCERT_CO
 	return fReturn;
 }
 
-BOOL CStoredCredentialManager::UpdateCredential(__in PUNICODE_STRING ComputerName, __in PUNICODE_STRING UserName, __in PUNICODE_STRING Password)
+BOOL CStoredCredentialManager::UpdateCredential(__in PLUID pLuid, __in PUNICODE_STRING Password)
 {
 	DWORD dwRid = 0;
 	WCHAR szComputer[UNLEN+1];
@@ -480,18 +480,35 @@ BOOL CStoredCredentialManager::UpdateCredential(__in PUNICODE_STRING ComputerNam
 	DWORD dwError = 0;
 	BOOL fReturn = FALSE;
 	USER_INFO_3* pUserInfo = NULL;
+	PSECURITY_LOGON_SESSION_DATA pLogonSessionData = NULL;
+	NTSTATUS status;
 	__try
 	{
+		status = LsaGetLogonSessionData(pLuid, &pLogonSessionData);
+		if (status != STATUS_SUCCESS)
+		{
+			dwError = LsaNtStatusToWinError(status);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaGetLogonSessionData 0x%08x",status);
+			__leave;
+		}
 		GetComputerName(szComputer,&dwSize);
-		if ((ComputerName->Length != dwSize * sizeof(WCHAR))
-				|| memcmp(ComputerName->Buffer,szComputer,dwSize) != 0 )
+		if (!((pLogonSessionData->LogonDomain.Length == dwSize * sizeof(WCHAR)
+			&& memcmp(pLogonSessionData->LogonDomain.Buffer,szComputer, dwSize * sizeof(WCHAR)) == 0)))
 		{
 			dwError = ERROR_NONE_MAPPED;
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"not a local account");
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"not a local account '%wZ'", &(pLogonSessionData->LogonDomain));
 			__leave;
 		}
 		// get the user ID (RID)
-				
+		PUNICODE_STRING UserName = &(pLogonSessionData->UserName);
+		if (!UserName)
+		{
+			dwError = ERROR_NONE_MAPPED;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"UserName null");
+			__leave;
+		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"using userName '%wZ'", UserName);
+
 		memcpy(szUser, UserName->Buffer,UserName->Length);
 		szUser[UserName->Length/2] = L'\0';
 		dwError = NetUserGetInfo(szComputer, szUser, 3, (LPBYTE*) &pUserInfo);
@@ -511,6 +528,7 @@ BOOL CStoredCredentialManager::UpdateCredential(__in PUNICODE_STRING ComputerNam
 	__finally
 	{
 		if (pUserInfo) NetApiBufferFree(pUserInfo);
+		if (pLogonSessionData) LsaFreeReturnBuffer(pLogonSessionData);
 	}
 	SetLastError(dwError);
 	return fReturn;
@@ -782,6 +800,8 @@ NTSTATUS CompletePrimaryCredential(__in PLSA_UNICODE_STRING AuthenticatingAuthor
 						__out  PSECPKG_PRIMARY_CRED PrimaryCredentials)
 {
 
+	// futur : use MSV1_0_SUPPLEMENTAL_CREDENTIAL instead of clear password ?
+	
 	// general comment about the SECPKG_PRIMARY_CRED structure and DPAPI
 	// grabbed from the kerberos SSP output :
 	// Password logon :
