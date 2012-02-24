@@ -14,14 +14,29 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
-
+#include <ntstatus.h>
+#define WIN32_NO_STATUS 1
 #include <windows.h>
 #include <Ntsecapi.h>
+
 
 #include "../EIDCardLibrary/Tracing.h"
 #include "../EIDCardLibrary/StoredCredentialManagement.h"
 #include "../EIDCardLibrary/Registration.h"
 #include "../EIDCardLibrary/XPCompatibility.h"
+
+typedef NTSTATUS
+(NTAPI LSA_IMPERSONATE_CLIENT) (
+    VOID
+    );
+typedef LSA_IMPERSONATE_CLIENT * PLSA_IMPERSONATE_CLIENT;
+void SetImpersonate(PLSA_IMPERSONATE_CLIENT Impersonate);
+
+NTSTATUS NTAPI Impersonate (VOID)
+{
+	return STATUS_SUCCESS;
+}
+
 /*
 The InitializeChangeNotify function is implemented by a password filter DLL.
 This function initializes the DLL.
@@ -30,6 +45,9 @@ This function initializes the DLL.
 BOOL WINAPI InitializeChangeNotify()
 {
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
+	// if we don't set this, the library think that we are in a test process
+	// note : impersonation is not needed, that's why it is set to nothing
+	SetImpersonate(Impersonate);
 	return TRUE;
 }
 

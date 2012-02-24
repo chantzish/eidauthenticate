@@ -285,7 +285,8 @@ extern "C"
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter for account name = %wZ type=%d",AccountName, LogonType);
 		UNREFERENCED_PARAMETER(SupplementalCredentials);
-		if ( PrimaryCredentials && (PrimaryCredentials->Flags & (PRIMARY_CRED_UPDATE | PRIMARY_CRED_CLEAR_PASSWORD)))
+		if ( PrimaryCredentials && (PrimaryCredentials->Flags & PRIMARY_CRED_UPDATE) 
+								&& (PrimaryCredentials->Flags & PRIMARY_CRED_CLEAR_PASSWORD))
 		{
 			// is here the password update
 			// note : this function is called for each session opened (even the networked one)
@@ -295,9 +296,9 @@ extern "C"
 			// (for example using  net.exe)
 			// this function exists because a security package can be loaded immedialty after the install
 			// into LSASS.exe while a notification package requires a reboot.
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Password change");
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Password change with flag 0x%x", PrimaryCredentials->Flags);
 			CStoredCredentialManager* manager = CStoredCredentialManager::Instance();
-			manager->UpdateCredential(&(PrimaryCredentials->DomainName), AccountName, &(PrimaryCredentials->Password));
+			manager->UpdateCredential(&(PrimaryCredentials->LogonId), &(PrimaryCredentials->Password));
 			
 		}
 		return STATUS_SUCCESS;
