@@ -104,14 +104,15 @@ INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPAR
 				{
 					// go to the error page
 					dwWizardError = GetLastError();
-					SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
 					if (pnmh->code == PSN_WIZNEXT)
 					{
+						SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
 						PropSheet_SetCurSelByID(GetParent(hWnd), IDD_07TESTRESULTNOTOK);
 					}
 					else
 					{
 						MessageBoxWin32Ex(dwWizardError,hWnd);
+						SetWindowLongPtr(hWnd,DWLP_MSGRESULT,(LONG_PTR)IDD_05PASSWORD);
 					}
 					return TRUE;
 				}
