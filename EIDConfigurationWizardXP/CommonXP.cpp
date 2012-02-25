@@ -10,16 +10,16 @@ extern HINSTANCE g_hinst;
 
 VOID CenterWindow(HWND hWnd)
 {
-  RECT rcWindow;
-  GetWindowRect(hWnd, &rcWindow);
-  DWORD dwPosX = (GetSystemMetrics(SM_CXSCREEN)- (rcWindow.right - rcWindow.left)) / 2;
-  DWORD dwPosY = (GetSystemMetrics(SM_CYSCREEN) - (rcWindow.bottom - rcWindow.top)) / 2;
-  SetWindowPos(hWnd,
-	       HWND_TOPMOST,
-	       dwPosX, dwPosY,
-	       0,
-	       0,
-	       SWP_NOSIZE | SWP_SHOWWINDOW);
+	RECT rc;
+    if (!GetWindowRect(hWnd, &rc)) return;
+
+    const int width  = rc.right  - rc.left;
+    const int height = rc.bottom - rc.top;
+
+    MoveWindow(hWnd,
+        (GetSystemMetrics(SM_CXSCREEN) - width)  / 2,
+        (GetSystemMetrics(SM_CYSCREEN) - height) / 2,
+        width, height, true);
 }
 
 

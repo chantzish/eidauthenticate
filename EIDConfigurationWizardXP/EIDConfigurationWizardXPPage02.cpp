@@ -124,6 +124,14 @@ INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 		{
 			EnableWindow(GetDlgItem(hWnd,IDC_01DELETE), FALSE);
 		}
+		{
+			DWORD dwAttrib = GetFileAttributes(TEXT("c:\\windows\\system32\\Pintool.exe"));
+			if ((dwAttrib != INVALID_FILE_ATTRIBUTES && 
+							!(dwAttrib & FILE_ATTRIBUTE_DIRECTORY)))
+			{
+				ShowWindow(GetDlgItem(hWnd,IDC_02CHANGEPIN), SW_SHOW);
+			}
+		}
 		break;
 	case WM_NOTIFY :
         LPNMHDR pnmh = (LPNMHDR)lParam;
@@ -225,6 +233,10 @@ INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 								MessageBoxWin32Ex(lReturn, hWnd);
 							}
 						}
+					}
+					else if (wcscmp(item.szID, L"idChangePin") == 0)
+					{
+						ShellExecute(NULL, L"open", TEXT("PinTool.exe"), NULL, NULL, SW_SHOWNORMAL);
 					}
 					/*if ((((LPNMHDR)lParam)->hwndFrom == GetDlgItem(hWnd,IDC_SYSLINKHELP)) && (item.iLink == 0))
 					{

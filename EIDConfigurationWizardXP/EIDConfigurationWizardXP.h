@@ -94,6 +94,7 @@
 #define IDC_STC5                        132
 #define IDC_SYSLINKHELP                 133
 #define IDC_EMAILLBL                    134
+#define IDC_02CHANGEPIN                 134
 #define IDC_STC6                        137
 #define IDC_STC7                        138
 #define IDC_05PASSWORD                  140
