@@ -264,11 +264,11 @@ BOOL CContainerHolderTest::Solve(DWORD dwCheckNum)
 	case CHECK_SIGNATUREONLY:
 		{
 			DWORD dwValue = 1;
-				RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+			dwError = RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
 					TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\SmartCardCredentialProvider"),
 					TEXT("AllowSignatureOnlyKeys"), REG_DWORD, &dwValue,sizeof(dwValue));
 		}
-		fReturn = TRUE;
+		fReturn = (dwError == 0);
 		break;
 	case CHECK_TRUST:
 		switch (_dwTrustError)
@@ -277,14 +277,16 @@ BOOL CContainerHolderTest::Solve(DWORD dwCheckNum)
 			{
 				PCCERT_CONTEXT pCertContext = _pContainer->GetCertificate();
 				fReturn = MakeTrustedCertifcate(pCertContext);
+				dwError = GetLastError();
 				CertFreeCertificateContext(pCertContext);
 			}
 			break;
 		case CERT_TRUST_IS_NOT_VALID_FOR_USAGE:
 			DWORD dwValue = 1;
-			RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+			dwError = RegSetKeyValue(HKEY_LOCAL_MACHINE, 
 				TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\SmartCardCredentialProvider"),
 				TEXT("AllowCertificatesWithNoEKU"), REG_DWORD, &dwValue,sizeof(dwValue));
+			fReturn = (dwError == 0);
 			break;
 		}
 	}

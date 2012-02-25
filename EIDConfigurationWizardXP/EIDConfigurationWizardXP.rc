@@ -205,7 +205,9 @@ BEGIN
     LTEXT           "Choose this option if you are using a blank smart card",IDC_STATIC,25,94,235,11
     GROUPBOX        "",IDC_STATIC,8,119,256,49
     CONTROL         "<a  id=""idDatabase"">Check online database for known incompatibilities</a>",IDC_SYSLINKHELP,
-                    "SysLink",WS_TABSTOP,25,185,223,8
+                    "SysLink",WS_TABSTOP,25,193,223,8
+    CONTROL         "<a  id=""idChangePin"">Change the PIN</a>",IDC_02CHANGEPIN,
+                    "SysLink",NOT WS_VISIBLE | WS_TABSTOP,26,177,223,8
 END
 
 IDD_03NEW DIALOGEX 65535, 65523, 273, 209

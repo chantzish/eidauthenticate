@@ -55,7 +55,9 @@ BEGIN
     LTEXT           "Choississez cette option si vous disposez d'une carte à puce vierge",IDC_STATIC,25,94,235,11
     GROUPBOX        "",IDC_STATIC,8,119,256,49
     CONTROL         "<a  id=""idDatabase"">Rechercher en ligne des problèmes déjà signalés</a>",IDC_SYSLINKHELP,
-                    "SysLink",WS_TABSTOP,25,185,223,8
+                    "SysLink",WS_TABSTOP,25,192,223,8
+    CONTROL         "<a  id=""idChangePin"">Changer le code PIN</a>",IDC_02CHANGEPIN,
+                    "SysLink",NOT WS_VISIBLE | WS_TABSTOP,26,177,223,8
 END
 
 IDD_03NEW DIALOGEX 65535, 65523, 273, 209
