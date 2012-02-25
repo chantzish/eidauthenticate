@@ -103,6 +103,7 @@
         </Component>
         
         <Component Id="EnableAES" Guid="1C7B9C29-6A47-4C98-9514-5017A517A2CF">
+          <Condition><![CDATA[VersionNT = 501]]></Condition>
           <RegistryKey Root="HKLM" Key="SOFTWARE\Microsoft\Cryptography\Defaults\Provider\Microsoft Enhanced RSA and AES Cryptographic Provider">
             <RegistryValue Type="integer" Name="Type" Value="24"/>
             <RegistryValue Type="integer" Name="SigInFile" Value="0"/>
