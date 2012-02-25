@@ -92,7 +92,7 @@ BOOL CGina::Negotiate(DWORD dwWinlogonVersion, DWORD* pdwDllVersion)
 	return fReturn;
 }
 
-CGina::CGina(CWinLogon* pWinLogon): _pWinLogon(pWinLogon)
+CGina::CGina(CWinLogon* pWinLogon): _pWinLogon(pWinLogon), _hToken(0)
 {
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave");
@@ -141,10 +141,10 @@ BOOL CGina::Initialize(LPWSTR                  lpWinsta,
 VOID CGina::DisplaySASNotice()
 {
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
+	_pWinLogon->DisableRemovePolicy();
 	// tricky case : when in terminal server, msgina overwrite a CtrlAltDel sas 
 	// even if there was another a WLX_SAS_TYPE_EID_INSERT SAS
-	if ((0 != GetSystemMetrics(SM_REMOTESESSION)) // isRemote ?
-		&& _pWinLogon->_fSmartCardPresent)
+	if (IsRemote() && _pWinLogon->_fSmartCardPresent)
 	{
 		//_pWinLogon->SasNotify(WLX_SAS_TYPE_EID_INSERT);
 	}
@@ -173,75 +173,29 @@ int CGina::LoggedOutSAS(
 {
 	int iReturn = WLX_SAS_ACTION_NONE;
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter SAS = %d", dwSasType);
+	_dwLastSasType = dwSasType;
 	if (dwSasType == WLX_SAS_TYPE_EID_INSERT)
 	{
-//		HANDLE hToken;
-//		LUID AuthenticationId;
-		PWSTR szUserName;
-		PWSTR szPassword;
-		PWSTR szDomain;
-		DWORD dwError, dwRemaingPinAttempt;
-//		PMSV1_0_INTERACTIVE_PROFILE pSmartCardProfile;
+		PWSTR szUserName = NULL;
+		PWSTR szPassword = NULL;
+		PWSTR szDomain = NULL;
 		if (!_pWinLogon->_fSmartCardPresent)
 		{
 			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"Smart card removed ?");
 			return WLX_SAS_ACTION_NONE;
 		}
-		PINDialog dlg(_pWinLogon);
-		pfWlxDisplayStatusMessage(pMsGinaContext, GetThreadDesktop(GetCurrentThreadId()),0, NULL, L"Reading smart card ...");
-		BOOL fHasSmartCardCompatible = dlg.Populate();
-		pfWlxRemoveStatusMessage(pMsGinaContext);
-		if (! fHasSmartCardCompatible )
-		{
-			_pWinLogon->MessageBox(NULL, L"The smart card doesn't contain any valid credential",NULL,0);
-			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"The smart card doesn't contain any valid credential");
-			return WLX_SAS_ACTION_NONE;
-		}
+		PINDialog dlg(this, &szUserName, &szPassword, &szDomain);
 		if (IDOK != dlg.Show())
 		{
 			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"Smart card removed ? or cancelled ?");
 			return WLX_SAS_ACTION_NONE;
 		}
-		if (!_pWinLogon->_fSmartCardPresent)
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"Smart card removed ?");
-			return WLX_SAS_ACTION_NONE;
-		}
-		pfWlxDisplayStatusMessage(pMsGinaContext, GetThreadDesktop(GetCurrentThreadId()),0, NULL, L"Attempting logon ...");
-		/*BOOL fLogonSuccess = LogonUsingSmartCard(dlg.szPin, dlg.pCredential->GetContainer(), Interactive,
-												&AuthenticationId, &hToken, &szUserName, &szDomain,
-												&pSmartCardProfile, &dwError);*/
-		BOOL fLogonSuccess = GetPassword(dlg.szPin, dlg.pCredential->GetContainer(), 
-									&szUserName, &szPassword, &szDomain, &dwError, &dwRemaingPinAttempt);
-		pfWlxRemoveStatusMessage(pMsGinaContext);
-		if (!fLogonSuccess)
-		{
-			WCHAR szMessage[2048] = L"Unable to logon";
-			if (dwError == SCARD_W_WRONG_CHV && dwRemaingPinAttempt != 0xFFFFFFFF)
-			{
-				swprintf_s(szMessage, ARRAYSIZE(szMessage), L"Wrong PIN : %d attempts remaining",dwRemaingPinAttempt); 
-			}
-			else
-			{
-				LookUpErrorMessage(szMessage, ARRAYSIZE(szMessage), dwError);
-			}
-			_pWinLogon->MessageBox(NULL,szMessage,L"",0);
-			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,szMessage);
-			return WLX_SAS_ACTION_NONE;
-		}
 		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"Smart card card login successfull");
 		
-		// enable the hooh - the hook is automatically disabled after one logon attempt
-		_pWinLogon->EnableAutoLogon(szUserName, szPassword, szDomain);
+		// enable the hook - the hook is automatically disabled after one logon attempt
+		EnableAutoLogon(szUserName, szPassword, szDomain);
 		iReturn = pfWlxLoggedOutSAS(pMsGinaContext,WLX_SAS_TYPE_CTRL_ALT_DEL,pAuthenticationId,pLogonSid,pdwOptions,phToken,pNprNotifyInfo,pProfile);
-		_pWinLogon->_fAutologonHook = FALSE;
-		if (iReturn == WLX_SAS_ACTION_LOGON)
-		{
-			if (GetPolicyValue(scremoveoption))
-			{
-				_pWinLogon->_fEnableRemovePolicy = TRUE;
-			}
-		}
+		DisableAutoLogon();
 		EIDFree(szUserName);
 		EIDFree(szDomain);
 		EIDFree(szPassword);
@@ -258,6 +212,10 @@ int CGina::LoggedOutSAS(
 		_pWinLogon->EnableSmartCardSAS(FALSE);
 		
 	}
+	if (iReturn == WLX_SAS_ACTION_LOGON)
+	{
+		_hToken = *phToken;
+	}
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave with action = %d", iReturn);
 	return iReturn;
 }
@@ -268,8 +226,20 @@ BOOL CGina::ActivateUserShell(
     PVOID                   pEnvironment
     )
 {
-	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
+	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter Desktop = %s", pszDesktopName);
 	BOOL fReturn = pfWlxActivateUserShell(pMsGinaContext,pszDesktopName,pszMprLogonScript,pEnvironment);
+	if (fReturn)
+	{
+		wcscpy_s(_szDesktop, ARRAYSIZE(_szDesktop),pszDesktopName);
+		if (_dwLastSasType == WLX_SAS_TYPE_EID_INSERT)
+		{
+			_pWinLogon->EnableRemovePolicy(_hToken, _szDesktop);
+		}
+		else
+		{
+			_pWinLogon->DisableRemovePolicy();
+		}
+	}
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave");
 	return fReturn;
 }
@@ -291,7 +261,8 @@ int CGina::LoggedOnSAS(
 VOID CGina::DisplayLockedNotice()
 {
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
-	if ((0 != GetSystemMetrics(SM_REMOTESESSION)) // isRemote ?
+	_pWinLogon->DisableRemovePolicy();
+	if (IsRemote() // isRemote ?
 		&& _pWinLogon->_fSmartCardPresent)
 	{
 		//_pWinLogon->SasNotify(WLX_SAS_TYPE_EID_INSERT);
@@ -315,73 +286,26 @@ int CGina::WkstaLockedSAS(
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter SAS = %d", dwSasType);
 	if (dwSasType == WLX_SAS_TYPE_EID_INSERT)
 	{
-//		HANDLE hToken;
-//		LUID AuthenticationId;
-		PWSTR szUserName;
-		PWSTR szPassword;
-		PWSTR szDomain;
-		DWORD dwError, dwRemaingPinAttempt;
-//		PMSV1_0_INTERACTIVE_PROFILE pSmartCardProfile;
+		PWSTR szUserName = NULL;
+		PWSTR szPassword = NULL;
+		PWSTR szDomain = NULL;
 		if (!_pWinLogon->_fSmartCardPresent)
 		{
 			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"Smart card removed ?");
 			return WLX_SAS_ACTION_NONE;
 		}
-		PINDialog dlg(_pWinLogon);
-		pfWlxDisplayStatusMessage(pMsGinaContext, GetThreadDesktop(GetCurrentThreadId()),0, NULL, L"Reading smart card ...");
-		BOOL fHasSmartCardCompatible = dlg.Populate();
-		pfWlxRemoveStatusMessage(pMsGinaContext);
-		if (! fHasSmartCardCompatible )
-		{
-			_pWinLogon->MessageBox(NULL, L"The smart card doesn't contain any valid credential",NULL,0);
-			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"The smart card doesn't contain any valid credential");
-			return WLX_SAS_ACTION_NONE;
-		}
+		PINDialog dlg(this, &szUserName, &szPassword, &szDomain);
 		if (IDOK != dlg.Show())
 		{
 			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"Smart card removed ? or cancelled ?");
 			return WLX_SAS_ACTION_NONE;
 		}
-		if (!_pWinLogon->_fSmartCardPresent)
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"Smart card removed ?");
-			return WLX_SAS_ACTION_NONE;
-		}
-		pfWlxDisplayStatusMessage(pMsGinaContext, GetThreadDesktop(GetCurrentThreadId()),0, NULL, L"Attempting logon ...");
-		/*BOOL fLogonSuccess = LogonUsingSmartCard(dlg.szPin, dlg.pCredential->GetContainer(), Interactive,
-												&AuthenticationId, &hToken, &szUserName, &szDomain,
-												&pSmartCardProfile, &dwError);*/
-		BOOL fLogonSuccess = GetPassword(dlg.szPin, dlg.pCredential->GetContainer(), 
-									&szUserName, &szPassword, &szDomain, &dwError, &dwRemaingPinAttempt);
-		pfWlxRemoveStatusMessage(pMsGinaContext);
-		if (!fLogonSuccess)
-		{
-			WCHAR szMessage[2048] = L"Unable to logon";
-			if (dwError == SCARD_W_WRONG_CHV && dwRemaingPinAttempt != 0xFFFFFFFF)
-			{
-				swprintf_s(szMessage, ARRAYSIZE(szMessage), L"Wrong PIN : %d attempts remaining",dwRemaingPinAttempt); 
-			}
-			else
-			{
-				LookUpErrorMessage(szMessage, ARRAYSIZE(szMessage), dwError);
-			}
-			_pWinLogon->MessageBox(NULL,szMessage,L"",0);
-			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,szMessage);
-			return WLX_SAS_ACTION_NONE;
-		}
 		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"Smart card card login successfull");
 		
 		// enable the hooh - the hook is automatically disabled after one logon attempt
-		_pWinLogon->EnableAutoLogon(szUserName, szPassword, szDomain);
+		EnableAutoLogon(szUserName, szPassword, szDomain);
 		iReturn = pfWlxWkstaLockedSAS(pMsGinaContext,WLX_SAS_TYPE_CTRL_ALT_DEL);
-		_pWinLogon->_fAutologonHook = FALSE;
-		if (iReturn == WLX_SAS_ACTION_UNLOCK_WKSTA)
-		{
-			if (GetPolicyValue(scremoveoption))
-			{
-				_pWinLogon->_fEnableRemovePolicy = TRUE;
-			}
-		}
+		DisableAutoLogon();
 		EIDFree(szUserName);
 		EIDFree(szDomain);
 		EIDFree(szPassword);
@@ -397,6 +321,17 @@ int CGina::WkstaLockedSAS(
 		iReturn = pfWlxWkstaLockedSAS(pMsGinaContext,dwSasType);
 		_pWinLogon->EnableSmartCardSAS(FALSE);
 		
+	}
+	if (iReturn == WLX_SAS_ACTION_UNLOCK_WKSTA)
+	{
+		if (dwSasType == WLX_SAS_TYPE_EID_INSERT)
+		{
+			_pWinLogon->EnableRemovePolicy(_hToken, _szDesktop);
+		}
+		else
+		{
+			_pWinLogon->DisableRemovePolicy();
+		}
 	}
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave with action = %d", iReturn);
 	return iReturn;
@@ -482,7 +417,7 @@ BOOL CGina::DisplayStatusMessage(
     PWSTR                   pMessage
     )
 {
-	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
+	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Message '%s'", pMessage);
 	BOOL fReturn = pfWlxDisplayStatusMessage(pMsGinaContext, hDesktop, dwOptions, pTitle, pMessage);
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave");
 	return fReturn;
@@ -534,4 +469,54 @@ VOID CGina::DisconnectNotify ()
 	_pWinLogon->SmartCardThreadStop();
 	pfWlxDisconnectNotify(pMsGinaContext);
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave");
+}
+
+VOID CGina::EnableAutoLogon(PWSTR szUserName, PWSTR szPassword, PWSTR szDomain)
+{
+	_pWinLogon->EnableAutoLogon(szUserName, szPassword, szDomain);
+	dwForcePolicy = GetPolicyValue(scforceoption);
+	if (dwForcePolicy) SetPolicyValue(scforceoption,0);
+	// unexpire the password ...
+	PUSER_MODALS_INFO_0 pInfo = NULL;
+	NET_API_STATUS status;
+	_dwMaxPasswordAge = TIMEQ_FOREVER;
+	USER_MODALS_INFO_1002 info;
+	__try
+	{
+		status = NetUserModalsGet(NULL, 0, (PBYTE*) &pInfo);
+		if (NERR_Success != status)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR, L"NetUserModalsGet 0x%08X", status);
+			__leave;
+		}
+		_dwMaxPasswordAge = pInfo->usrmod0_max_passwd_age;
+		info.usrmod1002_max_passwd_age = TIMEQ_FOREVER;
+		 status = NetUserModalsSet(NULL, 1002, (PBYTE) &info, NULL);
+		if (NERR_Success != status)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR, L"NetUserModalsSet 0x%08X", status);
+		}
+	}
+	__finally
+	{
+		if (pInfo) NetApiBufferFree(pInfo);
+	}
+}
+
+VOID CGina::DisableAutoLogon()
+{
+	_pWinLogon->DisableAutoLogon();
+	if (dwForcePolicy) SetPolicyValue(scforceoption,dwForcePolicy);
+	USER_MODALS_INFO_1002 info;
+	info.usrmod1002_max_passwd_age = _dwMaxPasswordAge;
+	NET_API_STATUS status = NetUserModalsSet(NULL, 1002, (PBYTE) &info, NULL);
+	if (NERR_Success != status)
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR, L"NetUserModalsSet 0x%08X", status);
+	}
+}
+
+BOOL CGina::IsRemote()
+{
+	return 0 != GetSystemMetrics(SM_REMOTESESSION);
 }

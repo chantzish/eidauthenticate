@@ -1,3 +1,5 @@
+#pragma once
+
 class CWinLogon;
 
 class CGina
@@ -38,6 +40,8 @@ public:
     BOOL GetConsoleSwitchCredentials(PVOID pCredInfo);
     void DisconnectNotify();
     void ReconnectNotify();
+	CWinLogon* GetCWinLogon() {return _pWinLogon;}
+
 	~CGina();
 protected:
 	CGina(CWinLogon* pWinLogon);
@@ -45,6 +49,17 @@ protected:
 	static DWORD GetWinLogonVersion(){return _WlxVersion;}
 	PVOID pMsGinaContext;
 	CWinLogon* _pWinLogon;
+	// autologon (disable force policy, touch password expiration, ...)
+	VOID EnableAutoLogon(PWSTR szUserName, PWSTR szPassword, PWSTR szDomain);
+	VOID DisableAutoLogon();
+	DWORD _dwMaxPasswordAge;
+	// used temporary to store the old force policy value
+	DWORD dwForcePolicy;
+	// used to store the token created by msgina and to be able to launch program
+	HANDLE _hToken;
+	WCHAR _szDesktop[256];
+	DWORD _dwLastSasType;
 private:
 	static DWORD _WlxVersion;
+	BOOL IsRemote();
 };
