@@ -201,7 +201,7 @@ BOOL IsCertificateInComputerTrustedPeopleStore(__in PCCERT_CONTEXT pCertContext)
 {
 	BOOL fReturn = FALSE;
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Testing trusted certificate");
-	HCERTSTORE hTrustedPeople = CertOpenStore(CERT_STORE_PROV_SYSTEM,0,NULL,CERT_SYSTEM_STORE_LOCAL_MACHINE,_T("TrustedPeople"));
+	HCERTSTORE hTrustedPeople = CertOpenStore(CERT_STORE_PROV_SYSTEM,0,NULL,CERT_SYSTEM_STORE_LOCAL_MACHINE | CERT_STORE_OPEN_EXISTING_FLAG | CERT_STORE_READONLY_FLAG,_T("TrustedPeople"));
 	if (hTrustedPeople)
 	{
 					
@@ -213,6 +213,10 @@ BOOL IsCertificateInComputerTrustedPeopleStore(__in PCCERT_CONTEXT pCertContext)
 			CertFreeCertificateContext(pCertificateFound);
 		}
 		CertCloseStore(hTrustedPeople, 0);
+	}
+	else
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"unable to open store 0x%08x", GetLastError());
 	}
 	return fReturn;
 }
