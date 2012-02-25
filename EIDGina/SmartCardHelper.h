@@ -1,3 +1,4 @@
+/*
 BOOL LogonUsingSmartCard(__in PWSTR szPin,
 						__in CContainer* pContainer,
 						__in SECURITY_LOGON_TYPE logonType,
@@ -7,7 +8,7 @@ BOOL LogonUsingSmartCard(__in PWSTR szPin,
 						__out PWSTR *                 pszDomain,
 						__out PMSV1_0_INTERACTIVE_PROFILE *     pProfile,
 						__out PDWORD dwError);
-
+*/
 BOOL GetPassword(__in PWSTR szPin,
 				 __in CContainer* pContainer,
 				 __out PWSTR *pszUserName,

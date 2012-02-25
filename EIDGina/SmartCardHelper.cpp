@@ -87,7 +87,7 @@ BOOL CanSmartCardBeUsedByEIDAuthenticate(PWLX_SC_NOTIFICATION_INFO pNotification
 	return fReturn;
 }
 */
-
+/*
 BOOL CallLsaLogonUserEIDAuthenticate(
 									SECURITY_LOGON_TYPE logonType,
 									PEID_INTERACTIVE_LOGON pLogonRequest,
@@ -187,7 +187,7 @@ BOOL CallLsaLogonUserEIDAuthenticate(
 		if (hLsa) LsaDeregisterLogonProcess(hLsa);
 	}
     return fResult;
-}
+}*/
 /*
 BOOL AllocateProfil(PMSV1_0_INTERACTIVE_PROFILE pMSVProfile, PWLX_PROFILE_V1_0 *pProfile)
 {
@@ -339,7 +339,7 @@ BOOL PrepareNprNotifyInfo(PEID_INTERACTIVE_LOGON pLogonStruct, PWLX_MPR_NOTIFY_I
 	}
 	return fReturn;
 }*/
-
+/*
 BOOL LogonUsingSmartCard(__in PWSTR szPin,
 						__in CContainer* pContainer,
 						__in SECURITY_LOGON_TYPE logonType,
@@ -387,6 +387,7 @@ BOOL LogonUsingSmartCard(__in PWSTR szPin,
 	_ASSERTE( _CrtCheckMemory( ) );
 	return fReturn;
 }
+*/
 
 BOOL GetPassword(__in PWSTR szPin,
 				 __in CContainer* pContainer,

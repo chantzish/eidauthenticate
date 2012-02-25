@@ -54,13 +54,8 @@ public:
 	// behovior of the hooks
 	VOID SetSmartCardLogonPresentHook(BOOL fSet) { _fSmartCardPresentHook = fSet;}
 	VOID EnableSmartCardSAS(BOOL fSet) { _fSmartCardSAS = fSet;}
-	VOID EnableAutoLogon(PWSTR szUserName, PWSTR szPassword, PWSTR szDomain)
-	{
-		_alUserName = szUserName;
-		_alPassword = szPassword;
-		_alDomain = szDomain;
-		_fAutologonHook = TRUE;
-	}
+	VOID EnableAutoLogon(PWSTR szUserName, PWSTR szPassword, PWSTR szDomain);
+	VOID DisableAutoLogon();
 	WLX_DISPATCH_VERSION_1_4 DispatchTable;
 	// custom dlg proc
 	INT_PTR LoggedOutSASDlgProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -68,18 +63,19 @@ public:
 	INT_PTR WkstaLockedSASDlgProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 	INT_PTR DisplayLockedNoticeDlgProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 	// remove policy
-	BOOL _fEnableRemovePolicy;
+	VOID EnableRemovePolicy(HANDLE hToken, PWSTR szDesktop);
+	VOID DisableRemovePolicy();
 
 	BOOL _fSmartCardPresent;
 	WCHAR _szReader[255];
 	WCHAR _szCard[255];
 	USHORT _ActivityCount;
 	HWND _LastHwndUsed;
-	// temp	
-	BOOL _fAutologonHook;
 	// terminal server
 	VOID SmartCardThreadStop() {if (_pSmartCardConnectionNotifier) _pSmartCardConnectionNotifier->Stop();}
 	VOID SmartCardThreadStart() {if (_pSmartCardConnectionNotifier) _pSmartCardConnectionNotifier->Start();}
+	// messagebox / error detection
+	DWORD GetMessageBoxCount() {return _dwMessageBoxCount;}
 private:
 	CWinLogon();
     HANDLE _winLogonHandle;
@@ -90,10 +86,20 @@ private:
 	BOOL _fSmartCardSAS;
 
 	// autologon
+	BOOL _fAutologonHook;
 	DLGPROC _pfOriginalDlgProc;
 	PWSTR _alUserName;
 	PWSTR _alPassword;
 	PWSTR _alDomain;
+	// messagebox
+	DWORD _dwMessageBoxCount;
+	// remove policy
+	BOOL _fEnableRemovePolicy;
+	HANDLE _hToken;
+	WCHAR _szDesktop[256];
+	DWORD _dwRemovePolicyValue;
+	VOID ExecuteRemovePolicy();
+	BOOL IsRemote();
 protected:
 	PVOID CreateThunk(ULONG somefunction);
 	CSmartCardConnectionNotifier*			_pSmartCardConnectionNotifier;

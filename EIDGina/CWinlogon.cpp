@@ -4,6 +4,7 @@
 #include "CWinlogon.h"
 #include "..\EIDCardLibrary\EIDCardLibrary.h"
 #include "..\EIDCardLibrary\Tracing.h"
+#include "..\EIDCardLibrary\Gpo.h"
 #include "WinLoginInterface.h"
 #include <crtdbg.h>
 
@@ -60,6 +61,7 @@ CWinLogon::CWinLogon(HANDLE                  hWlx,
 	_fAutologonHook = FALSE;
 	_fEnableRemovePolicy = FALSE;
 	_LastHwndUsed = NULL;
+	_dwMessageBoxCount = 0;
 	DispatchTable.WlxUseCtrlAltDel = WlxUseCtrlAltDel;
     DispatchTable.WlxSetContextPointer = WlxSetContextPointer;
     DispatchTable.WlxSasNotify = WlxSasNotify;
@@ -159,7 +161,7 @@ void CWinLogon::Callback(EID_CREDENTIAL_PROVIDER_READER_STATE Message, __in LPCT
 		_fSmartCardPresent = TRUE;
 		if (_fSmartCardSAS && _LastHwndUsed) 
 		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO, L"WM_EID_INSERT");
+			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO, L"WM_EID_INSERT to %d", _LastHwndUsed);
 			PostMessage(_LastHwndUsed, WM_EID_INSERT,0,0);
 		}
 		break;
@@ -170,17 +172,12 @@ void CWinLogon::Callback(EID_CREDENTIAL_PROVIDER_READER_STATE Message, __in LPCT
 		_fSmartCardPresent = FALSE;
 		if (_fSmartCardSAS && _LastHwndUsed) 
 		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO, L"WM_EID_REMOVE");
+			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO, L"WM_EID_REMOVE to %d", _LastHwndUsed);
 			PostMessage(_LastHwndUsed, WM_EID_REMOVE,0,0);
 		}
 		if (_fEnableRemovePolicy)
 		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO, L"LockWorkStation");
-			BOOL fReturn = LockWorkStation();
-			if (!fReturn)
-			{
-				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR, L"LockWorkStation 0x%08x", GetLastError());
-			}
+			ExecuteRemovePolicy();
 			_fEnableRemovePolicy = FALSE;
 		}
 		break;
@@ -226,7 +223,8 @@ int CWinLogon::AssignShellProtection(HANDLE hToken, HANDLE hProcess, HANDLE hThr
 
 int CWinLogon::MessageBox(HWND hwndOwner, LPWSTR lpszText, LPWSTR lpszTitle, UINT fuStyle)
 {
-	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Enter");
+	_dwMessageBoxCount++;
+	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Message : %s", lpszText);
 	int iReturn =  _pDispatchTable->WlxMessageBox(_winLogonHandle, hwndOwner, lpszText, lpszTitle, fuStyle);
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave");
 	return iReturn;
@@ -332,6 +330,8 @@ INT_PTR CWinLogon::DisplaySASNoticeDlgProc (HWND hwndDlg, UINT uMsg, WPARAM wPar
 INT_PTR CWinLogon::LoggedOutSASDlgProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	INT_PTR iReturn;
+	DWORD dwMessageBoxCount = GetMessageBoxCount();
+	_LastHwndUsed = hwndDlg;
 	if (uMsg == WM_WINDOWPOSCHANGING)
 	{
 		//EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"WM_WINDOWPOSCHANGING");
@@ -354,18 +354,28 @@ INT_PTR CWinLogon::LoggedOutSASDlgProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, 
 		SendMessage(hwndDlg,WM_COMMAND,IDC_WLXLOGGEDOUTSAS_OK,1);
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave");
 	}
-	_LastHwndUsed = hwndDlg;
-	if (uMsg == WM_EID_INSERT)
+	else if (uMsg == WM_EID_INSERT && IsRemote())
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO, L"WLX_SAS_TYPE_EID_INSERT");
 		_pDispatchTable->WlxSasNotify(_winLogonHandle, WLX_SAS_TYPE_EID_INSERT);
 	}
-	if (uMsg == WLX_WM_SAS)
+	else if (uMsg == WLX_WM_SAS)
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO, L"WLX_WM_SAS %d ireturn = %d",wParam, iReturn);
 		if ( wParam == WLX_SAS_TYPE_EID_INSERT || wParam == WLX_SAS_TYPE_EID_REMOVE )
 		{
 			iReturn = FALSE;
+		}
+	}
+	if (_fAutologonHook)
+	{
+		// check if an error message was displayed.
+		// if so, cancel the dialog
+		if (GetMessageBoxCount() > dwMessageBoxCount)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO, L"Cancel Window");
+			// And "hit" cancel ;)
+			EndDialog(hwndDlg, IDCANCEL);
 		}
 	}
 	return iReturn;
@@ -374,6 +384,8 @@ INT_PTR CWinLogon::LoggedOutSASDlgProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, 
 INT_PTR CWinLogon::WkstaLockedSASDlgProc (HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	INT_PTR iReturn;
+	DWORD dwMessageBoxCount = GetMessageBoxCount();
+	_LastHwndUsed = hwndDlg;
 	// let msgina do the job
 	iReturn = _pfOriginalDlgProc(hwndDlg, uMsg,wParam, lParam);
 	// overwrite the user fields
@@ -387,18 +399,28 @@ INT_PTR CWinLogon::WkstaLockedSASDlgProc (HWND hwndDlg, UINT uMsg, WPARAM wParam
 		SendMessage(hwndDlg,WM_COMMAND,IDC_WLXWKSTALOCKEDSAS_OK,1);
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Leave");
 	}
-	_LastHwndUsed = hwndDlg;
-	if (uMsg == WM_EID_INSERT)
+	else if (uMsg == WM_EID_INSERT && IsRemote())
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO, L"WLX_SAS_TYPE_EID_INSERT");
 		_pDispatchTable->WlxSasNotify(_winLogonHandle, WLX_SAS_TYPE_EID_INSERT);
 	}
-	if (uMsg == WLX_WM_SAS)
+	else if (uMsg == WLX_WM_SAS)
 	{
 		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO, L"WLX_WM_SAS %d ireturn = %d",wParam, iReturn);
 		if ( wParam == WLX_SAS_TYPE_EID_INSERT || wParam == WLX_SAS_TYPE_EID_REMOVE )
 		{
 			iReturn = FALSE;
+		}
+	}
+	if (_fAutologonHook)
+	{
+		// check if an error message was displayed.
+		// if so, cancel the dialog
+		if (GetMessageBoxCount() > dwMessageBoxCount)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO, L"Cancel Window");
+			// And "hit" cancel ;)
+			EndDialog(hwndDlg, IDCANCEL);
 		}
 	}
 	return iReturn;
@@ -591,3 +613,79 @@ DWORD CWinLogon::QueryConsoleSwitchCredentials( PWLX_CONSOLESWITCH_CREDENTIALS_I
 	return dwReturn;
 }
 
+VOID CWinLogon::EnableAutoLogon(PWSTR szUserName, PWSTR szPassword, PWSTR szDomain)
+{
+	_alUserName = szUserName;
+	_alPassword = szPassword;
+	_alDomain = szDomain;
+	_fAutologonHook = TRUE;
+}
+
+VOID CWinLogon::DisableAutoLogon()
+{
+	_fAutologonHook = FALSE;
+}
+
+VOID CWinLogon::EnableRemovePolicy(HANDLE hToken, PWSTR szDesktop)
+{
+	_hToken = hToken;
+	_fEnableRemovePolicy = TRUE;
+	wcscpy_s(_szDesktop, ARRAYSIZE(_szDesktop),szDesktop);
+	_dwRemovePolicyValue = GetPolicyValue(scremoveoption);
+}
+
+VOID CWinLogon::DisableRemovePolicy()
+{
+	_fEnableRemovePolicy = FALSE;
+}
+
+VOID CWinLogon::ExecuteRemovePolicy()
+{
+	EIDCardLibraryTrace(WINEVENT_LEVEL_INFO, L"Enter");
+	STARTUPINFO si = { sizeof si, 0, _szDesktop };
+	PROCESS_INFORMATION pi;
+	ZeroMemory(&pi,sizeof(PROCESS_INFORMATION));
+	BOOL fMustRevertToSelf = FALSE;
+	WCHAR szRunDLLActionsLock[] = L"RUNDLL32.exe user32.dll, LockWorkStation";
+	WCHAR szRunDLLActionsLogoff[] = L"RUNDLL32.exe user32.dll, ExitWindowEx";
+	// disconnect : WinStationDisconnect(0, WTSGetActiveConsoleSessionId, True)
+	PWSTR szCommandLine = NULL;
+	__try
+	{
+		switch(_dwRemovePolicyValue)
+		{
+		case 1: // lock
+			szCommandLine = szRunDLLActionsLock;
+			break;
+		case 2: // logoff
+			szCommandLine = szRunDLLActionsLogoff;
+			break;
+		default:
+			__leave;
+		}
+		 // impersonate the user to ensure that they are allowed
+		// to execute the program in the first place
+		if (!ImpersonateLoggedOnUser(_hToken)) {
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"ImpersonateLoggedOnUser failed: %d", GetLastError());
+			__leave;
+		}
+		fMustRevertToSelf = TRUE;
+		if (!CreateProcessAsUser(_hToken, NULL, szCommandLine, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) 
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CreateProcessAsUser failed for image %s with error code %d", szCommandLine, GetLastError());
+			__leave;
+		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Success");
+	}
+	__finally
+	{
+		if (pi.hProcess) CloseHandle(pi.hProcess);
+		if (pi.hThread) CloseHandle(pi.hThread);
+		if (fMustRevertToSelf) RevertToSelf();
+	}
+}
+
+BOOL CWinLogon::IsRemote()
+{
+	return 0 != GetSystemMetrics(SM_REMOTESESSION);
+}
