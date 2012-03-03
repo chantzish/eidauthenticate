@@ -107,7 +107,17 @@ extern "C"
 			HANDLE h = CreateFile(szLogFile, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, 0, 0);
 			if (INVALID_HANDLE_VALUE != h) {
 				if (INVALID_SET_FILE_POINTER != SetFilePointer(h, 0, 0, FILE_END)) {
-					DWORD cb = (DWORD) (wcslen(String) * sizeof(WCHAR));
+					DWORD cb;
+					SYSTEMTIME st;
+					GetSystemTime(&st);
+					TCHAR szLocalDate[255], szLocalTime[255];
+					_stprintf_s(szLocalDate, ARRAYSIZE(szLocalDate),TEXT("%04d-%02d-%02d"),st.wYear,st.wMonth,st.wDay);
+					_stprintf_s(szLocalTime, ARRAYSIZE(szLocalTime),TEXT("%02d:%02d:%02d"),st.wHour,st.wMinute,st.wSecond);
+					WriteFile ( h, szLocalDate, (DWORD)_tcslen(szLocalDate) * (DWORD)sizeof(TCHAR), &cb, NULL);
+					WriteFile ( h, TEXT(";"), 1 * (DWORD)sizeof(TCHAR), &cb, NULL);
+					WriteFile ( h, szLocalTime, (DWORD)_tcslen(szLocalTime) * (DWORD)sizeof(TCHAR), &cb, NULL);
+					WriteFile ( h, TEXT(";"), 1 * (DWORD)sizeof(TCHAR), &cb, NULL);
+					cb = (DWORD) (wcslen(String) * sizeof(WCHAR));
 					WriteFile(h, String, cb, &cb, 0);
 					WCHAR szEndLine[] = L"\r\n";
 					cb = 2 * sizeof(WCHAR);
