@@ -6,7 +6,8 @@
 
 #include "CertificateUtilities.h"
 #include "Tracing.h"
-#include "../EIDCardLibrary/EIDCardLibrary.h"
+#include "EIDCardLibrary.h"
+#include "EIDAuthenticateVersion.h"
 
 #pragma comment(lib,"Version.lib")
 #pragma comment(lib,"Winhttp.lib")
@@ -97,6 +98,13 @@ PTSTR GetWebSite()
 	return DATABASE_SITE;
 }
 
+TCHAR szAdvancedErrorMessage[2000] = TEXT("Unknow");
+
+PTSTR GetAdvancedErrorMessage()
+{
+	return szAdvancedErrorMessage;
+}
+
 BOOL PostDataToTheSupportSite(PSTR szPostData)
 {
 	HINTERNET hSession = NULL;
@@ -185,7 +193,7 @@ BOOL PostDataToTheSupportSite(PSTR szPostData)
 				}
 			}
 		}
-
+		//min timeout : 30s WINHTTP_OPTION_RECEIVE_TIMEOUT, WINHTTP_OPTION_SEND_TIMEOUT
 		LPCTSTR additionalHeaders = TEXT("Content-Type: application/x-www-form-urlencoded\r\n");
 		if (!WinHttpSendRequest(hRequest, additionalHeaders, (DWORD) -1, (LPVOID)szPostData, (DWORD) strlen(szPostData), (DWORD) strlen(szPostData), 0))
 		{
@@ -209,15 +217,42 @@ BOOL PostDataToTheSupportSite(PSTR szPostData)
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed WinHttpQueryHeaders 0x%08X",dwError);
 			__leave;
 		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"statusCode %d",statusCode);
 		if ( statusCode >= 400 )
 		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"statusCode %d",statusCode);
 			dwError = (DWORD) SPAPI_E_MACHINE_UNAVAILABLE;
+			// system error message
+			LPVOID Error = NULL;
+			FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_FROM_SYSTEM,
+					NULL,dwError,0,(LPTSTR)&Error,0,NULL);
+			_stprintf_s(szAdvancedErrorMessage,ARRAYSIZE(szAdvancedErrorMessage),
+				TEXT("0x%08X - %s\r\nHTTP STATUS CODE: %d"),dwError,Error, statusCode);
+			LocalFree(Error);
 			__leave;
 		}
-		else
+        // Check for available data.
+        CHAR szResult[2000];
+		DWORD dwDownloaded = 0;
+		if (!WinHttpReadData( hRequest, (LPVOID)szResult, 
+                                ARRAYSIZE(szResult), &dwDownloaded))
+        {  
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed WinHttpReadData 0x%08X",dwError);
+			__leave;
+		}
+		szResult[dwDownloaded] = '\0';
+		if (_strnicmp(szResult, "SUCCESS", 7) != 0)
 		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"statusCode %d",statusCode);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"http:%S",szResult);
+			dwError = ERROR_INTERNAL_ERROR;
+			// system error message
+			LPVOID Error = NULL;
+			FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_FROM_SYSTEM,
+					NULL,dwError,0,(LPTSTR)&Error,0,NULL);
+			_stprintf_s(szAdvancedErrorMessage,ARRAYSIZE(szAdvancedErrorMessage),
+				TEXT("0x%08X - %s\r\nDetail: %S"),dwError,Error, szResult);
+			LocalFree(Error);
+			__leave;
 		}
 		fReturn = TRUE;
 	}
@@ -301,7 +336,8 @@ void UrlLogFileEncoder(__inout PCHAR *ppPointer, __inout PDWORD pdwRemainingSize
 				else if (((pbBuffer[i] >= L'A' && pbBuffer[i] <= L'Z') 
 							|| (pbBuffer[i] >= L'a' && pbBuffer[i] <= L'z')
 							|| (pbBuffer[i] >= L'0' && pbBuffer[i] <= L'9')
-							|| (pbBuffer[i] == L'-') || (pbBuffer[i] == L'_') || (pbBuffer[i] == L'.') || (pbBuffer[i] == L'~'))
+							|| (pbBuffer[i] == L'-') || (pbBuffer[i] == L'_') || (pbBuffer[i] == L'.') || (pbBuffer[i] == L'~')
+							|| (pbBuffer[i] == L'$') || (pbBuffer[i] == L'+') || (pbBuffer[i] == L'!') || (pbBuffer[i] == L'*'))
 					&& *pdwRemainingSize > 1)
 				{
 					**ppPointer = (CHAR)pbBuffer[i];
@@ -533,7 +569,12 @@ BOOL CommunicateTestNotOK(DWORD dwErrorCode, PTSTR szEmail, PTSTR szTracingFile,
 	UrlEncoder(&ppPointer, &dwRemainingSize, szFileVersion);
 	UrlEncoder(&ppPointer, &dwRemainingSize, TEXT("&Company="), TRUE);
 	UrlEncoder(&ppPointer, &dwRemainingSize, szCompany);
+	UrlEncoder(&ppPointer, &dwRemainingSize, TEXT("&Software="), TRUE);
+	UrlEncoder(&ppPointer, &dwRemainingSize, TEXT("EIDAuthenticate"));
+	UrlEncoder(&ppPointer, &dwRemainingSize, TEXT("&Version="), TRUE);
+	UrlEncoder(&ppPointer, &dwRemainingSize, TEXT(EIDAuthenticateVersionText));
 	UrlEncoder(&ppPointer, &dwRemainingSize, TEXT("&ErrorCode="), TRUE);
+
 	TCHAR szErrorCode[16];
 	_stprintf_s(szErrorCode, ARRAYSIZE(szErrorCode),TEXT("0x%08X"),dwErrorCode);
 	UrlEncoder(&ppPointer, &dwRemainingSize, szErrorCode);
