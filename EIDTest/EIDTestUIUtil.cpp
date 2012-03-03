@@ -246,7 +246,7 @@ PCCERT_CONTEXT SelectCerts(__in LPCWSTR szReaderName,__in LPCWSTR szCardName,
 										0))
 							{
 								pCertContext = CertCreateCertificateContext(
-												X509_ASN_ENCODING|PKCS_7_ASN_ENCODING, 
+												X509_ASN_ENCODING, 
 												pbCert,
 												dwCertLen);
 								if (pCertContext)
@@ -325,7 +325,7 @@ PCCERT_CONTEXT SelectCerts(__in LPCWSTR szReaderName,__in LPCWSTR szCardName,
 									0))
 						{
 							pCertContext = CertCreateCertificateContext(
-											X509_ASN_ENCODING|PKCS_7_ASN_ENCODING, 
+											X509_ASN_ENCODING, 
 											pbCert,
 											dwCertLen);
 							if (pCertContext)
@@ -365,7 +365,7 @@ PCCERT_CONTEXT SelectCerts(__in LPCWSTR szReaderName,__in LPCWSTR szCardName,
 			
 			//create a certificate store in memory
 			hStore = CertOpenStore(CERT_STORE_PROV_MEMORY,
-						PKCS_7_ASN_ENCODING | X509_ASN_ENCODING,
+						X509_ASN_ENCODING,
 						NULL,
 						0,
 						NULL);
@@ -397,7 +397,7 @@ PCCERT_CONTEXT SelectCerts(__in LPCWSTR szReaderName,__in LPCWSTR szCardName,
 				// match certificate
 				for (DWORD i=0; i < dwContextArrayLen; i++)
 				{
-					if (CertCompareCertificate(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,pSelectedContext->pCertInfo,
+					if (CertCompareCertificate(X509_ASN_ENCODING,pSelectedContext->pCertInfo,
 						pContextArray[i]->pCertInfo))
 					{
 						wcscpy_s(szOutContainerName,dwOutContainerLength,pContainerName[i]);

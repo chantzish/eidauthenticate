@@ -224,7 +224,7 @@ BOOL CContainerHolderFactory<T>::CreateItemFromCertificateBlob(__in LPCTSTR szRe
 {
 	BOOL fReturn = FALSE;
 	PCCERT_CONTEXT pCertContext = NULL;
-	pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, Data, DataSize);
+	pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, Data, DataSize);
 	if (pCertContext)
 	{
 		BOOL fAdd = TRUE;
@@ -300,8 +300,9 @@ BOOL CContainerHolderFactory<T>::CreateItemFromCertificateBlob(__in LPCTSTR szRe
 		}
 		if (fAdd)
 		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Creating container szReaderName='%s' szCardName='%s' szProviderName='%s'",
-					szReaderName,szCardName,szProviderName);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Creating container szReaderName='%s'", szReaderName);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Creating container szCardName='%s'", szCardName);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Creating container szProviderName='%s'", szProviderName);
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Creating container szWideContainerName='%s' KeySpec=%d ActivityCount=%d",
 					szWideContainerName, KeySpec, ActivityCount);
 			this->Lock();

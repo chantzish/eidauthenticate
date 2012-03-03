@@ -171,17 +171,19 @@ void menu_AP_Protect()
 
 void Menu_AP_Exception()
 {
-	int i = 1;
-	int j = 2;	
+	int tab[10] = {1,2,3,4,5,6,7,8,9,0};
 	__try
 	{
-		i--;
-		j = j/i;
+		int x = 113250;
+		for (int i = 0; i<10; i++)
+		{
+			x = x/tab[i];
+		}
 	}
 	__except(EIDExceptionHandlerDebug(GetExceptionInformation(),FALSE))
 	{
 		DWORD dwException =0;// GetExceptionCode();
-		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"NT exception 0x%08x",dwException,j);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"NT exception 0x%08x",dwException);
 		MessageBox(NULL,TEXT("Exception trapped"),TEXT(""),0);
 	}
 }

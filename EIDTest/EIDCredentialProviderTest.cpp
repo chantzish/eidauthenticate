@@ -189,7 +189,7 @@ BOOL AddServerCertInfo(IN OUT PSCHANNEL_CRED pSchannelCred)
 			// Open LM:MY store
 			hCertStore = CertOpenStore(
 							   CERT_STORE_PROV_SYSTEM,
-							   X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
+							   X509_ASN_ENCODING,
 							   0,
 							   CERT_SYSTEM_STORE_LOCAL_MACHINE,
 							   TEXT("MY") );
@@ -212,7 +212,7 @@ BOOL AddServerCertInfo(IN OUT PSCHANNEL_CRED pSchannelCred)
 		// the supplied name somewhere in the subject name.
 		ppCertContext[0] = CertFindCertificateInStore(
 								   hCertStore,
-								   X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,
+								   X509_ASN_ENCODING,
 								   0,
 								   CERT_FIND_SUBJECT_STR_A,
 								   pwszSubjectName,

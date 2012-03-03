@@ -178,7 +178,7 @@ LPBYTE AllocateAndEncodeObject(LPVOID pvStruct, LPCSTR lpszStructType, LPDWORD p
 	__try
    {
 	   *pdwSize = 0;	
-	   bResult = CryptEncodeObject(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,   
+	   bResult = CryptEncodeObject(X509_ASN_ENCODING,   
 								   lpszStructType,   
 								   pvStruct,   
 								   NULL, pdwSize);   
@@ -198,7 +198,7 @@ LPBYTE AllocateAndEncodeObject(LPVOID pvStruct, LPCSTR lpszStructType, LPDWORD p
 	   }   
 
 	   // Get Key Usage Extension blob   
-	   bResult = CryptEncodeObject(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,   
+	   bResult = CryptEncodeObject(X509_ASN_ENCODING,   
 								   lpszStructType,   
 								   pvStruct,   
 								   pbEncodedObject, pdwSize);   
@@ -389,7 +389,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 
 		
 		// create the cert data
-		if (!CertStrToName(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,pCertificateInfo->szSubject,CERT_X500_NAME_STR,NULL,NULL,&SubjectIssuerBlob.cbData,NULL))
+		if (!CertStrToName(X509_ASN_ENCODING,pCertificateInfo->szSubject,CERT_X500_NAME_STR,NULL,NULL,&SubjectIssuerBlob.cbData,NULL))
 		{
 			dwError = GetLastError();
 			__leave;
@@ -400,7 +400,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			dwError = GetLastError();
 			__leave;
 		}
-		if (!CertStrToName(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,pCertificateInfo->szSubject,CERT_X500_NAME_STR,NULL,(PBYTE)SubjectIssuerBlob.pbData,&SubjectIssuerBlob.cbData,NULL))
+		if (!CertStrToName(X509_ASN_ENCODING,pCertificateInfo->szSubject,CERT_X500_NAME_STR,NULL,(PBYTE)SubjectIssuerBlob.pbData,&SubjectIssuerBlob.cbData,NULL))
 		{
 			dwError = GetLastError();
 			__leave;
@@ -554,7 +554,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			if(!CryptExportPublicKeyInfo(
 				  hCryptProvNewCertificate,
 				  pCertificateInfo->dwKeyType,  
-				  X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,      
+				  X509_ASN_ENCODING,      
 				  pbPublicKeyInfo,       
 				  &cbPublicKeyInfo))     
 			{
@@ -569,7 +569,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			if(!CryptExportPublicKeyInfo(
 				  hCryptProvNewCertificate,
 				  pCertificateInfo->dwKeyType,   
-				  X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,      
+				  X509_ASN_ENCODING,      
 				  pbPublicKeyInfo,       
 				  &cbPublicKeyInfo))     
 			{
@@ -618,7 +618,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			CertKeyIdentifier.pbData = pbKeyIdentifier;  
 
 			// Get Subject Key Identifier Extension size   
-			if (!CryptEncodeObject(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,   
+			if (!CryptEncodeObject(X509_ASN_ENCODING,   
 									   szOID_SUBJECT_KEY_IDENTIFIER,   
 									   (LPVOID)&CertKeyIdentifier,   
 									   NULL, &dwSize))
@@ -636,7 +636,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			}   
 
 			// Get Subject Key Identifier Extension   
-			if (!CryptEncodeObject(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,   
+			if (!CryptEncodeObject(X509_ASN_ENCODING,   
 									   szOID_SUBJECT_KEY_IDENTIFIER,   
 									   (LPVOID)&CertKeyIdentifier,   
 									   SubjectKeyIdentifier, &dwSize))
@@ -675,7 +675,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			if(!CryptSignAndEncodeCertificate(
 				  hCryptProvRootCertificate,                     // Crypto provider
 				  AT_SIGNATURE,                 // Key spec
-				  X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,               // Encoding type
+				  X509_ASN_ENCODING,               // Encoding type
 				  X509_CERT_TO_BE_SIGNED, // Struct type
 				  &CertInfo,                   // Struct info        
 				  &SigAlg,                        // Signature algorithm
@@ -695,7 +695,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			if(!CryptSignAndEncodeCertificate(
 				  hCryptProvRootCertificate,                     // Crypto provider
 				  AT_SIGNATURE,                 // Key spec
-				  X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,               // Encoding type
+				  X509_ASN_ENCODING,               // Encoding type
 				  X509_CERT_TO_BE_SIGNED, // Struct type
 				  &CertInfo,                   // Struct info        
 				  &SigAlg,                        // Signature algorithm
@@ -708,7 +708,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			}
 			// create context
 			//////////////////
-			pNewCertificateContext = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING,pbSignedEncodedCertReq,cbEncodedCertReqSize);
+			pNewCertificateContext = CertCreateCertificateContext(X509_ASN_ENCODING,pbSignedEncodedCertReq,cbEncodedCertReqSize);
 			if (!pNewCertificateContext)
 			{
 				dwError = GetLastError();
@@ -1299,7 +1299,7 @@ PCCERT_CONTEXT FindCertificateFromHashOnCard(PCRYPT_DATA_BLOB pCertInfo, PTSTR s
 							{
 								BYTE pbHash[100];
 								DWORD dwHashSize = ARRAYSIZE(pbHash);
-								PCCERT_CONTEXT pTempContext = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING ,Data,DataSize);
+								PCCERT_CONTEXT pTempContext = CertCreateCertificateContext(X509_ASN_ENCODING ,Data,DataSize);
 								if (CryptHashCertificate(NULL, 0, 0, Data, DataSize, (PBYTE) &pbHash, &dwHashSize))
 								{
 									if (memcmp(pbHash, pCertInfo->pbData, pCertInfo->cbData) == 0)
@@ -1432,7 +1432,7 @@ PCCERT_CONTEXT FindCertificateFromHash(PCRYPT_DATA_BLOB pCertInfo)
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptGetUserKey 0x%08x",dwError);
 			__leave;
 		}
-		pCertContext = CertFindCertificateInStore(hCertStore, X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, 0, CERT_FIND_HASH, (PVOID) pCertInfo, NULL);
+		pCertContext = CertFindCertificateInStore(hCertStore, X509_ASN_ENCODING, 0, CERT_FIND_HASH, (PVOID) pCertInfo, NULL);
 		if (pCertContext)
 		{
 			// OK, found

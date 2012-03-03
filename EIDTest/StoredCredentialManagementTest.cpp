@@ -34,7 +34,7 @@ void menu_CREDMGMT_CreateStoredCredential(BOOL fCrypt)
 				if (AskPin(szPin))
 				{
 					CStoredCredentialManager* manager = CStoredCredentialManager::Instance();
-					if (manager->CreateCredential(GetRidFromUsername(szUserName), Context,szPin,0, fCrypt))
+					if (manager->CreateCredential(GetRidFromUsername(szUserName), Context,szPin,0, fCrypt, FALSE))
 					{
 						MessageBox(hMainWnd,_T("Success"),_T("Success"),0);
 					}

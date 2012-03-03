@@ -36,7 +36,10 @@ PCCERT_CONTEXT GetCertificateFromCspInfo(__in PEID_SMARTCARD_CSP_INFO pCspInfo)
 	DWORD DataSize = ARRAYSIZE(Data);
 	LPTSTR szContainerName = pCspInfo->bBuffer + pCspInfo->nContainerNameOffset;
 	LPTSTR szProviderName = pCspInfo->bBuffer + pCspInfo->nCSPNameOffset;
+//	LPTSTR szReaderName = pCspInfo->bBuffer + pCspInfo->nReaderNameOffset;
+//	LPTSTR szCardName = pCspInfo->bBuffer + pCspInfo->nCardNameOffset;
 	HCRYPTKEY phUserKey = NULL;
+	BOOL fResult, fRemoveContainer = FALSE;
 	__try
 	{
 		// check input
@@ -45,12 +48,20 @@ PCCERT_CONTEXT GetCertificateFromCspInfo(__in PEID_SMARTCARD_CSP_INFO pCspInfo)
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Policy denies AT_SIGNATURE Key");
 			__leave;
 		}
-
-		if (!CryptAcquireContext(&hProv,szContainerName,szProviderName,PROV_RSA_FULL, CRYPT_SILENT))
+		fResult = CryptAcquireContext(&hProv,szContainerName,szProviderName,PROV_RSA_FULL, CRYPT_SILENT);
+		if (!fResult)
 		{
 			dwError = GetLastError();
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireContext : 0x%08x container='%s' provider='%s'",GetLastError(),szContainerName,szProviderName);
-			__leave;
+			fRemoveContainer = TRUE;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"PIV fallback");
+			fResult = CryptAcquireContext(&hProv,NULL,szProviderName,PROV_RSA_FULL, CRYPT_SILENT);
+			if (!fResult)
+			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireContext : 0x%08x",GetLastError());
+				__leave;
+			}
 		}
 		if (!CryptGetUserKey(hProv, pCspInfo->KeySpec, &phUserKey))
 		{
@@ -64,7 +75,7 @@ PCCERT_CONTEXT GetCertificateFromCspInfo(__in PEID_SMARTCARD_CSP_INFO pCspInfo)
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptGetKeyParam : 0x%08x",GetLastError());
 			__leave;
 		}
-		pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, Data, DataSize); 
+		pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, Data, DataSize); 
 		if (!pCertContext)
 		{
 			dwError = GetLastError();
@@ -74,7 +85,15 @@ PCCERT_CONTEXT GetCertificateFromCspInfo(__in PEID_SMARTCARD_CSP_INFO pCspInfo)
 		// save reference to CSP (else we can't access private key)
 		CRYPT_KEY_PROV_INFO KeyProvInfo = {0};
 		KeyProvInfo.pwszProvName = szProviderName;
-		KeyProvInfo.pwszContainerName = szContainerName;
+		if (fRemoveContainer)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"PIV fallback 2");
+			KeyProvInfo.pwszContainerName = NULL;
+		}
+		else
+		{
+			KeyProvInfo.pwszContainerName = szContainerName;
+		}
 		KeyProvInfo.dwProvType = PROV_RSA_FULL;
 		KeyProvInfo.dwKeySpec = pCspInfo->KeySpec;
 

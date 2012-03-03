@@ -6,7 +6,15 @@ void menu_Wizard_CommunicateTestOK()
 {
 	if (!CommunicateTestOK())
 	{
-		MessageBoxWin32(GetLastError());
+		DWORD dwError = GetLastError();
+		if (dwError == SPAPI_E_MACHINE_UNAVAILABLE || dwError == ERROR_INTERNAL_ERROR)
+		{
+			MessageBox(NULL,GetAdvancedErrorMessage(),TEXT("Error"),0);
+		}
+		else
+		{
+			MessageBoxWin32(GetLastError());
+		}
 	}
 	else
 	{

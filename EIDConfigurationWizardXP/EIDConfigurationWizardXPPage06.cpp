@@ -66,7 +66,14 @@ INT_PTR CALLBACK	WndProc_06TESTRESULTOK(HWND hWnd, UINT message, WPARAM wParam, 
 						SetCursor(LoadCursor(NULL,MAKEINTRESOURCE(IDC_ARROW)));
 						if (!fReturn)
 						{
-							MessageBoxWin32Ex(GetLastError(), hWnd);
+							if (GetLastError() == SPAPI_E_MACHINE_UNAVAILABLE || GetLastError() == ERROR_INTERNAL_ERROR)
+							{
+								MessageBox(hWnd,GetAdvancedErrorMessage(),TEXT("Error"),0);
+							}
+							else
+							{
+								MessageBoxWin32Ex(GetLastError(), hWnd);
+							}
 						}
 						else
 						{
