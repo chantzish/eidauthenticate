@@ -3,6 +3,7 @@
 
 #include "../EIDCardLibrary/CContainer.h"
 #include "../EIDCardLibrary/CContainerHolderFactory.h"
+#include "../EIDCardLibrary/OnlineDatabase.h"
 #include "CContainerHolderXP.h"
 #include "globalXP.h"
 #include "EIDConfigurationWizardXP.h"
@@ -59,7 +60,14 @@ INT_PTR CALLBACK	WndProc_07TESTRESULTNOTOK(HWND hWnd, UINT message, WPARAM wPara
 						SetCursor(LoadCursor(NULL,MAKEINTRESOURCE(IDC_ARROW)));
 						if (!fReturn)
 						{
-							MessageBoxWin32Ex(GetLastError(), hWnd);
+							if (GetLastError() == SPAPI_E_MACHINE_UNAVAILABLE || GetLastError() == ERROR_INTERNAL_ERROR)
+							{
+								MessageBox(hWnd,GetAdvancedErrorMessage(),TEXT("Error"),0);
+							}
+							else
+							{
+								MessageBoxWin32Ex(GetLastError(), hWnd);
+							}
 						}
 						else
 						{

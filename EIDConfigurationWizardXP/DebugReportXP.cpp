@@ -82,7 +82,7 @@ BOOL TestLogon(HWND hMainWnd)
 			__leave;
 		}
 		manager = CStoredCredentialManager::Instance();
-		if (!manager->CreateCredential(GetRidFromUsername(szUserName), pCertContext,szTestPassword,0, fCrypt))
+		if (!manager->CreateCredential(GetRidFromUsername(szUserName), pCertContext,szTestPassword,0, fCrypt, FALSE))
 		{
 			dwError = GetLastError();
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CreateCredential 0X%08X",GetLastError());

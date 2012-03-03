@@ -64,7 +64,7 @@ BOOL GetTrustErrorMessage(DWORD dwError, PTSTR szName, DWORD dwSize)
 	}
 	else if (dwError & CERT_TRUST_IS_UNTRUSTED_ROOT)
 	{
-		dwResourceId = 3298;
+		dwResourceId = 3296;
 	}
 	else if (dwError & CERT_TRUST_IS_PARTIAL_CHAIN)
 	{
@@ -242,6 +242,7 @@ PTSTR CContainerHolderTest::GetSolveDescription(DWORD dwCheckNum)
 		{
 			switch (_dwTrustError)
 			{
+			case CERT_TRUST_IS_UNTRUSTED_ROOT:
 			case CERT_TRUST_IS_PARTIAL_CHAIN:
 				LoadString(g_hinst,IDS_04TRUSTMAKETRUSTED,szDescription, dwWords);
 				break;
@@ -273,6 +274,7 @@ BOOL CContainerHolderTest::Solve(DWORD dwCheckNum)
 	case CHECK_TRUST:
 		switch (_dwTrustError)
 		{
+		case CERT_TRUST_IS_UNTRUSTED_ROOT:
 		case CERT_TRUST_IS_PARTIAL_CHAIN:
 			{
 				PCCERT_CONTEXT pCertContext = _pContainer->GetCertificate();

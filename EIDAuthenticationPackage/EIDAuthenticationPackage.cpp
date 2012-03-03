@@ -207,7 +207,7 @@ extern "C"
 				pBuffer->szPassword = (PWSTR) pPointer;
 				pPointer = (PBYTE) pBuffer->pbCertificate - (ULONG) ClientBufferBase + (ULONG) pBuffer;
 				pBuffer->pbCertificate = (PBYTE) pPointer;
-				pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, pBuffer->pbCertificate, pBuffer->dwCertificateSize);
+				pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, pBuffer->pbCertificate, pBuffer->dwCertificateSize);
 				if (!pCertContext)
 				{
 					pBuffer->dwError = GetLastError();
@@ -215,7 +215,7 @@ extern "C"
 					break;
 				}
 				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Certificate created in memory");
-				fStatus = CStoredCredentialManager::Instance()->CreateCredential(pBuffer->dwRid,pCertContext,pBuffer->szPassword, 0, pBuffer->fEncryptPassword);
+				fStatus = CStoredCredentialManager::Instance()->CreateCredential(pBuffer->dwRid,pCertContext,pBuffer->szPassword, 0, pBuffer->fEncryptPassword, TRUE);
 				if (!fStatus)
 				{
 					pBuffer->dwError = GetLastError();
@@ -295,7 +295,7 @@ extern "C"
 				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"EIDCMGetStoredCredentialRid");
 				pPointer = (PBYTE) pBuffer->pbCertificate - (ULONG) ClientBufferBase + (ULONG) pBuffer;
 				pBuffer->pbCertificate = (PBYTE) pPointer;
-				pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, pBuffer->pbCertificate, pBuffer->dwCertificateSize);
+				pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, pBuffer->pbCertificate, pBuffer->dwCertificateSize);
 				if (!pCertContext)
 				{
 					pBuffer->dwError = GetLastError();
@@ -786,15 +786,21 @@ extern "C"
 				MyLsaDispatchTable->FreeLsaHeap(MyTokenInformation);
 				switch(dwError)
 				{
-					case 0x80090015:
+					case NTE_BAD_KEYSET_PARAM:	
+					case NTE_BAD_PUBLIC_KEY:
+					case NTE_BAD_KEYSET:
 						return STATUS_SMARTCARD_NO_KEYSET;
 					case SCARD_W_WRONG_CHV:
 						*SubStatus = 0xFFFFFFFF;
 						return STATUS_SMARTCARD_WRONG_PIN;
 					case SCARD_W_CHV_BLOCKED:
 						return STATUS_SMARTCARD_CARD_BLOCKED;
+					case NTE_SILENT_CONTEXT:
+						return STATUS_SMARTCARD_SILENT_CONTEXT;
+					case SCARD_W_CARD_NOT_AUTHENTICATED:
+						return STATUS_SMARTCARD_CARD_NOT_AUTHENTICATED;
 					default:
-						return STATUS_LOGON_FAILURE;
+						return STATUS_SMARTCARD_IO_ERROR;
 				}
 				
 			}
