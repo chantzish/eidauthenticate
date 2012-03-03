@@ -4,7 +4,7 @@
 	<Product Id="$(var.ProductCode)" Codepage="1252" Language="0" 
 			 Manufacturer="My Smart Logon" 
 			 Name="EIDAuthenticate" 
-			 Version="$(var.ProductVersion)" 
+			 Version="!(bind.FileVersion.EIDAuthenticationPackage)" 
 			 UpgradeCode="$(var.UpgradeCode)">
 		<Package Compressed="yes" InstallerVersion="200" 
 				Languages="0" 
@@ -13,8 +13,8 @@
 				InstallScope="perMachine" Platform="$(var.Platform)"
 				Description="$(var.ProductName)"/>
 		<Upgrade Id="$(var.UpgradeCode)">
-			<UpgradeVersion OnlyDetect="yes" Minimum="$(var.ProductVersion)" Property="NEWERVERSIONDETECTED" IncludeMinimum="no" />
-			<UpgradeVersion OnlyDetect="no" Maximum="$(var.ProductVersion)" Property="OLDERVERSIONBEINGUPGRADED" IncludeMaximum="no" />
+			<UpgradeVersion OnlyDetect="yes" Minimum="!(bind.FileVersion.EIDAuthenticationPackage)" Property="NEWERVERSIONDETECTED" IncludeMinimum="no" />
+			<UpgradeVersion OnlyDetect="no" Maximum="!(bind.FileVersion.EIDAuthenticationPackage)" Property="OLDERVERSIONBEINGUPGRADED" IncludeMaximum="no" />
 		</Upgrade>
 
 		<Condition Message="An administrator must approve or install [ProductName].">
@@ -62,69 +62,69 @@
 		
         <Directory Id="TARGETDIR" Name="SourceDir">
             <Directory Id="$(var.PlatformSystemFolder)" SourceName="System Folder">
-				<Component Id="EIDAuthenticationPackage" Guid="d607063e-497c-41a5-a559-1d02be3f6d95">
-					<File Id="EIDAuthenticationPackage" Name="EIDAuthenticationPackage.dll" KeyPath="yes" DiskId="1" Source="$(var.SourceDir)\EIDAuthenticationPackage.dll" Checksum="yes"/>
-          <RegistryKey Root="HKLM" Key="SYSTEM\CurrentControlSet\Control\Lsa">
-            <RegistryValue Action="append" Type="multiString" Name="Security Packages" Value="EIDAuthenticationPackage"/>
-          </RegistryKey>
-				</Component>
+				        <Component Id="EIDAuthenticationPackage" Guid="d607063e-497c-41a5-a559-1d02be3f6d95">
+					        <File Id="EIDAuthenticationPackage" Name="EIDAuthenticationPackage.dll" KeyPath="yes" DiskId="1" Source="$(var.SourceDir)\EIDAuthenticationPackage.dll" Checksum="yes"/>
+                  <RegistryKey Root="HKLM" Key="SYSTEM\CurrentControlSet\Control\Lsa">
+                    <RegistryValue Action="append" Type="multiString" Name="Security Packages" Value="EIDAuthenticationPackage"/>
+                  </RegistryKey>
+				        </Component>
               
-				<Component Id="EIDCredentialProvider" Guid="7df570f5-ca89-4f5c-bcf0-38ef4e38b53e">
-					<File Id="EIDCredentialProvider" Name="EIDCredentialProvider.dll" KeyPath="yes" DiskId="1" Source="$(var.SourceDir)\EIDCredentialProvider.dll" Checksum="yes"/>
-          <RegistryKey Root="HKLM"
-                    Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\Credential Providers\{B4866A0A-DB08-4835-A26F-414B46F3244C}">
-              <RegistryValue Type="string" Value="EidCredentialProvider"/>
-          </RegistryKey>
-          <RegistryKey Root="HKCR" Key="CLSID\{B4866A0A-DB08-4835-A26F-414B46F3244C}">
-            <RegistryValue Type="string" Value="EidCredentialProvider"/>
-            <RegistryKey Key="InprocServer32">
-              <RegistryValue Type="string" Value="EidCredentialProvider.dll"/>
-              <RegistryValue Type="string" Name="ThreadingModel" Value="Apartment"/>
-            </RegistryKey>
-          </RegistryKey>
-        </Component>
+				        <Component Id="EIDCredentialProvider" Guid="7df570f5-ca89-4f5c-bcf0-38ef4e38b53e">
+					        <File Id="EIDCredentialProvider" Name="EIDCredentialProvider.dll" KeyPath="yes" DiskId="1" Source="$(var.SourceDir)\EIDCredentialProvider.dll" Checksum="yes"/>
+                  <RegistryKey Root="HKLM"
+                            Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\Credential Providers\{B4866A0A-DB08-4835-A26F-414B46F3244C}">
+                      <RegistryValue Type="string" Value="EidCredentialProvider"/>
+                  </RegistryKey>
+                  <RegistryKey Root="HKCR" Key="CLSID\{B4866A0A-DB08-4835-A26F-414B46F3244C}">
+                    <RegistryValue Type="string" Value="EidCredentialProvider"/>
+                    <RegistryKey Key="InprocServer32">
+                      <RegistryValue Type="string" Value="EidCredentialProvider.dll"/>
+                      <RegistryValue Type="string" Name="ThreadingModel" Value="Apartment"/>
+                    </RegistryKey>
+                  </RegistryKey>
+                </Component>
               
-				<Component Id="EIDConfigurationWizard" Guid="d3dec3cd-db08-4377-9d4d-2459c457eff5">
-          <File Id="EIDConfigurationWizard" Name="EIDConfigurationWizard.exe" KeyPath="yes" DiskId="1" Source="$(var.SourceDir)\EIDConfigurationWizard.exe" Checksum="yes"/>
-          <File Id="EIDConfigurationWizardElevated" Name="EIDConfigurationWizardElevated.exe" DiskId="1" Source="$(var.SourceDir)\EIDConfigurationWizardElevated.exe" Checksum="yes"/>
-          <RegistryKey Root="HKLM"
-                  Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\ControlPanel\NameSpace\{F5D846B4-14B0-11DE-B23C-27A355D89593}">
-            <RegistryValue Type="string" Value="EIDConfigurationWizard"/>
-          </RegistryKey>
-          <RegistryKey Root="HKCR" Key="CLSID\{F5D846B4-14B0-11DE-B23C-27A355D89593}">
-            <RegistryValue Type="string" Value="EIDConfigurationWizard"/>
-            <RegistryValue Type="string" Name="System.ApplicationName" Value="EID.EIDConfigurationWizard"/>
-            <RegistryValue Type="string" Name="System.ControlPanel.Category" Value="10"/>
-            <RegistryValue Type="string" Name="LocalizedString" Value="Smart Card Logon"/>
-            <RegistryValue Type="string" Name="InfoTip" Value="Smart Card Logon"/>
-            <RegistryValue Type="expandable" Name="System.Software.TasksFileUrl" Value="%SystemRoot%\system32\EIDConfigurationWizard.exe,-68"/>
-            <RegistryValue Type="expandable" Key="DefaultIcon" Value="%SystemRoot%\system32\imageres.dll,-58"/>
-            <RegistryValue Type="expandable" Key="Shell\Open\Command" Value="%SystemRoot%\system32\EIDConfigurationWizard.exe"/>
-          </RegistryKey>   
-        </Component>
+				        <Component Id="EIDConfigurationWizard" Guid="d3dec3cd-db08-4377-9d4d-2459c457eff5">
+                  <File Id="EIDConfigurationWizard" Name="EIDConfigurationWizard.exe" KeyPath="yes" DiskId="1" Source="$(var.SourceDir)\EIDConfigurationWizard.exe" Checksum="yes"/>
+                  <File Id="EIDConfigurationWizardElevated" Name="EIDConfigurationWizardElevated.exe" DiskId="1" Source="$(var.SourceDir)\EIDConfigurationWizardElevated.exe" Checksum="yes"/>
+                  <RegistryKey Root="HKLM"
+                          Key="SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\ControlPanel\NameSpace\{F5D846B4-14B0-11DE-B23C-27A355D89593}">
+                    <RegistryValue Type="string" Value="EIDConfigurationWizard"/>
+                  </RegistryKey>
+                  <RegistryKey Root="HKCR" Key="CLSID\{F5D846B4-14B0-11DE-B23C-27A355D89593}">
+                    <RegistryValue Type="string" Value="EIDConfigurationWizard"/>
+                    <RegistryValue Type="string" Name="System.ApplicationName" Value="EID.EIDConfigurationWizard"/>
+                    <RegistryValue Type="string" Name="System.ControlPanel.Category" Value="10"/>
+                    <RegistryValue Type="string" Name="LocalizedString" Value="Smart Card Logon"/>
+                    <RegistryValue Type="string" Name="InfoTip" Value="Smart Card Logon"/>
+                    <RegistryValue Type="expandable" Name="System.Software.TasksFileUrl" Value="%SystemRoot%\system32\EIDConfigurationWizard.exe,-68"/>
+                    <RegistryValue Type="expandable" Key="DefaultIcon" Value="%SystemRoot%\system32\imageres.dll,-58"/>
+                    <RegistryValue Type="expandable" Key="Shell\Open\Command" Value="%SystemRoot%\system32\EIDConfigurationWizard.exe"/>
+                  </RegistryKey>   
+                </Component>
               
-				<Component Id="EIDPasswordChangeNotification" Guid="8a8368f9-c785-427f-906c-d17ba5dbdb52">
-          <File Id="EIDPasswordChangeNotification" Name="EIDPasswordChangeNotification.dll" KeyPath="yes" DiskId="1" Source="$(var.SourceDir)\EIDPasswordChangeNotification.dll" Checksum="yes"/>
-          <RegistryKey Root="HKLM" Key="SYSTEM\CurrentControlSet\Control\Lsa">
-            <RegistryValue Action="append" Type="multiString" Name="Notification Packages" Value="EIDPasswordChangeNotification"/>
-          </RegistryKey>
-        </Component>
-              
-				<?if Configuration != Release?>
-					<Component Id="EIDAuthenticationPackageDebug" Guid="aa8954fd-8930-496a-b152-3690b43ddad6">
-						<File Id="EIDAuthenticationPackageDebug" Name="EIDAuthenticationPackage.pdb" KeyPath="yes" DiskId="1" Source="$(var.SourceDir)\EIDAuthenticationPackage.pdb" Checksum="yes"/>
-					</Component>
-					<Component Id="EIDCredentialProviderDebug" Guid="414182f5-e190-4b4d-b767-23ee863daf81">
-						<File Id="EIDCredentialProviderDebug" Name="EIDCredentialProvider.pdb" KeyPath="yes" DiskId="1" Source="$(var.SourceDir)\EIDCredentialProvider.pdb" Checksum="yes"/>
-					</Component>
-					<Component Id="EIDConfigurationWizardDebug" Guid="707dac8a-9487-4a61-a364-05c30be64747">
-						<File Id="EIDConfigurationWizardDebug" Name="EIDConfigurationWizard.pdb" KeyPath="yes" DiskId="1" Source="$(var.SourceDir)\EIDConfigurationWizard.pdb" Checksum="yes"/>
-            <File Id="EIDConfigurationWizardElevatedDebug" Name="EIDConfigurationWizardElevated.pdb" DiskId="1" Source="$(var.SourceDir)\EIDConfigurationWizardElevated.pdb" Checksum="yes"/>
-					</Component>
-					<Component Id="EIDPasswordChangeNotificationDebug" Guid="4665d665-2c5a-4300-9661-4478b9e96f42">
-						<File Id="EIDPasswordChangeNotificationDebug" Name="EIDPasswordChangeNotification.pdb" KeyPath="yes" DiskId="1" Source="$(var.SourceDir)\EIDPasswordChangeNotification.pdb" Checksum="yes"/>
-					</Component>
-				<?endif?>
+				        <Component Id="EIDPasswordChangeNotification" Guid="8a8368f9-c785-427f-906c-d17ba5dbdb52">
+                  <File Id="EIDPasswordChangeNotification" Name="EIDPasswordChangeNotification.dll" KeyPath="yes" DiskId="1" Source="$(var.SourceDir)\EIDPasswordChangeNotification.dll" Checksum="yes"/>
+                  <RegistryKey Root="HKLM" Key="SYSTEM\CurrentControlSet\Control\Lsa">
+                    <RegistryValue Action="append" Type="multiString" Name="Notification Packages" Value="EIDPasswordChangeNotification"/>
+                  </RegistryKey>
+                </Component>
+
+               <?if $(var.Configuration) = "Debug"?>
+					        <Component Id="EIDAuthenticationPackageDebug" Guid="aa8954fd-8930-496a-b152-3690b43ddad6">
+						        <File Id="EIDAuthenticationPackageDebug" Name="EIDAuthenticationPackage.pdb" KeyPath="yes" DiskId="1" Source="$(var.SourceDir)\EIDAuthenticationPackage.pdb" Checksum="yes"/>
+					        </Component>
+					        <Component Id="EIDCredentialProviderDebug" Guid="414182f5-e190-4b4d-b767-23ee863daf81">
+						        <File Id="EIDCredentialProviderDebug" Name="EIDCredentialProvider.pdb" KeyPath="yes" DiskId="1" Source="$(var.SourceDir)\EIDCredentialProvider.pdb" Checksum="yes"/>
+					        </Component>
+					        <Component Id="EIDConfigurationWizardDebug" Guid="707dac8a-9487-4a61-a364-05c30be64747">
+						        <File Id="EIDConfigurationWizardDebug" Name="EIDConfigurationWizard.pdb" KeyPath="yes" DiskId="1" Source="$(var.SourceDir)\EIDConfigurationWizard.pdb" Checksum="yes"/>
+                    <File Id="EIDConfigurationWizardElevatedDebug" Name="EIDConfigurationWizardElevated.pdb" DiskId="1" Source="$(var.SourceDir)\EIDConfigurationWizardElevated.pdb" Checksum="yes"/>
+					        </Component>
+					        <Component Id="EIDPasswordChangeNotificationDebug" Guid="4665d665-2c5a-4300-9661-4478b9e96f42">
+						        <File Id="EIDPasswordChangeNotificationDebug" Name="EIDPasswordChangeNotification.pdb" KeyPath="yes" DiskId="1" Source="$(var.SourceDir)\EIDPasswordChangeNotification.pdb" Checksum="yes"/>
+					        </Component>
+				        <?endif?>
             </Directory>
         </Directory>
         <Feature Id="DefaultFeature" ConfigurableDirectory="TARGETDIR" Level="1">
@@ -132,7 +132,7 @@
 			<ComponentRef Id="EIDCredentialProvider" />
 			<ComponentRef Id="EIDConfigurationWizard" />
 			<ComponentRef Id="EIDPasswordChangeNotification" />
-			<?if Configuration != Release?>
+      <?if $(var.Configuration) = "Debug"?>
 				<ComponentRef Id="EIDAuthenticationPackageDebug" />
 				<ComponentRef Id="EIDCredentialProviderDebug" />
 				<ComponentRef Id="EIDConfigurationWizardDebug" />

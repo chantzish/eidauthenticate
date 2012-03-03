@@ -4,7 +4,7 @@
   <Product Id="$(var.ProductCode)" Codepage="1252" Language="0"
          Manufacturer="My Smart Logon"
          Name="EIDAuthenticate"
-         Version="$(var.ProductVersion)"
+         Version="!(bind.FileVersion.EIDAuthenticationPackage)"
          UpgradeCode="$(var.UpgradeCode)">
     <Package Compressed="yes" InstallerVersion="200"
 				Languages="0"
@@ -13,8 +13,8 @@
 				InstallScope="perMachine" Platform="$(var.Platform)"
 				Description="$(var.ProductName)"/>
     <Upgrade Id="$(var.UpgradeCode)">
-      <UpgradeVersion OnlyDetect="yes" Minimum="$(var.ProductVersion)" Property="NEWERVERSIONDETECTED" IncludeMinimum="no" />
-      <UpgradeVersion OnlyDetect="no" Maximum="$(var.ProductVersion)" Property="OLDERVERSIONBEINGUPGRADED" IncludeMaximum="no" />
+      <UpgradeVersion OnlyDetect="yes" Minimum="!(bind.FileVersion.EIDAuthenticationPackage)" Property="NEWERVERSIONDETECTED" IncludeMinimum="no" />
+      <UpgradeVersion OnlyDetect="no" Maximum="!(bind.FileVersion.EIDAuthenticationPackage)" Property="OLDERVERSIONBEINGUPGRADED" IncludeMaximum="no" />
     </Upgrade>
 
     <Condition Message="An administrator must approve or install [ProductName].">
@@ -110,8 +110,8 @@
             <RegistryValue Type="string" Name="Image Path" Value="rsaenh.dll" KeyPath="yes"/>
           </RegistryKey>
         </Component>
-        
-        <?if Configuration != Release?>
+
+        <?if $(var.Configuration) = "Debug"?>
         <Component Id="EIDAuthenticationPackageDebug" Guid="aa8954fd-8930-496a-b152-3690b43ddad6">
           <File Id="EIDAuthenticationPackageDebug" Name="EIDAuthenticationPackage.pdb" KeyPath="yes" DiskId="1" Source="$(var.SourceDir)\EIDAuthenticationPackage.pdb" Checksum="yes"/>
         </Component>
@@ -134,11 +134,11 @@
       <ComponentRef Id="EIDGina" />
       <ComponentRef Id="EnableAES" />
       <ComponentRef Id="DisableCAD" />
-      <?if Configuration != Release?>
-      <ComponentRef Id="EIDAuthenticationPackageDebug" />
-      <ComponentRef Id="EIDPasswordChangeNotificationDebug" />
-      <ComponentRef Id="EIDGinaDebug" />
-      <ComponentRef Id="EIDConfigurationWizardXPDebug" />
+      <?if $(var.Configuration) = "Debug"?>
+        <ComponentRef Id="EIDAuthenticationPackageDebug" />
+        <ComponentRef Id="EIDPasswordChangeNotificationDebug" />
+        <ComponentRef Id="EIDGinaDebug" />
+        <ComponentRef Id="EIDConfigurationWizardXPDebug" />
       <?endif?>
     </Feature>
     <Media Id="1" Cabinet="eidauthenticate.cab" EmbedCab="yes" />
