@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Include>
-	<?define ProductVersion="0.5.0.0" ?>
-	<?define ProductCode="102850c2-b430-4004-b20a-13242179d623" ?>
+  <!-- <?define ProductVersion="0.5.0.0" ?>-->
+  <?define ProductCode="102850c2-b430-4004-b20a-13242179d623" ?>
 	<?define UpgradeCode="390C3A94-6CE6-45EB-850D-68384A483603" ?>
 	<!-- Product name as you want it to appear in Add/Remove Programs-->
 	<?if $(var.Platform) = x64 ?>
