@@ -532,6 +532,7 @@ BOOL CheckPINandGetRemainingAttempts(PTSTR szReader, PTSTR szCard, PTSTR szPin, 
 	{
 		if (pdwAttempts == NULL)
 		{
+			dwError = ERROR_INVALID_PARAMETER;
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pdwAttempts = NULL");
 			__leave;
 		}
@@ -580,15 +581,31 @@ BOOL CheckPINandGetRemainingAttempts(PTSTR szReader, PTSTR szCard, PTSTR szPin, 
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"MgScCardAuthenticatePin 0x%08X *pdwAttempts=%d",lReturn, *pdwAttempts);
 			__leave;
 		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"cardmodule authentication successfull");
 		fReturn = TRUE;
 	}
 	__finally
 	{
+		BOOL fDeAuthenticated = FALSE;
 		if (pContext.pvContext)
+		{
+			if (MgScCardDeauthenticate(&pContext, wszCARD_USER_USER, 0) == ERROR_SUCCESS)
+			{
+				fDeAuthenticated = TRUE;
+			}
 			MgScCardDeleteContext(&pContext);
+		}
 		if (hSCardHandle)
 		{
-			SCardEndTransaction(hSCardHandle,SCARD_LEAVE_CARD);
+			if (!fDeAuthenticated)
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Reset Card");
+				SCardEndTransaction(hSCardHandle,SCARD_RESET_CARD);
+			}
+			else
+			{
+				SCardEndTransaction(hSCardHandle,SCARD_LEAVE_CARD);
+			}
 			SCardDisconnect(hSCardHandle,0);
 		}
 		if (hSCardContext)
