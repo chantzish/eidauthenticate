@@ -952,7 +952,13 @@ BOOL CStoredCredentialManager::GetResponseFromCryptedChallenge(__in PBYTE pChall
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CryptAcquireContext", GetLastError());
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE, L"Keyspec %S container %s provider %s", (pProvInfo->dwKeySpec == AT_SIGNATURE ?"AT_SIGNATURE":"AT_KEYEXCHANGE"),
 					pProvInfo->pwszContainerName, pProvInfo->pwszProvName);
-			__leave;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"PIV fallback");
+			if (!CryptAcquireContext(&hProv, NULL, pProvInfo->pwszProvName, pProvInfo->dwProvType, CRYPT_SILENT))
+			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CryptAcquireContext", GetLastError());
+				__leave;
+			}
 		}
 		/*if (!CryptAcquireCertificatePrivateKey(pCertContext,CRYPT_ACQUIRE_SILENT_FLAG,NULL,&hProv,&dwKeySpec,&fCallerFreeProv))
 		{

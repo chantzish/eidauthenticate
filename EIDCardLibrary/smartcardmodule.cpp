@@ -626,6 +626,10 @@ NTSTATUS CheckPINandGetRemainingAttemptsIfPossible(PEID_SMARTCARD_CSP_INFO pCspI
 	{
 		return 0;
 	}
+	if (_tcscmp(TEXT("Identity Device (NIST SP 800-73 [PIV])"), szCardName) == 0)
+	{
+		return 0;
+	}
 	EIDImpersonate();
 	BOOL fReturn = CheckPINandGetRemainingAttempts(szReaderName, szCardName, szPin, &dwAttempts);
 	DWORD dwError = GetLastError();

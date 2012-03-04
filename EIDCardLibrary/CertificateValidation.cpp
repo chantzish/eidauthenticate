@@ -39,7 +39,7 @@ PCCERT_CONTEXT GetCertificateFromCspInfo(__in PEID_SMARTCARD_CSP_INFO pCspInfo)
 //	LPTSTR szReaderName = pCspInfo->bBuffer + pCspInfo->nReaderNameOffset;
 //	LPTSTR szCardName = pCspInfo->bBuffer + pCspInfo->nCardNameOffset;
 	HCRYPTKEY phUserKey = NULL;
-	BOOL fResult, fRemoveContainer = FALSE;
+	BOOL fResult;
 	__try
 	{
 		// check input
@@ -53,7 +53,6 @@ PCCERT_CONTEXT GetCertificateFromCspInfo(__in PEID_SMARTCARD_CSP_INFO pCspInfo)
 		{
 			dwError = GetLastError();
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireContext : 0x%08x container='%s' provider='%s'",GetLastError(),szContainerName,szProviderName);
-			fRemoveContainer = TRUE;
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"PIV fallback");
 			fResult = CryptAcquireContext(&hProv,NULL,szProviderName,PROV_RSA_FULL, CRYPT_SILENT);
 			if (!fResult)
@@ -85,15 +84,7 @@ PCCERT_CONTEXT GetCertificateFromCspInfo(__in PEID_SMARTCARD_CSP_INFO pCspInfo)
 		// save reference to CSP (else we can't access private key)
 		CRYPT_KEY_PROV_INFO KeyProvInfo = {0};
 		KeyProvInfo.pwszProvName = szProviderName;
-		if (fRemoveContainer)
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"PIV fallback 2");
-			KeyProvInfo.pwszContainerName = NULL;
-		}
-		else
-		{
-			KeyProvInfo.pwszContainerName = szContainerName;
-		}
+		KeyProvInfo.pwszContainerName = szContainerName;
 		KeyProvInfo.dwProvType = PROV_RSA_FULL;
 		KeyProvInfo.dwKeySpec = pCspInfo->KeySpec;
 
