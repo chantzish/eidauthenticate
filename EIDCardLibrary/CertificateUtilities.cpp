@@ -940,67 +940,159 @@ BOOL ClearCard(PTSTR szReaderName, PTSTR szCardName)
 	//delete
 	BOOL bStatus = FALSE;
 	WCHAR szProviderName[1024];
-	DWORD dwProviderNameLen = 1024;
+	DWORD dwProviderNameLen = ARRAYSIZE(szProviderName);
 	CHAR szContainerName[1024];
-	DWORD dwContainerNameLen = 1024;
+	DWORD dwContainerNameLen =  ARRAYSIZE(szContainerName);
 	DWORD dwFlags;
-	HCRYPTPROV HMainCryptProv,hProv;
+	HCRYPTPROV HMainCryptProv = NULL,hProv = NULL;
 	DWORD dwError = 0;
-	if (!SchGetProviderNameFromCardName(szCardName, szProviderName, &dwProviderNameLen))
+	BOOL fReturn = FALSE;
+	LPTSTR szMainContainerName = NULL;
+	__try
 	{
-		return FALSE;
-	}
-
-	size_t ulNameLen = _tcslen(szReaderName);
-	LPTSTR szMainContainerName = (LPTSTR) EIDAlloc((DWORD)(ulNameLen + 6) * sizeof(TCHAR));
-	if (!szMainContainerName)
-	{
-		return FALSE;
-	}
-	_stprintf_s(szMainContainerName,(ulNameLen + 6), _T("\\\\.\\%s\\"), szReaderName);
-
-	bStatus = CryptAcquireContext(&HMainCryptProv,
-				szMainContainerName,
-				szProviderName,
-				PROV_RSA_FULL,
-				0);
-	if (!bStatus)
-	{
-		EIDFree(szMainContainerName);
-		return FALSE;
-	}
-	dwFlags = CRYPT_FIRST;
-	/* Enumerate all the containers */
-	while (CryptGetProvParam(HMainCryptProv,
-				PP_ENUMCONTAINERS,
-				(LPBYTE) szContainerName,
-				&dwContainerNameLen,
-				dwFlags)
-			)
-	{
-		// convert the container name to unicode
-		int wLen = MultiByteToWideChar(CP_ACP, 0, szContainerName, -1, NULL, 0);
-		LPWSTR szWideContainerName = (LPWSTR) EIDAlloc(wLen * sizeof(WCHAR));
-		MultiByteToWideChar(CP_ACP, 0, szContainerName, -1, szWideContainerName, wLen);
-
-		// Acquire a context on the current container
-		if (!CryptAcquireContext(&hProv,
-				szWideContainerName,
-				szProviderName,
-				PROV_RSA_FULL,
-				CRYPT_DELETEKEYSET))
+		if (!SchGetProviderNameFromCardName(szCardName, szProviderName, &dwProviderNameLen))
 		{
 			dwError = GetLastError();
-			break;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SchGetProviderNameFromCardName 0x%08x",dwError);
+			__leave;
 		}
-		dwFlags = CRYPT_NEXT;
-		dwContainerNameLen = 1024;
+
+		size_t ulNameLen = _tcslen(szReaderName);
+		szMainContainerName = (LPTSTR) EIDAlloc((DWORD)(ulNameLen + 6) * sizeof(TCHAR));
+		if (!szMainContainerName)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EIDAlloc 0x%08x",dwError);
+			__leave;
+		}
+		_stprintf_s(szMainContainerName,(ulNameLen + 6), _T("\\\\.\\%s\\"), szReaderName);
+
+		bStatus = CryptAcquireContext(&HMainCryptProv,
+					szMainContainerName,
+					szProviderName,
+					PROV_RSA_FULL,
+					CRYPT_VERIFYCONTEXT);
+		if (!bStatus)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireContext 0x%08x",dwError);
+			__leave;
+		}
+		dwFlags = CRYPT_FIRST;
+		/* Enumerate all the containers */
+		while (CryptGetProvParam(HMainCryptProv,
+					PP_ENUMCONTAINERS,
+					(LPBYTE) szContainerName,
+					&dwContainerNameLen,
+					dwFlags)
+				)
+		{
+			// convert the container name to unicode
+			int wLen = MultiByteToWideChar(CP_ACP, 0, szContainerName, -1, NULL, 0);
+			LPWSTR szWideContainerName = (LPWSTR) EIDAlloc(wLen * sizeof(WCHAR));
+			MultiByteToWideChar(CP_ACP, 0, szContainerName, -1, szWideContainerName, wLen);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Deleting %s with %s", szWideContainerName, szProviderName);
+
+			// Acquire a context on the current container
+			if (!CryptAcquireContext(&hProv,
+					szWideContainerName,
+					szProviderName,
+					PROV_RSA_FULL,
+					CRYPT_DELETEKEYSET))
+			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CRYPT_DELETEKEYSET 0x%08x",dwError);
+				__leave;
+			}
+			dwFlags = CRYPT_NEXT;
+			dwContainerNameLen = ARRAYSIZE(szContainerName);
+		}
+		fReturn = TRUE;
 	}
-	CryptReleaseContext(HMainCryptProv,0);
-	EIDFree(szMainContainerName);
+	__finally
+	{
+		if (szMainContainerName) EIDFree(szMainContainerName);
+		if (HMainCryptProv) CryptReleaseContext(HMainCryptProv,0);
+	}
 	SetLastError(dwError);
-	return TRUE;
+	return fReturn;
 }
+
+// see http://msdn.microsoft.com/en-us/library/windows/desktop/aa387401%28v=vs.85%29.aspx
+typedef struct _RSAPRIVATEKEY {
+	BLOBHEADER blobheader;
+	RSAPUBKEY rsapubkey;
+#ifdef _DEBUG
+#define BITLEN_TO_CHECK 2048
+	BYTE modulus[BITLEN_TO_CHECK/8];
+	BYTE prime1[BITLEN_TO_CHECK/16];
+	BYTE prime2[BITLEN_TO_CHECK/16];
+	BYTE exponent1[BITLEN_TO_CHECK/16];
+	BYTE exponent2[BITLEN_TO_CHECK/16];
+	BYTE coefficient[BITLEN_TO_CHECK/16];
+	BYTE privateExponent[BITLEN_TO_CHECK/8];
+#endif
+} RSAPRIVKEY, *PRSAPRIVKEY;
+
+
+BOOL CheckRSAKeyLength(PTSTR szContainerName, PTSTR szProviderName, RSAPRIVKEY* pbData)
+{
+	BOOL fReturn = FALSE;
+	HCRYPTPROV hProv = NULL;
+	DWORD dwError = 0;
+	DWORD dwFlags = CRYPT_FIRST;
+	PROV_ENUMALGS_EX alg;
+	DWORD dwSize;
+	__try
+	{
+		if (pbData->blobheader.bType != PRIVATEKEYBLOB)
+		{
+			dwError = ERROR_INVALID_PARAMETER;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"ERROR_INVALID_PARAMETER");
+			__leave;
+		}
+		if (! CryptAcquireContext(&hProv,szContainerName, szProviderName, PROV_RSA_FULL,CRYPT_VERIFYCONTEXT))
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireContext 0x%08x",dwError);
+			__leave;
+		}
+		dwSize = sizeof(PROV_ENUMALGS_EX);
+		while (CryptGetProvParam(hProv,
+				PP_ENUMALGS_EX,
+				(LPBYTE) &alg,
+				&dwSize,
+				dwFlags)
+			)
+		{
+			if (alg.aiAlgid == pbData->blobheader.aiKeyAlg)
+			{
+				if (pbData->rsapubkey.bitlen >= alg.dwMinLen && pbData->rsapubkey.bitlen <= alg.dwMaxLen)
+				{
+					fReturn = TRUE;
+				}
+				else
+				{
+					dwError = (DWORD) NTE_BAD_LEN;
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Invalid bitlen should be %d < %d < %d",alg.dwMinLen,pbData->rsapubkey.bitlen, alg.dwMaxLen);
+				}
+				__leave;
+			}
+			dwSize = sizeof(PROV_ENUMALGS_EX);
+			dwFlags = 0;
+		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"no alg data found");
+		fReturn = TRUE;
+	}
+	__finally
+	{
+		if (hProv)
+			CryptReleaseContext(hProv, 0);
+	}
+	SetLastError(dwError);
+	return fReturn;
+}
+
 
 BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderName, PTSTR szCardname)
 {
@@ -1017,12 +1109,13 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 	BOOL fFreeProv;
 	DWORD dwKeySpec = AT_KEYEXCHANGE;
 	HCRYPTKEY hKey = NULL, hCardKey = NULL;
-	PBYTE pbData = NULL;
+	PRSAPRIVKEY pbData = NULL;
 	DWORD dwSize = 0;
 	DWORD dwError = 0;
 	BOOL fSetBackMSBaseSCCryptoFlagImport = FALSE;
 	__try
 	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Importing %s", szFileName);
 		hFile = CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL);
 		if (hFile == INVALID_HANDLE_VALUE)
 		{
@@ -1078,6 +1171,7 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 		while( pCertContext )
 		{
 			dwSize = 0;
+			// this check allows to find which certificate has a private key
 			if (CertGetCertificateContextProperty(pCertContext,CERT_KEY_PROV_INFO_PROP_ID, NULL, &dwSize))
 			{	
 				if (! CryptAcquireCertificatePrivateKey(pCertContext, 0, NULL, &hProv, &dwKeySpec, &fFreeProv))
@@ -1092,7 +1186,7 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 					HKEY hRegKey;
 					DWORD dwKeyData = 0;
 					dwSize = sizeof(DWORD);
-					if (RegOpenKey(HKEY_CLASSES_ROOT, TEXT("SOFTWARE\\Microsoft\\Cryptography\\Defaults\\Provider\\Microsoft Base Smart Card Crypto Provider"), &hRegKey))
+					if (!RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\Cryptography\\Defaults\\Provider\\Microsoft Base Smart Card Crypto Provider"),NULL, KEY_READ|KEY_QUERY_VALUE|KEY_WRITE, &hRegKey))
 					{
 						if (dwKeySpec == AT_SIGNATURE)
 						{
@@ -1106,6 +1200,7 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 						{
 							fSetBackMSBaseSCCryptoFlagImport = TRUE;
 							dwKeyData = 1;
+							dwSize = sizeof(DWORD);
 							if (dwKeySpec == AT_SIGNATURE)
 							{
 								RegSetValueEx(hRegKey,TEXT("AllowPrivateSignatureKeyImport"),NULL, REG_DWORD,(PBYTE)&dwKeyData,dwSize);
@@ -1125,23 +1220,32 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptGetUserKey 0x%08x",dwError);
 					__leave;
 				}
+				dwSize = 0;
 				if (!CryptExportKey(hKey, NULL, PRIVATEKEYBLOB, 0, NULL, &dwSize))
 				{
 					dwError = GetLastError();
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptExportKey 0x%08x",dwError);
 					__leave;
 				}
-				pbData = (PBYTE) EIDAlloc(dwSize);
+				pbData = (PRSAPRIVKEY) EIDAlloc(dwSize);
 				if (!pbData)
 				{
 					dwError = GetLastError();
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"EIDAlloc 0x%08x",dwError);
 					__leave;
 				}
-				if (!CryptExportKey(hKey, NULL, PRIVATEKEYBLOB, 0, pbData, &dwSize))
+				memset(pbData, 0, dwSize);
+				if (!CryptExportKey(hKey, NULL, PRIVATEKEYBLOB, 0, (PBYTE) pbData, &dwSize))
 				{
 					dwError = GetLastError();
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptExportKey 0x%08x",dwError);
+					__leave;
+				}
+				// check key length
+				if (!CheckRSAKeyLength(szContainerName, szProviderName, pbData))
+				{
+					dwError = GetLastError();
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CheckRSAKeyLength 0x%08x",dwError);
 					__leave;
 				}
 				if (! CryptAcquireContext(&hCardProv,szContainerName, szProviderName, PROV_RSA_FULL,CRYPT_NEWKEYSET))
@@ -1150,7 +1254,7 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireContext 0x%08x",dwError);
 					__leave;
 				}
-				if (!CryptImportKey(hCardProv, pbData, dwSize, NULL, 0, &hCardKey))
+				if (!CryptImportKey(hCardProv, (PBYTE) pbData, dwSize, NULL, 0, &hCardKey))
 				{
 					dwError = GetLastError();
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptImportKey 0x%08x",dwError);
@@ -1197,7 +1301,7 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 			HKEY hRegKey;
 			DWORD dwKeyData = 0;
 			dwSize = sizeof(DWORD);
-			if (RegOpenKey(HKEY_CLASSES_ROOT, TEXT("SOFTWARE\\Microsoft\\Cryptography\\Defaults\\Provider\\Microsoft Base Smart Card Crypto Provider"), &hRegKey))
+			if (!RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\Cryptography\\Defaults\\Provider\\Microsoft Base Smart Card Crypto Provider"),0,KEY_READ|KEY_QUERY_VALUE|KEY_WRITE, &hRegKey))
 			{
 				if (dwKeySpec == AT_SIGNATURE)
 				{
