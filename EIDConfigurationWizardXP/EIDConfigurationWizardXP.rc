@@ -270,14 +270,14 @@ STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_VISIBLE | WS_CAPT
 FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
     LTEXT           "Additional tasks :",IDC_STATIC,13,107,204,13
-    CONTROL         "<a id=""idUpdate"">Update the status of this card as ""Working"" on the internet site</a>",IDC_06UPDATEDATABASE,
-                    "SysLink",WS_TABSTOP,21,120,216,11
+    CONTROL         "<a id=""idUpdate"">Update automatically the status of this card as ""Working"" on the internet site</a>",IDC_06UPDATEDATABASE,
+                    "SysLink",WS_TABSTOP,21,120,216,19
     CONTROL         "<a id=""idRemove"">Turn the removal policy on or off</a>",IDC_06REMOVALPOLICY,
-                    "SysLink",WS_TABSTOP,21,153,216,11
+                    "SysLink",WS_TABSTOP,21,162,216,11
     CONTROL         "<a id=""idForce"">Turn the force smart card policy on or off</a>",IDC_06FORCEPOLICY,
-                    "SysLink",WS_TABSTOP,21,136,216,11
+                    "SysLink",WS_TABSTOP,21,145,216,11
     LTEXT           "The test was successfull. You can now use your smartcard to logon.",IDC_STC7,39,18,225,25
-    ICON            "",IDC_06SHIELD,8,12,21,20
+    ICON            "",IDC_06SHIELD,8,12,20,20
 END
 
 IDD_07TESTRESULTNOTOK DIALOGEX 0, 0, 273, 209

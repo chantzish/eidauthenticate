@@ -180,13 +180,13 @@ FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
     LTEXT           "Тестовый запуск прошел успешно. Теперь Вы можете использовать Вашу смарт-карту для входа в систему.",IDC_STC7,41,14,226,24
     LTEXT           "Additional tasks :",IDC_STATIC,13,107,204,13
-    CONTROL         "<a id=""idUpdate"">Update the status of this card as ""Working"" on the internet site</a>",IDC_06UPDATEDATABASE,
-                    "SysLink",WS_TABSTOP,21,120,216,11
     CONTROL         "<a id=""idRemove"">Включить/выключить политику извлечения смарт-карты</a>",IDC_06REMOVALPOLICY,
-                    "SysLink",WS_TABSTOP,21,153,216,11
+                    "SysLink",WS_TABSTOP,21,159,216,11
     CONTROL         "<a id=""idForce"">Включить/выключит групповые политики смарт-карт</a>",IDC_06FORCEPOLICY,
-                    "SysLink",WS_TABSTOP,21,136,216,11
+                    "SysLink",WS_TABSTOP,21,142,216,11
     ICON            "",IDC_06SHIELD,8,12,20,20
+    CONTROL         "<a id=""idUpdate"">Update automatically the status of this card as ""Working"" on the internet site</a>",IDC_06UPDATEDATABASE,
+                    "SysLink",WS_TABSTOP,21,120,216,19
 END
 
 IDD_07TESTRESULTNOTOK DIALOGEX 0, 0, 273, 209

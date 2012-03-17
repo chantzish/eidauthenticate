@@ -127,6 +127,8 @@ void EIDCardLibraryTracingUnRegister() {
 	EventUnregister(hPub);
 }
 
+// see http://www.codeproject.com/Articles/16598/Get-Your-DLL-s-Path-Name for the "__ImageBase"
+EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 
 void EIDCardLibraryTraceEx(LPCSTR szFile, DWORD dwLine, LPCSTR szFunction, UCHAR dwLevel, PCWSTR szFormat,...) {
 	_ASSERTE( _CrtCheckMemory( ) );
@@ -139,7 +141,10 @@ void EIDCardLibraryTraceEx(LPCSTR szFile, DWORD dwLine, LPCSTR szFunction, UCHAR
 	int ret;
 	va_list ap;
 
-	if (bFirst) EIDCardLibraryTracingRegister();
+	if (bFirst) 
+	{
+		EIDCardLibraryTracingRegister();
+	}
 
 	va_start (ap, szFormat);
 	ret = _vsnwprintf_s (Buffer, 256, 256, szFormat, ap);

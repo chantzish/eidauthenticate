@@ -226,7 +226,7 @@ BOOL UnRegisterTheSecurityPackage()
 	DWORD dwError = 0;
 	__try
 	{
-		
+		// maybe use lsacallpackage to run UnloadPackage inside the SSP
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Starting...");
 		Status = EnumerateSecurityPackages(&dwNbPackage, &pPackageInfo);
 		if (Status != SEC_E_OK)

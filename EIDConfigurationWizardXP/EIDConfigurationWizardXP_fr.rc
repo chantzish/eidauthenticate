@@ -122,13 +122,13 @@ FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
     LTEXT           "Le test s'est déroulé avec succès. Vous pouvez désormais utiliser votre carte à puce pour ouvrir une session.",IDC_STC7,41,14,225,32
     LTEXT           "Tâches supplémentaires :",IDC_STATIC,13,107,204,13
-    CONTROL         "<a id=""idUpdate"">Envoyer un rapport selon lequel la carte fonctionne correctement</a>",IDC_06UPDATEDATABASE,
-                    "SysLink",WS_TABSTOP,21,120,216,11
-    CONTROL         "<a id=""idRemove"">Turn the removal policy on or off</a>",IDC_06REMOVALPOLICY,
-                    "SysLink",WS_TABSTOP,21,153,216,11
-    CONTROL         "<a id=""idForce"">Turn the force smart card policy on or off</a>",IDC_06FORCEPOLICY,
-                    "SysLink",WS_TABSTOP,21,136,216,11
-    ICON            "",IDC_06SHIELD,10,12,21,20
+    CONTROL         "<a id=""idUpdate"">Rapporter automatiquement que ce modèle de carte fonctionne correctement</a>",IDC_06UPDATEDATABASE,
+                    "SysLink",WS_TABSTOP,21,120,216,17
+    CONTROL         "<a id=""idRemove"">Activer ou désactiver la politique de retrait</a>",IDC_06REMOVALPOLICY,
+                    "SysLink",WS_TABSTOP,21,162,216,11
+    CONTROL         "<a id=""idForce"">Décider de l'obligation d'utiliser une carte à puce</a>",IDC_06FORCEPOLICY,
+                    "SysLink",WS_TABSTOP,21,145,216,11
+    ICON            "",IDC_06SHIELD,10,12,20,20
 END
 
 IDD_07TESTRESULTNOTOK DIALOGEX 0, 0, 273, 209

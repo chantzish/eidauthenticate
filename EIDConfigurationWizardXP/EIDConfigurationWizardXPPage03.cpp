@@ -64,7 +64,7 @@ BOOL SelectFile(HWND hWnd)
     return SUCCEEDED(hr);*/
 	OPENFILENAME ofn;
 	TCHAR szFile[MAX_PATH], szFilter[256];
-	_stprintf_s(szFilter, 256, TEXT("%s\0*.pfx;*.p12\0%s\0*.*\0"),szSpecContainer,szSpecAll);
+	_stprintf_s(szFilter, 256, TEXT("%s%c*.pfx;*.p12%c%s%c*.*%c"),szSpecContainer,0,0,szSpecAll,0,0);
 	ZeroMemory(&ofn, sizeof(ofn));
 	ofn.lStructSize = sizeof(ofn);
 	ofn.hwndOwner = hWnd;
@@ -79,7 +79,7 @@ BOOL SelectFile(HWND hWnd)
 	ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 	if (GetOpenFileName(&ofn)==TRUE) 
 	{
-		SetWindowText(GetDlgItem(hWnd,IDC_03FILENAME),szFileName);
+		SetWindowText(GetDlgItem(hWnd,IDC_03FILENAME),szFile);
 		CheckDlgButton(hWnd,IDC_03IMPORT,BST_CHECKED);
 		CheckDlgButton(hWnd,IDC_03USETHIS,BST_UNCHECKED);
 		CheckDlgButton(hWnd,IDC_03_CREATE,BST_UNCHECKED);

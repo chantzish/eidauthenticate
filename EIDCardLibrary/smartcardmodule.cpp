@@ -622,7 +622,7 @@ NTSTATUS CheckPINandGetRemainingAttemptsIfPossible(PEID_SMARTCARD_CSP_INFO pCspI
 	LPTSTR szCardName = pCspInfo->bBuffer + pCspInfo->nCardNameOffset;
 	LPTSTR szReaderName = pCspInfo->bBuffer + pCspInfo->nReaderNameOffset;
 	// do the test only if it is a mini driver
-	if (_tcscmp(TEXT("Microsoft Base Smart Card Crypto Provider"), szCSPName) != 0)
+	if (_tcscmp(MS_SCARD_PROV, szCSPName) != 0)
 	{
 		return 0;
 	}
