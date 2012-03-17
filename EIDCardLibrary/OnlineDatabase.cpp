@@ -451,7 +451,7 @@ BOOL CommunicateTestNotOK(DWORD dwErrorCode, PTSTR szEmail, PTSTR szTracingFile,
 						_stprintf_s(szATRMask + 2*i, ARRAYSIZE(szATRMask) - 2*i,TEXT("%02X"),bATR[i]);
 					}
 				}
-				if (_tcscmp(TEXT("Microsoft Base Smart Card Crypto Provider"), szProviderName) == 0)
+				if (_tcscmp(MS_SCARD_PROV, szProviderName) == 0)
 				{
 					dwSize = sizeof(szCspDll);
 					RegQueryValueEx(hRegKey,TEXT("80000001"), NULL, NULL,(PBYTE)&szCspDll,&dwSize);

@@ -122,6 +122,7 @@ BOOL CContainerHolderFactory<T>::ConnectNotificationGeneric(__in LPCTSTR szReade
 		if (!bStatus)
 		{
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptAcquireContext 2 0x%08x",GetLastError());
+			EIDFree(szMainContainerName);
 			return FALSE;
 		}
 	}

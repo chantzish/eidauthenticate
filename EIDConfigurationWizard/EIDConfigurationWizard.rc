@@ -182,9 +182,9 @@ FONT 9, "Segoe UI", 0, 0, 0x0
 BEGIN
     LTEXT           "The test was successfull. You can now use your smartcard to logon.",IDC_STC7,40,16,228,22
     LTEXT           "Additional tasks :",IDC_STATIC,13,107,204,13
-    CONTROL         "Update the status of this card as ""Working"" on the internet site",IDC_06UPDATEDATABASE,
+    CONTROL         "Update automatically the status of this card as ""Working"" on the internet site",IDC_06UPDATEDATABASE,
                     "Button",BS_COMMANDLINK | WS_TABSTOP,21,116,216,33
-    ICON            "",IDC_06SHIELD,10,10,18,17
+    ICON            "",IDC_06SHIELD,10,10,20,20
 END
 
 IDD_07TESTRESULTNOTOK DIALOGEX 0, 0, 273, 209

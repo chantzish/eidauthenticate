@@ -103,9 +103,9 @@ FONT 9, "Segoe UI", 0, 0, 0x0
 BEGIN
     LTEXT           "Le test s'est déroulé avec succès. Vous pouvez désormais utiliser votre carte à puce pour ouvrir une session.",IDC_STC7,35,11,231,32
     LTEXT           "Tâches supplémentaires :",IDC_STATIC,13,107,204,13
-    CONTROL         "Envoyer un rapport selon lequel la carte fonctionne correctement",IDC_06UPDATEDATABASE,
+    CONTROL         "Rapporter automatiquement que ce modèle de carte fonctionne correctement",IDC_06UPDATEDATABASE,
                     "Button",BS_COMMANDLINK | WS_TABSTOP,21,116,216,33
-    ICON            "",IDC_06SHIELD,10,10,18,17
+    ICON            "",IDC_06SHIELD,10,10,20,20
 END
 
 IDD_07TESTRESULTNOTOK DIALOGEX 0, 0, 273, 209
@@ -241,7 +241,7 @@ BEGIN
     IDS_TITLE5              "Résultat du test"
     IDS_CHECKDRIVERONLINE   "EIDAuthenticate a détecté que la carte à puce que vous utilisez (ATR:%s) ne possède pas de pilote. Voulez-vous rechercher dans notre base de données une solution ?"
     IDS_TURNREMOVALPOLICY   "Activer ou désactiver la politique de retrait"
-    IDS_TURNFORCEPOLICY     "Rendre ou ne pas rendre obligatoire l'utilisation de cartes à puce"
+    IDS_TURNFORCEPOLICY     "Décider de l'obligation d'utiliser une carte à puce"
 END
 
 STRINGTABLE

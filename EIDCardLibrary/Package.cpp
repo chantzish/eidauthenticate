@@ -53,7 +53,7 @@
 #pragma comment(lib, "Netapi32.lib")
 #pragma comment(lib, "Wtsapi32.lib")
 
-
+#define DEBUG_MARKUP "MySmartLogonHeapCheck"
 
 PLSA_ALLOCATE_LSA_HEAP MyAllocateHeap = NULL;  
 PLSA_FREE_LSA_HEAP MyFreeHeap = NULL;  
@@ -78,12 +78,21 @@ PVOID EIDAllocEx(PCSTR szFile, DWORD dwLine, PCSTR szFunction,DWORD dwSize)
 	PVOID memory = NULL;
 	if (MyAllocateHeap)
 	{
+#ifdef _DEBUG	
+		memory = MyAllocateHeap(dwSize + sizeof(DEBUG_MARKUP) + sizeof(PVOID));
+		if (memory)
+		{
+			memcpy((PBYTE) memory + dwSize,DEBUG_MARKUP, sizeof(DEBUG_MARKUP));
+			memcpy((PBYTE) memory + dwSize + sizeof(DEBUG_MARKUP),&memory, sizeof(PVOID));
+		}
+#else
 		memory = MyAllocateHeap(dwSize);
+#endif		
 	}
 	else
 	{
 #ifdef _DEBUG	
-		memory = _malloc_dbg(dwSize,_NORMAL_BLOCK, szFile, dwLine);
+		memory = _malloc_dbg(dwSize,_CLIENT_BLOCK, szFile, dwLine);
 #else
 		memory = malloc(dwSize);
 #endif		
@@ -105,14 +114,39 @@ VOID EIDFreeEx(PCSTR szFile, DWORD dwLine, PCSTR szFunction,PVOID buffer)
 	//}
 	if (MyFreeHeap)
 	{
+#ifdef _DEBUG
+		// look for markup
+		BOOL bFound = FALSE;
+		for (int i = 0; i < 10000; i++)
+		{
+			if (memcmp((PBYTE)buffer + i,DEBUG_MARKUP, sizeof(DEBUG_MARKUP)) == 0)
+			{
+				if (memcmp((PBYTE)buffer + i + sizeof(DEBUG_MARKUP),&buffer,sizeof(PVOID)) != 0)
+				{
+					EIDCardLibraryTraceEx(szFile, dwLine, szFunction, WINEVENT_LEVEL_ERROR, L"Markup not ok %p",buffer);
+				}
+				else
+				{
+					bFound = TRUE;
+				}
+				break;
+			}
+		}
+		if (!bFound)
+		{
+			EIDCardLibraryTraceEx(szFile, dwLine, szFunction, WINEVENT_LEVEL_ERROR, L"Markup not found when freeing %p",buffer);
+		}
 		MyFreeHeap(buffer);
+#else
+		MyFreeHeap(buffer);
+#endif
 	}
 	else
 	{
 #ifndef _DEBUG	
 		free(buffer);
 #else
-		_free_dbg(buffer, _NORMAL_BLOCK);
+		_free_dbg(buffer, _CLIENT_BLOCK);
 #endif
 	}
 }
@@ -740,7 +774,7 @@ BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPasswo
 	DWORD dwSize;
 	NTSTATUS status;
 	PBYTE pPointer;
-	DWORD dwPasswordSize;
+	DWORD dwPasswordSize, dwBufferSize;
 	DWORD dwError = 0;
 	PCRYPT_KEY_PROV_INFO pProvInfo = NULL;
 	__try
@@ -770,9 +804,9 @@ BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPasswo
 		}
 	
 		dwPasswordSize = (DWORD) (wcslen(szPassword) + 1) * sizeof(WCHAR);
-		dwSize = (DWORD) (sizeof(EID_CALLPACKAGE_BUFFER) + dwPasswordSize + pContext->cbCertEncoded); //+ dwProviderSize + dwContainerSize;
+		dwBufferSize = (DWORD) (sizeof(EID_CALLPACKAGE_BUFFER) + dwPasswordSize + pContext->cbCertEncoded); //+ dwProviderSize + dwContainerSize;
 
-		pBuffer = (PEID_CALLPACKAGE_BUFFER) EIDAlloc(dwSize);
+		pBuffer = (PEID_CALLPACKAGE_BUFFER) EIDAlloc(dwBufferSize);
 		if( !pBuffer) 
 		{
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pBuffer null");
@@ -837,7 +871,7 @@ BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPasswo
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaLookupAuthenticationPackage 0x%08x",status);
 			__leave;
 		}
-		status = LsaCallAuthenticationPackage(hLsa, ulAuthPackage, pBuffer, dwSize, NULL, NULL, NULL);
+		status = LsaCallAuthenticationPackage(hLsa, ulAuthPackage, pBuffer, dwBufferSize, NULL, NULL, NULL);
 		if (status != STATUS_SUCCESS)
 		{
 			dwError = LsaNtStatusToWinError(status);
@@ -855,7 +889,11 @@ BOOL LsaEIDCreateStoredCredential(__in_opt PWSTR szUsername, __in PWSTR szPasswo
 	__finally
 	{
 		if (hLsa) LsaClose(hLsa);
-		if (pBuffer) EIDFree(pBuffer);
+		if (pBuffer) 
+		{
+			SecureZeroMemory(pBuffer, dwBufferSize);
+			EIDFree(pBuffer);
+		}
 		if (pProvInfo) EIDFree(pProvInfo);
 	}
 	SetLastError(dwError);
@@ -1202,38 +1240,51 @@ BOOL MatchUserOrIsAdmin(__in DWORD dwRid, __in PVOID pClientInfo)
 	HANDLE hToken = ((SECPKG_CLIENT_INFO*)pClientInfo)->ClientToken;
 	NTSTATUS status;
 	PSECURITY_LOGON_SESSION_DATA pLogonSessionData = NULL;
-	status = LsaGetLogonSessionData(&LogonId, &pLogonSessionData);
-	if (status != STATUS_SUCCESS)
+	DWORD dwError = 0;
+	PSID AdministratorsGroup = NULL; 
+	__try
 	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaGetLogonSessionData 0x%08x",status);
-	}
-	else
-	{
+		status = LsaGetLogonSessionData(&LogonId, &pLogonSessionData);
+		if (status != STATUS_SUCCESS)
+		{
+			dwError = LsaNtStatusToWinError(status);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaGetLogonSessionData 0x%08x",status);
+			__leave;
+		}
 		if (dwRid == *GetSidSubAuthority(pLogonSessionData->Sid, *GetSidSubAuthorityCount(pLogonSessionData->Sid) -1))
 		{
+			// is current user = TRUE
 			fReturn = TRUE;
+			__leave;
 		}
-		else
+		// is admin ?
+		SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
+		
+		fReturn = AllocateAndInitializeSid(&NtAuthority,
+					2,
+					SECURITY_BUILTIN_DOMAIN_RID,
+					DOMAIN_ALIAS_RID_ADMINS,
+					0, 0, 0, 0, 0, 0,
+					&AdministratorsGroup); 
+		if(!fReturn) 
 		{
-			
-			SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
-			PSID AdministratorsGroup; 
-			fReturn = AllocateAndInitializeSid(&NtAuthority,
-				2,
-				SECURITY_BUILTIN_DOMAIN_RID,
-				DOMAIN_ALIAS_RID_ADMINS,
-				0, 0, 0, 0, 0, 0,
-				&AdministratorsGroup); 
-			if(fReturn) 
-			{
-				if (!CheckTokenMembership( hToken, AdministratorsGroup, &fReturn)) 
-				{
-					 fReturn = FALSE;
-				} 
-				FreeSid(AdministratorsGroup); 
-			}
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"AllocateAndInitializeSid 0x%08x",dwError);
+			__leave;
 		}
-		LsaFreeReturnBuffer(pLogonSessionData);
+		if (!CheckTokenMembership(hToken, AdministratorsGroup, &fReturn)) 
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CheckTokenMembership 0x%08x",dwError);
+			__leave;
+		}
+		fReturn = TRUE;
 	}
+	__finally
+	{
+		if (pLogonSessionData) LsaFreeReturnBuffer(pLogonSessionData);
+		if (AdministratorsGroup) FreeSid(AdministratorsGroup); 
+	}
+	SetLastError(dwError);
 	return fReturn;
 }

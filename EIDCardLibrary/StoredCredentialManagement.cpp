@@ -280,7 +280,7 @@ BOOL CStoredCredentialManager::CreateCredential(__in DWORD dwRid, __in PCCERT_CO
 	BOOL fReturn = FALSE, fStatus;
 	DWORD dwError = 0;
 	NTSTATUS Status;
-	HCRYPTKEY hKey = NULL;;
+	HCRYPTKEY hKey = NULL;
 	HCRYPTKEY hSymetricKey = NULL;
 	PBYTE pSymetricKey = NULL;
 	USHORT usSymetricKeySize;
@@ -605,6 +605,7 @@ BOOL CStoredCredentialManager::GetChallenge(__in DWORD dwRid, __out PBYTE* ppCha
 		switch(*pType)
 		{
 		case eidpdtCrypted:
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"dwType = eidpdtCrypted");
 			*pdwChallengeSize = pEidPrivateData->dwSymetricKeySize;
 			*ppChallenge = (PBYTE) EIDAlloc(pEidPrivateData->dwSymetricKeySize);
 			if (*ppChallenge == NULL)
@@ -616,6 +617,7 @@ BOOL CStoredCredentialManager::GetChallenge(__in DWORD dwRid, __out PBYTE* ppCha
 			memcpy(*ppChallenge, pEidPrivateData->Data + pEidPrivateData->dwSymetricKeyOffset, pEidPrivateData->dwSymetricKeySize); 
 			break;
 		case eidpdtClearText:
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"dwType = eidpdtClearText");
 			fStatus = GetSignatureChallenge(ppChallenge, pdwChallengeSize);
 			if (!fStatus)
 			{
@@ -749,6 +751,7 @@ BOOL CStoredCredentialManager::GetPassword(__in DWORD dwRid, __in PCCERT_CONTEXT
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"dwRid 0x%08x",dwError);
 			__leave;
 		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"GetChallenge");
 		fStatus = GetChallenge(dwRid, &pChallenge, &dwChallengeSize, &type);
 		if (!fStatus)
 		{
@@ -756,6 +759,7 @@ BOOL CStoredCredentialManager::GetPassword(__in DWORD dwRid, __in PCCERT_CONTEXT
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetChallenge 0x%08x",dwError);
 			__leave;
 		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"GetResponseFromChallenge");
 		EIDImpersonate();
 		fStatus = GetResponseFromChallenge(pChallenge, dwChallengeSize, type, pContext, szPin, &pResponse, &dwResponseSize);
 		EIDRevertToSelf();
@@ -765,6 +769,7 @@ BOOL CStoredCredentialManager::GetPassword(__in DWORD dwRid, __in PCCERT_CONTEXT
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetResponseFromChallenge 0x%08x",dwError);
 			__leave;
 		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"GetPasswordFromChallengeResponse");
 		fStatus = GetPasswordFromChallengeResponse(dwRid, pChallenge, dwChallengeSize, type, pResponse, dwResponseSize, pszPassword);
 		if (!fStatus)
 		{
@@ -1775,66 +1780,71 @@ BOOL CStoredCredentialManager::StorePrivateData(__in DWORD dwRid, __in_opt PBYTE
     LSA_UNICODE_STRING lusSecretName;
     LSA_UNICODE_STRING lusSecretData;
 	WCHAR szLsaKeyName[256];
-
     NTSTATUS ntsResult = STATUS_SUCCESS;
-
     //  Object attributes are reserved, so initialize to zeros.
     ZeroMemory(&ObjectAttributes, sizeof(ObjectAttributes));
+	DWORD dwError = 0;
+	BOOL fReturn = FALSE;
+	__try
+	{
+		//  Get a handle to the Policy object.
+		ntsResult = LsaOpenPolicy(
+			NULL,    // local machine
+			&ObjectAttributes, 
+			POLICY_CREATE_SECRET | READ_CONTROL | WRITE_OWNER | WRITE_DAC,
+			&LsaPolicyHandle);
 
-    //  Get a handle to the Policy object.
-    ntsResult = LsaOpenPolicy(
-        NULL,    // local machine
-        &ObjectAttributes, 
-        POLICY_CREATE_SECRET | READ_CONTROL | WRITE_OWNER | WRITE_DAC,
-        &LsaPolicyHandle);
+		if( STATUS_SUCCESS != ntsResult )
+		{
+			//  An error occurred. Display it as a win32 error code.
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by LsaOpenPolicy", ntsResult);
+			dwError = LsaNtStatusToWinError(ntsResult);
+			__leave;
+		} 
 
-    if( STATUS_SUCCESS != ntsResult )
-    {
-        //  An error occurred. Display it as a win32 error code.
-        EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by LsaOpenPolicy", ntsResult);
-		SetLastError(LsaNtStatusToWinError(ntsResult));
-        return FALSE;
-    } 
-
-    //  Initialize an LSA_UNICODE_STRING for the name of the
-	wsprintf(szLsaKeyName, L"%s_%08X", CREDENTIAL_LSAPREFIX, dwRid);
+		//  Initialize an LSA_UNICODE_STRING for the name of the
+		wsprintf(szLsaKeyName, L"%s_%08X", CREDENTIAL_LSAPREFIX, dwRid);
 	
-    lusSecretName.Buffer = szLsaKeyName;
-    lusSecretName.Length = (USHORT) wcslen(szLsaKeyName)* sizeof(WCHAR);
-    lusSecretName.MaximumLength = lusSecretName.Length;
-    //  If the pwszSecret parameter is NULL, then clear the secret.
-    if( NULL == pbSecret )
-    {
-        EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"Clearing %x",dwRid);
-		ntsResult = LsaStorePrivateData(
-            LsaPolicyHandle,
-            &lusSecretName,
-            NULL);
-    }
-    else
-    {
-        EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"Setting %x",dwRid);
-		//  Initialize an LSA_UNICODE_STRING for the value
-        //  of the private data. 
-        lusSecretData.Buffer = (PWSTR) pbSecret;
-        lusSecretData.Length = usSecretSize;
-        lusSecretData.MaximumLength = usSecretSize;
-        ntsResult = LsaStorePrivateData(
-            LsaPolicyHandle,
-            &lusSecretName,
-            &lusSecretData);
-    }
-
-    LsaClose(LsaPolicyHandle);
-    if( STATUS_SUCCESS != ntsResult )
-    {
-        //  An error occurred. Display it as a win32 error code.
-        EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by LsaStorePrivateData", ntsResult);
-		SetLastError(LsaNtStatusToWinError(ntsResult));
-        return FALSE;
-    } 
-	SetLastError(0);
-    return TRUE;
+		lusSecretName.Buffer = szLsaKeyName;
+		lusSecretName.Length = (USHORT) wcslen(szLsaKeyName)* sizeof(WCHAR);
+		lusSecretName.MaximumLength = lusSecretName.Length;
+		//  If the pwszSecret parameter is NULL, then clear the secret.
+		if( NULL == pbSecret )
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"Clearing %x",dwRid);
+			ntsResult = LsaStorePrivateData(
+				LsaPolicyHandle,
+				&lusSecretName,
+				NULL);
+		}
+		else
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"Setting %x",dwRid);
+			//  Initialize an LSA_UNICODE_STRING for the value
+			//  of the private data. 
+			lusSecretData.Buffer = (PWSTR) pbSecret;
+			lusSecretData.Length = usSecretSize;
+			lusSecretData.MaximumLength = usSecretSize;
+			ntsResult = LsaStorePrivateData(
+				LsaPolicyHandle,
+				&lusSecretName,
+				&lusSecretData);
+		}
+		if( STATUS_SUCCESS != ntsResult )
+		{
+			//  An error occurred. Display it as a win32 error code.
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by LsaStorePrivateData", ntsResult);
+			dwError = LsaNtStatusToWinError(ntsResult);
+			__leave;
+		}
+		fReturn = TRUE;
+	}
+	__finally
+	{
+		if (LsaPolicyHandle) LsaClose(LsaPolicyHandle);
+	} 
+	SetLastError(dwError);
+    return fReturn;
 
 }
 
@@ -1902,57 +1912,64 @@ BOOL CStoredCredentialManager::RetrievePrivateData(__in DWORD dwRid, __out PEID_
 	NTSTATUS ntsResult = STATUS_SUCCESS;
     //  Object attributes are reserved, so initialize to zeros.
     ZeroMemory(&ObjectAttributes, sizeof(ObjectAttributes));
-
-    //  Get a handle to the Policy object.
-    ntsResult = LsaOpenPolicy(
-        NULL,    // local machine
-        &ObjectAttributes, 
-        POLICY_GET_PRIVATE_INFORMATION,
-        &LsaPolicyHandle);
-
-    if( STATUS_SUCCESS != ntsResult )
-    {
-        //  An error occurred. Display it as a win32 error code.
-        EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by LsaOpenPolicy", ntsResult);
-		SetLastError(LsaNtStatusToWinError(ntsResult));
-        return FALSE;
-    } 
-
-    //  Initialize an LSA_UNICODE_STRING for the name of the
-    //  private data ("DefaultPassword").
-	wsprintf(szLsaKeyName, L"%s_%08X", CREDENTIAL_LSAPREFIX, dwRid);
-	
-    lusSecretName.Buffer = szLsaKeyName;
-    lusSecretName.Length = (USHORT) wcslen(szLsaKeyName)* sizeof(WCHAR);
-    lusSecretName.MaximumLength = lusSecretName.Length;
-    
-	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Reading dwRid = 0x%x", dwRid);
-    ntsResult = LsaRetrievePrivateData(LsaPolicyHandle,&lusSecretName,&pData);
-	
-    LsaClose(LsaPolicyHandle);
-    if( STATUS_SUCCESS != ntsResult )
-    {
-        if (0xc0000034 == ntsResult)
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Private info not found for dwRid = 0x%x", dwRid);
-		}
-		else
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by LsaRetrievePrivateData", ntsResult);
-		}
-		SetLastError(LsaNtStatusToWinError(ntsResult));
-        return FALSE;
-    } 
-	*ppPrivateData = (PEID_PRIVATE_DATA) EIDAlloc(pData->Length);
-	if (!*ppPrivateData)
+	DWORD dwError = 0;
+	BOOL fReturn = FALSE;
+	__try
 	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by EIDAlloc", GetLastError());
-        return FALSE;
+		//  Get a handle to the Policy object.
+		ntsResult = LsaOpenPolicy(
+			NULL,    // local machine
+			&ObjectAttributes, 
+			POLICY_GET_PRIVATE_INFORMATION,
+			&LsaPolicyHandle);
+
+		if( STATUS_SUCCESS != ntsResult )
+		{
+			//  An error occurred. Display it as a win32 error code.
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by LsaOpenPolicy", ntsResult);
+			dwError = LsaNtStatusToWinError(ntsResult);
+			__leave;
+		} 
+
+		//  Initialize an LSA_UNICODE_STRING for the name of the
+		//  private data ("DefaultPassword").
+		wsprintf(szLsaKeyName, L"%s_%08X", CREDENTIAL_LSAPREFIX, dwRid);
+	
+		lusSecretName.Buffer = szLsaKeyName;
+		lusSecretName.Length = (USHORT) wcslen(szLsaKeyName)* sizeof(WCHAR);
+		lusSecretName.MaximumLength = lusSecretName.Length;
+    
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Reading dwRid = 0x%x", dwRid);
+		ntsResult = LsaRetrievePrivateData(LsaPolicyHandle,&lusSecretName,&pData);
+		if( STATUS_SUCCESS != ntsResult )
+		{
+			if (0xc0000034 == ntsResult)
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Private info not found for dwRid = 0x%x", dwRid);
+			}
+			else
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by LsaRetrievePrivateData", ntsResult);
+			}
+			dwError = LsaNtStatusToWinError(ntsResult);
+			__leave;
+		} 
+		*ppPrivateData = (PEID_PRIVATE_DATA) EIDAlloc(pData->Length);
+		if (!*ppPrivateData)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by EIDAlloc", GetLastError());
+			__leave;
+		}
+		memcpy(*ppPrivateData, pData->Buffer, pData->Length);
+		fReturn = TRUE;
 	}
-	memcpy(*ppPrivateData, pData->Buffer, pData->Length);
-	LsaFreeMemory(pData);
-	SetLastError(0);
-	return TRUE;
+	__finally
+	{
+		if (LsaPolicyHandle) LsaClose(LsaPolicyHandle);
+		if (pData) LsaFreeMemory(pData);
+	}
+	SetLastError(dwError);
+	return fReturn;
 }
 
 BOOL CStoredCredentialManager::RetrievePrivateDataDebug(__in DWORD dwRid, __out PEID_PRIVATE_DATA *ppPrivateData)

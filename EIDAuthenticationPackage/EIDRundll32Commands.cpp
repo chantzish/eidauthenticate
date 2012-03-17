@@ -117,7 +117,13 @@ extern "C"
 		int ret = ERROR_INSTALL_FAILURE;
 		__try
 		{
-			LsaEIDRemoveAllStoredCredential();
+			if (!LsaEIDRemoveAllStoredCredential())
+			{
+				dwError = GetLastError();
+				__leave;
+			}
+			// this function is unimplemented and trigger the reboot,
+			// but call it anyway
 			if (!UnRegisterTheSecurityPackage())
 			{
 				dwError = GetLastError();

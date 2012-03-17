@@ -104,7 +104,7 @@ INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPAR
 				{
 					// go to the error page
 					dwWizardError = GetLastError();
-					if (pnmh->code == PSN_WIZNEXT)
+					if (pnmh->code == PSN_WIZNEXT && dwWizardError != ERROR_INVALID_PASSWORD)
 					{
 						SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
 						PropSheet_SetCurSelByID(GetParent(hWnd), IDD_07TESTRESULTNOTOK);

@@ -12,6 +12,7 @@
 #include "../EIDCardLibrary/Package.h"
 #include "../EIDCardLibrary/Tracing.h"
 #include "../EIDCardLibrary/OnlineDatabase.h"
+#include "../EIDCardLibrary/EIDAuthenticateVersion.h"
 
 #include "../EIDCardLibrary/CContainer.h"
 #include "../EIDCardLibrary/CContainerHolderFactory.h"
@@ -130,6 +131,7 @@ BOOL DoTheActionToBeTraced()
 	{
 		
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Starting report");
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Version : %S", EIDAuthenticateVersionText);
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"===============");
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Register the certificate");
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"===============");
