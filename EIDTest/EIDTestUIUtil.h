@@ -1,12 +1,10 @@
 #pragma once
 BOOL AskUsername(WCHAR* Username, WCHAR* ComputerName);
-BOOL AskPin(WCHAR* Pin);
+BOOL AskPin(PWSTR Pin, PWSTR szReader, PWSTR szCard);
+BOOL AskPassword(WCHAR* Password);
 
 
-PCCERT_CONTEXT SelectCerts(__in LPCWSTR szReaderName,__in LPCWSTR szCardName, 
-				__out LPWSTR szOutProviderName,__in DWORD dwOutProviderLength,
-				__out LPWSTR szOutContainerName,__in DWORD dwOutContainerLength,
-				__in_opt PDWORD pdwKeySpec);
+PCCERT_CONTEXT SelectCert(__in LPCWSTR szReaderName,__in LPCWSTR szCardName);
 
 
 

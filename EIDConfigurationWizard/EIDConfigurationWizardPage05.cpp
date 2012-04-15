@@ -45,6 +45,40 @@ BOOL WizardFinishButton(PTSTR szPassword)
 
 BOOL TestLogon(HWND hMainWnd);
 
+HWND hwndInvalidPasswordBalloon = NULL;
+VOID ShowInvalidPasswordBalloon(HWND hWnd)
+{
+	if (hwndInvalidPasswordBalloon) 
+	{ 
+		DestroyWindow(hwndInvalidPasswordBalloon); 
+		hwndInvalidPasswordBalloon = NULL; 
+	}
+	hwndInvalidPasswordBalloon = CreateWindowEx(NULL, TOOLTIPS_CLASS, NULL,
+                            WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP | TTS_BALLOON | TTS_CLOSE,
+                            CW_USEDEFAULT, CW_USEDEFAULT,
+                            CW_USEDEFAULT, CW_USEDEFAULT,
+                            hWnd, NULL, g_hinst,
+                            NULL);
+
+	if (hwndInvalidPasswordBalloon)
+	{
+		LPTSTR szError = NULL;
+		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_FROM_SYSTEM,
+			NULL,ERROR_INVALID_PASSWORD,0,(LPTSTR)&szError,0,NULL);
+		TOOLINFO ti;
+		memset(&ti,0,sizeof(TOOLINFO));
+		ti.cbSize   = sizeof(ti);
+		ti.uFlags   = TTF_TRANSPARENT | TTF_CENTERTIP | TTF_IDISHWND | TTF_SUBCLASS;
+		ti.hwnd     = hWnd;
+		ti.uId      = (UINT_PTR) GetDlgItem(hWnd, IDC_05PASSWORD);
+		ti.hinst    = g_hinst;
+		ti.lpszText = L" ";
+		SendMessage(hwndInvalidPasswordBalloon, TTM_SETTITLE, TTI_ERROR, (LPARAM) szError);
+		SendMessage(hwndInvalidPasswordBalloon, TTM_ADDTOOL, 0, (LPARAM) &ti );
+		SendMessage(hwndInvalidPasswordBalloon,TTM_TRACKACTIVATE,(WPARAM)TRUE,(LPARAM)&ti);
+		LocalFree(szError);
+	}
+}
 
 #define WM_MYMESSAGE WM_USER + 10
 INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -103,6 +137,11 @@ INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPAR
 				break;
 			case PSN_WIZFINISH :
 			case PSN_WIZNEXT:
+				if (hwndInvalidPasswordBalloon) 
+				{
+					DestroyWindow(hwndInvalidPasswordBalloon); 
+					hwndInvalidPasswordBalloon = NULL; 
+				}
 				GetWindowText(GetDlgItem(hWnd,IDC_05PASSWORD),szPassword,dwPasswordSize);
 				if (!WizardFinishButton(szPassword))
 				{
@@ -115,7 +154,14 @@ INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPAR
 					}
 					else
 					{
-						MessageBoxWin32Ex(dwWizardError,hWnd);
+						if (dwWizardError != ERROR_INVALID_PASSWORD)
+						{
+							MessageBoxWin32Ex(dwWizardError,hWnd);
+						}
+						else
+						{
+							ShowInvalidPasswordBalloon((hWnd));
+						}
 						SetWindowLongPtr(hWnd,DWLP_MSGRESULT,(LONG_PTR)IDD_05PASSWORD);
 					}
 					return TRUE;

@@ -103,7 +103,7 @@
 #define IDC_STC5 27
 #define IDC_STC7 28
 #define IDC_KEYSIZE 29
-#define IDD_PIN 1100
+#define IDD_PASSWORD 1100
 #define IDC_PIN 1101
 #define IDC_STC6 1102
 #define IDC_PINCANCEL 1103

@@ -421,10 +421,10 @@ PEID_INTERACTIVE_LOGON CContainer::AllocateLogonStruct(PWSTR szPin, PDWORD pdwSi
 		wcscpy_s(&pCspInfo->bBuffer[pCspInfo->nCSPNameOffset] , dwCspBufferLength + ARRAYSIZE(pCspInfo->bBuffer) - pCspInfo->nCSPNameOffset, _szProviderName);	
 		_ASSERTE( _CrtCheckMemory( ) );
 		// Put pointer in relative format
-		pRequest->Pin.Buffer = (PWSTR) ((PUCHAR) pRequest->Pin.Buffer - (ULONG) pRequest);
-		pRequest->UserName.Buffer = (PWSTR) ((PUCHAR) pRequest->UserName.Buffer - (ULONG) pRequest);
-		pRequest->LogonDomainName.Buffer = (PWSTR) ((PUCHAR) pRequest->LogonDomainName.Buffer - (ULONG) pRequest);
-		pRequest->CspData = (pRequest->CspData - (ULONG) pRequest);
+		pRequest->Pin.Buffer = (PWSTR) ((PUCHAR) pRequest->Pin.Buffer - (ULONG_PTR) pRequest);
+		pRequest->UserName.Buffer = (PWSTR) ((PUCHAR) pRequest->UserName.Buffer - (ULONG_PTR) pRequest);
+		pRequest->LogonDomainName.Buffer = (PWSTR) ((PUCHAR) pRequest->LogonDomainName.Buffer - (ULONG_PTR) pRequest);
+		pRequest->CspData = (pRequest->CspData - (ULONG_PTR) pRequest);
 		// sucess !
 		_ASSERTE( _CrtCheckMemory( ) );
 		pReturn = pRequest;
@@ -511,8 +511,8 @@ PEID_MSGINA_AUTHENTICATION CContainer::AllocateGinaStruct(PWSTR szPin, PDWORD pd
 		wcscpy_s(&pCspInfo->bBuffer[pCspInfo->nCSPNameOffset] , dwCspBufferLength + ARRAYSIZE(pCspInfo->bBuffer) - pCspInfo->nCSPNameOffset, _szProviderName);	
 		_ASSERTE( _CrtCheckMemory( ) );
 		// Put pointer in relative format
-		pRequest->Pin.Buffer = (PWSTR) ((PUCHAR) pRequest->Pin.Buffer - (ULONG) pRequest);
-		pRequest->CspData = (PEID_SMARTCARD_CSP_INFO) ((PUCHAR)pRequest->CspData - (ULONG) pRequest);
+		pRequest->Pin.Buffer = (PWSTR) ((PUCHAR) pRequest->Pin.Buffer - (ULONG_PTR) pRequest);
+		pRequest->CspData = (PEID_SMARTCARD_CSP_INFO) ((PUCHAR)pRequest->CspData - (ULONG_PTR) pRequest);
 		// sucess !
 		_ASSERTE( _CrtCheckMemory( ) );
 		pReturn = pRequest;

@@ -355,6 +355,15 @@ INT_PTR CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case IDM_UTIL_CLEAR:
 			menu_UTIL_ClearCard();
 			break;
+		case IDM_UTIL_CSPINFO:
+			menu_UTIL_DisplayCSPInfoFromUserCertificate();
+			break;
+		case IDM_UTIL_SETSMARTCARDFLAG:
+			menu_UTIL_ChangeUserFlag(TRUE);
+			break;
+		case IDM_UTIL_UNSETSMARTCARDFLAG:
+			menu_UTIL_ChangeUserFlag(FALSE);
+			break;
 		case IDM_INFO_TRACING:
 			if (IsElevated())
 			{

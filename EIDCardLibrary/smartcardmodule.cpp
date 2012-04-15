@@ -547,7 +547,7 @@ BOOL CheckPINandGetRemainingAttempts(PTSTR szReader, PTSTR szCard, PTSTR szPin, 
 			dwError = lReturn;
 			__leave;
 		}
-		lReturn = SCardConnect(hSCardContext,szReader,SCARD_SHARE_SHARED,SCARD_PROTOCOL_T1|SCARD_PROTOCOL_T0, &hSCardHandle, &dwProtocol);
+		lReturn = SCardConnect(hSCardContext,szReader,SCARD_SHARE_SHARED,SCARD_PROTOCOL_Tx, &hSCardHandle, &dwProtocol);
 		if ( SCARD_S_SUCCESS != lReturn )
 		{
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SCardConnect 0x%08X",lReturn);

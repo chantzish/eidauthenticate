@@ -40,6 +40,7 @@ PCCERT_CONTEXT GetCertificateFromCspInfo(__in PEID_SMARTCARD_CSP_INFO pCspInfo)
 //	LPTSTR szCardName = pCspInfo->bBuffer + pCspInfo->nCardNameOffset;
 	HCRYPTKEY phUserKey = NULL;
 	BOOL fResult;
+	BOOL fSuccess = FALSE;
 	__try
 	{
 		// check input
@@ -82,7 +83,10 @@ PCCERT_CONTEXT GetCertificateFromCspInfo(__in PEID_SMARTCARD_CSP_INFO pCspInfo)
 			__leave;
 		}
 		// save reference to CSP (else we can't access private key)
-		CRYPT_KEY_PROV_INFO KeyProvInfo = {0};
+		CRYPT_KEY_PROV_INFO KeyProvInfo;
+		memset(&KeyProvInfo, 0, sizeof(CRYPT_KEY_PROV_INFO));
+		// this flag enable cache for futher call to CryptAcquireCertificatePrivateKey
+		KeyProvInfo.dwFlags = CERT_SET_KEY_CONTEXT_PROP_ID;
 		KeyProvInfo.pwszProvName = szProviderName;
 		KeyProvInfo.pwszContainerName = szContainerName;
 		KeyProvInfo.dwProvType = PROV_RSA_FULL;
@@ -91,14 +95,41 @@ PCCERT_CONTEXT GetCertificateFromCspInfo(__in PEID_SMARTCARD_CSP_INFO pCspInfo)
 		if (!CertSetCertificateContextProperty(pCertContext,CERT_KEY_PROV_INFO_PROP_ID,0,&KeyProvInfo))
 		{
 			dwError = GetLastError();
-			CertFreeCertificateContext(pCertContext);
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CertSetCertificateContextProperty : 0x%08x",dwError);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CertSetCertificateContextProperty CERT_KEY_PROV_INFO_PROP_ID 0x%08x",dwError);
+			__leave;
+		}
+		// we provide the context to cache it
+		CERT_KEY_CONTEXT keyContext;
+		memset(&keyContext, 0, sizeof(CERT_KEY_CONTEXT));
+		keyContext.cbSize = sizeof(CERT_KEY_CONTEXT);
+		keyContext.hCryptProv = hProv;
+		keyContext.dwKeySpec = pCspInfo->KeySpec;
+		if (!CertSetCertificateContextProperty(pCertContext, CERT_KEY_CONTEXT_PROP_ID, 0, &keyContext))
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CertSetCertificateContextProperty CERT_KEY_CONTEXT_PROP_ID 0x%08x",dwError);
+			__leave;
+		}
+		// important : the hprov will be freed if the certificatecontext is freed, and that's a problem
+		if (!CryptContextAddRef(hProv, NULL, 0))
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptContextAddRef 0x%08x",dwError);
+			__leave;
 		}
 		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"Certificate OK");
-
+		fSuccess = TRUE;
 	}
 	__finally
 	{
+		if (!fSuccess)
+		{
+			if (pCertContext) 
+			{
+				CertFreeCertificateContext(pCertContext);
+				pCertContext = NULL;
+			}
+		}
 		if (phUserKey)
 			CryptDestroyKey(phUserKey);
 		if (hProv) 

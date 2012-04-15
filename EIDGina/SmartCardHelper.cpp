@@ -23,7 +23,7 @@ PWSTR DuplicateUnicodeStringWithShift(PUNICODE_STRING source, PVOID pShift)
 		EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"Out of memory");
 		return NULL;
 	}
-	memcpy(szReturn, (PUCHAR)pShift + (DWORD) (source->Buffer), source->Length);
+	memcpy(szReturn, (PUCHAR)pShift + (ULONG_PTR) (source->Buffer), source->Length);
 	szReturn[source->Length/2] = L'\0';
 	return szReturn;
 }	
@@ -289,7 +289,7 @@ BOOL PrepareNprNotifyInfo(PEID_INTERACTIVE_LOGON pLogonStruct, PWLX_MPR_NOTIFY_I
 			EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"Out of memory");
 			__leave;
 		}
-		memcpy(pNprNotifyInfo->pszUserName, ((PUCHAR) pLogonStruct) + (DWORD) pLogonStruct->UserName.Buffer, pLogonStruct->UserName.Length);
+		memcpy(pNprNotifyInfo->pszUserName, ((PUCHAR) pLogonStruct) + (ULONG_PTR) pLogonStruct->UserName.Buffer, pLogonStruct->UserName.Length);
 		pNprNotifyInfo->pszUserName [pLogonStruct->UserName.Length/2] = L'\0';
 		// domain
 		pNprNotifyInfo->pszDomain = (PWSTR) LocalAlloc(LMEM_FIXED, pLogonStruct->LogonDomainName.Length + sizeof(WCHAR));
@@ -298,7 +298,7 @@ BOOL PrepareNprNotifyInfo(PEID_INTERACTIVE_LOGON pLogonStruct, PWLX_MPR_NOTIFY_I
 			EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"Out of memory");
 			__leave;
 		}
-		memcpy(pNprNotifyInfo->pszDomain, ((PUCHAR) pLogonStruct) + (DWORD) pLogonStruct->LogonDomainName.Buffer, pLogonStruct->LogonDomainName.Length);
+		memcpy(pNprNotifyInfo->pszDomain, ((PUCHAR) pLogonStruct) + (ULONG_PTR) pLogonStruct->LogonDomainName.Buffer, pLogonStruct->LogonDomainName.Length);
 		pNprNotifyInfo->pszDomain [pLogonStruct->LogonDomainName.Length/2] = L'\0';
 		pNprNotifyInfo->pszPassword = (PWSTR) LocalAlloc(LMEM_FIXED,sizeof(WCHAR));
 		if (!pNprNotifyInfo->pszPassword)
@@ -488,8 +488,8 @@ BOOL GetPassword(__in PWSTR szPin,
 		pResponseRequest->dwResponseSize = dwResponseSize;
 		pResponseRequest->pbChallenge = (PBYTE) sizeof(EID_MSGINA_AUTHENTICATION_RESPONSE_REQUEST);
 		pResponseRequest->pbResponse = (PBYTE)  sizeof(EID_MSGINA_AUTHENTICATION_RESPONSE_REQUEST) + pResponseRequest->dwChallengeSize;
-		memcpy(pResponseRequest->pbChallenge + (ULONG) pResponseRequest, pChallengeAnswer->pbChallenge, pChallengeAnswer->dwChallengeSize);
-		memcpy(pResponseRequest->pbResponse + (ULONG) pResponseRequest, pbResponse, dwResponseSize);
+		memcpy(pResponseRequest->pbChallenge + (ULONG_PTR) pResponseRequest, pChallengeAnswer->pbChallenge, pChallengeAnswer->dwChallengeSize);
+		memcpy(pResponseRequest->pbResponse + (ULONG_PTR) pResponseRequest, pbResponse, dwResponseSize);
 
 		status = LsaCallAuthenticationPackage(hLsa, ulAuthPackage, pResponseRequest, dwSize, (PVOID*) &pResponseAnswer, &ulSize, &protocolStatus);
 		if (status != STATUS_SUCCESS)

@@ -226,7 +226,7 @@ LONG CSmartCardConnectionNotifier::WaitForSmartCardInsertion()
 					// Report the status for all the reader where a change has been detected.
 					if ((0 != ( SCARD_STATE_CHANGED & rgscState[dwI].dwEventState)))
 					{
-						EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"SCardGetStatusChange :%X",rgscState[dwI].dwEventState);
+						EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"SCardGetStatusChange :0x%08X",rgscState[dwI].dwEventState);
 						if ( (SCARD_STATE_PRESENT  & rgscState[dwI].dwEventState) &&
 								!(SCARD_STATE_PRESENT & rgscState[dwI].dwCurrentState))
 						{

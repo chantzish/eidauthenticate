@@ -2,6 +2,7 @@
 #include <tchar.h>
 #include <Cryptuiapi.h>
 #include <Sddl.h>
+#include <Lm.h>
 #include "EIDTestUIUtil.h"
 
 #include "../EIDCardLibrary/EIDCardLibrary.h"
@@ -20,12 +21,10 @@ void menu_UTIL_ListCertificates()
 {
 	WCHAR szReader[256];
 	WCHAR szCard[256];
-	WCHAR szContainer[256];
-	WCHAR szProvider[256];
 	PCCERT_CONTEXT Context = NULL;
 	if (AskForCard(szReader,256,szCard,256))
 	{
-		Context = SelectCerts(szReader,szCard,szProvider,256,szContainer,256, NULL);
+		Context = SelectCert(szReader,szCard);
 		if (Context) CertFreeCertificateContext(Context);
 	}
 }
@@ -34,26 +33,46 @@ void menu_UTIL_DeleteOneCertificate()
 {
 	WCHAR szReader[256];
 	WCHAR szCard[256];
-	WCHAR szContainer[256];
-	WCHAR szProvider[256];
 	HCRYPTPROV hProv;
-	PCCERT_CONTEXT Context = NULL;
-	if (AskForCard(szReader,256,szCard,256)) {
-		if (Context = SelectCerts(szReader,szCard,szProvider, 256, szContainer,256, NULL)) 
+	PCCERT_CONTEXT pContext = NULL;
+	PCRYPT_KEY_PROV_INFO pProvInfo = NULL;
+	__try
+	{
+		if (!AskForCard(szReader,256,szCard,256)) __leave;
+		pContext = SelectCert(szReader,szCard);
+		if (!pContext) __leave;
+		DWORD dwSize = 0;
+		if (!CertGetCertificateContextProperty(pContext, CERT_KEY_PROV_INFO_PROP_ID, NULL, &dwSize))
 		{
-			CertFreeCertificateContext(Context);
-			// Acquire a context on the current container
-			if (CryptAcquireContext(&hProv,
-					szContainer,
-					szProvider,
-					PROV_RSA_FULL,
-					CRYPT_DELETEKEYSET))
-			{
-				WCHAR Buffer[4000];
-				_stprintf_s(Buffer,4000,L"Container %s deleted",szContainer);
-				MessageBox(NULL,Buffer,L"",0);
-			}
+			__leave;
 		}
+		pProvInfo = (PCRYPT_KEY_PROV_INFO) EIDAlloc(dwSize);
+		if (!pProvInfo)
+		{
+			__leave;
+		}
+		if (!CertGetCertificateContextProperty(pContext, CERT_KEY_PROV_INFO_PROP_ID, pProvInfo, &dwSize))
+		{
+			__leave;
+		}
+		CertFreeCertificateContext(pContext);
+		pContext = NULL;
+		// Acquire a context on the current container
+		if (CryptAcquireContext(&hProv,
+				pProvInfo->pwszContainerName,
+				pProvInfo->pwszProvName,
+				PROV_RSA_FULL,
+				CRYPT_DELETEKEYSET))
+		{
+			WCHAR Buffer[4000];
+			_stprintf_s(Buffer,4000,L"Container %s deleted",pProvInfo->pwszContainerName);
+			MessageBox(NULL,Buffer,L"",0);
+		}
+	}
+	__finally
+	{
+		if (pContext) CertFreeCertificateContext(pContext);
+		if (pProvInfo) EIDFree(pProvInfo);
 	}
 }
 void menu_UTIL_ClearCard()
@@ -117,7 +136,7 @@ void menu_UTIL_ShowSecurityDescriptor()
 	PCCERT_CONTEXT pCertContext = SelectCertificateWithPrivateKey(hMainWnd);
 	HCRYPTPROV hProv = NULL;
 	DWORD dwKeyType;
-	BOOL fCallerFreeProvOrNCryptKey;
+	BOOL fCallerFreeProvOrNCryptKey = FALSE;
 	DWORD dwError = 0;
 	PSECURITY_DESCRIPTOR pSD = NULL;
 	DWORD dwSize = 0;
@@ -125,7 +144,7 @@ void menu_UTIL_ShowSecurityDescriptor()
 	if (!pCertContext) return;
 	__try
 	{
-		if (!CryptAcquireCertificatePrivateKey(pCertContext,0,NULL,
+		if (!CryptAcquireCertificatePrivateKey(pCertContext,CRYPT_ACQUIRE_USE_PROV_INFO_FLAG,NULL,
 					&hProv,&dwKeyType,&fCallerFreeProvOrNCryptKey))
 		{
 			dwError = GetLastError();
@@ -163,11 +182,48 @@ void menu_UTIL_ShowSecurityDescriptor()
 			EIDFree(szSD);
 		if (pSD)
 			EIDFree(pSD);
-		if (hProv)
+		if (fCallerFreeProvOrNCryptKey && hProv)
 			CryptReleaseContext(hProv, 0);
 		if (pCertContext)
 			CertFreeCertificateContext(pCertContext);
 	}
 	if (dwError)
 		MessageBoxWin32(dwError);
+}
+
+void menu_UTIL_ChangeUserFlag(BOOL fSet)
+{
+	WCHAR szUserName[256];
+	WCHAR szComputerName[256];
+	USER_INFO_1008 info1008;
+	PUSER_INFO_1 pInfo1 = NULL;
+	NET_API_STATUS status;
+	if (AskUsername(szUserName, szComputerName))
+	{
+		
+		status = NetUserGetInfo(szComputerName, szUserName, 1, (PBYTE*) &pInfo1);
+		if (status == NERR_Success)
+		{
+			
+			info1008.usri1008_flags = pInfo1->usri1_flags;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE, L"flag before 0x%08x",info1008.usri1008_flags);
+			if (fSet)
+			{
+				info1008.usri1008_flags |= UF_SMARTCARD_REQUIRED;
+			}
+			else
+			{
+				info1008.usri1008_flags &= ~(UF_SMARTCARD_REQUIRED);
+			}
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE, L"flag after 0x%08x",info1008.usri1008_flags);
+			status = NetUserSetInfo(szComputerName, szUserName, 1008, (PBYTE) &info1008, NULL);
+			MessageBoxWin32(status)
+		}
+		else
+		{
+			MessageBoxWin32(status)
+		}
+		
+	}
+	if (pInfo1) NetApiBufferFree(pInfo1);
 }

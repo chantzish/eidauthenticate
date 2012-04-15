@@ -8,10 +8,15 @@
 #include <Cryptuiapi.h>
 #include <commctrl.h>
 #include <lm.h>
+#include <wincred.h>
 
 #include "../EIDCardLibrary/EIDCardLibrary.h"
 #include "../EIDCardLibrary/Tracing.h"
 #include "../EIDCardLibrary/CertificateUtilities.h"
+#include "../EIDCardLibrary/CContainer.h"
+#include "../EIDCardLibrary/CContainerHolderFactory.h"
+#include "../EIDCardLibrary/GPO.h"
+
 #include "EIDTest.h"
 #include "EIDTestUIUtil.h"
 
@@ -98,17 +103,245 @@ static BOOL CALLBACK GoToProcPin(HWND hwndDlg, UINT message, WPARAM wParam, LPAR
     return FALSE; 
 } 
 
-BOOL AskPin(WCHAR* Pin)
+typedef struct _KERB_SMARTCARD_CSP_INFO {
+  DWORD dwCspInfoLen;
+  DWORD MessageType;
+  union {
+    PVOID   ContextInformation;
+    ULONG64 SpaceHolderForWow64;
+  };
+  DWORD flags;
+  DWORD KeySpec;
+  ULONG nCardNameOffset;
+  ULONG nReaderNameOffset;
+  ULONG nContainerNameOffset;
+  ULONG nCSPNameOffset;
+  TCHAR bBuffer;
+} KERB_SMARTCARD_CSP_INFO, *PKERB_SMARTCARD_CSP_INFO;
+
+BOOL AskPin(__out PWSTR szPin, __in PWSTR szReader,__in PWSTR szCard)
+{
+
+	CREDUI_INFO credUiInfo;
+	credUiInfo.cbSize = sizeof(credUiInfo);
+	credUiInfo.pszCaptionText = TEXT("test");
+	credUiInfo.pszMessageText = TEXT("test");
+	credUiInfo.hbmBanner = NULL;
+	credUiInfo.hwndParent = hMainWnd;
+	ULONG authPackage = 0xffffeb34;
+	LPVOID authBuffer;
+	ULONG authBufferSize = 0;
+	DWORD dwTotalSize;
+	PKERB_CERTIFICATE_LOGON pRequest = NULL;
+	TCHAR szContainer[] = TEXT("");
+	TCHAR szProvider[256];
+	DWORD dwProviderNameLen = ARRAYSIZE(szProvider);
+	BOOL fReturn = FALSE;
+	SCARDCONTEXT hSCardContext = NULL;
+	SCARDHANDLE hCard = NULL;
+	LONG lCardStatus;
+	DWORD dwError = 0;
+	PBYTE pbAtr = NULL;
+	DWORD dwAtrSize = SCARD_AUTOALLOCATE;
+	SCARD_READERSTATE state;
+	__try
+	{
+		if (!SchGetProviderNameFromCardName(szCard, szProvider, &dwProviderNameLen))
+		{
+			dwError = GetLastError();
+			__leave;
+		}
+		// get provider name
+	
+		lCardStatus = SCardEstablishContext(SCARD_SCOPE_USER,NULL,NULL,&hSCardContext);
+		if (SCARD_S_SUCCESS != lCardStatus)
+		{
+			dwError = lCardStatus;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SCardEstablishContext 0x%08x",lCardStatus);
+			__leave;
+		}
+		
+		memset(&state,0,sizeof(SCARD_READERSTATE));
+		state.szReader = szReader;
+		state.dwCurrentState = SCARD_STATE_UNAWARE;
+		lCardStatus = SCardGetStatusChange(hSCardContext, 0, &state, 1);
+		if (SCARD_S_SUCCESS != lCardStatus)
+		{
+			dwError = lCardStatus;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SCardConnect 0x%08x",lCardStatus);
+			__leave;
+		}
+		DWORD dwCspBufferLength = (DWORD) (wcslen(szCard)+1
+						+ wcslen(szContainer)+1
+						+ wcslen(szProvider)+1
+						+ wcslen(szReader)+1);
+		DWORD dwCspDataLength = sizeof(KERB_SMARTCARD_CSP_INFO)
+						+ (dwCspBufferLength) * sizeof(WCHAR);
+		dwTotalSize = (DWORD) (sizeof(KERB_CERTIFICATE_LOGON) 
+						+ dwCspDataLength);
+    
+		pRequest = (PKERB_CERTIFICATE_LOGON) EIDAlloc(dwTotalSize);
+		if (!pRequest)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"Out of memory");
+			__leave;
+		}
+		memset(pRequest, 0, dwTotalSize);
+		pRequest->MessageType = KerbCertificateUnlockLogon;
+		PVOID pPointer = (PUCHAR) pRequest + sizeof(KERB_CERTIFICATE_LOGON);
+		pRequest->CspDataLength = dwCspDataLength;
+		pRequest->CspData = (PUCHAR) pPointer;
+		PKERB_SMARTCARD_CSP_INFO pCspInfo = (PKERB_SMARTCARD_CSP_INFO) pPointer;
+		pCspInfo->dwCspInfoLen = pRequest->CspDataLength;
+		// CSPInfo + content
+		pCspInfo->MessageType = 1;
+		pCspInfo->flags = 0x1 | ((state.dwEventState >> 16)<<16);
+		pCspInfo->nCardNameOffset = 0;
+		pCspInfo->nReaderNameOffset = (DWORD) (pCspInfo->nCardNameOffset + wcslen(szCard) + 1 );
+		pCspInfo->nContainerNameOffset = (DWORD) (pCspInfo->nReaderNameOffset + wcslen(szReader) + 1 );
+		pCspInfo->nCSPNameOffset = (DWORD) (pCspInfo->nContainerNameOffset + wcslen(szContainer) + 1 );
+		wcscpy_s(&pCspInfo->bBuffer + pCspInfo->nCardNameOffset , dwCspBufferLength  - pCspInfo->nCardNameOffset, szCard);
+		wcscpy_s(&pCspInfo->bBuffer + pCspInfo->nReaderNameOffset ,dwCspBufferLength  - pCspInfo->nReaderNameOffset, szReader);
+		wcscpy_s(&pCspInfo->bBuffer + pCspInfo->nContainerNameOffset ,dwCspBufferLength  - pCspInfo->nContainerNameOffset, szContainer);
+		wcscpy_s(&pCspInfo->bBuffer + pCspInfo->nCSPNameOffset , dwCspBufferLength  - pCspInfo->nCSPNameOffset, szProvider);	
+		pRequest->CspData = (pRequest->CspData - (ULONG_PTR) pRequest);
+		// sucess !
+		
+
+		CoInitializeEx(NULL,COINIT_APARTMENTTHREADED); 
+		DWORD result = CredUIPromptForWindowsCredentials(&(credUiInfo), 0, &(authPackage), 
+						pRequest, dwTotalSize, &authBuffer, &authBufferSize, NULL, CREDUIWIN_IN_CRED_ONLY);
+		if (result != ERROR_SUCCESS)
+		{
+			dwError = result;
+			__leave;
+		}
+		PKERB_CERTIFICATE_LOGON output = (PKERB_CERTIFICATE_LOGON) authBuffer;
+		for (int i = 0; i< output->Pin.Length; i++)
+		{
+			szPin[i] = (CHAR) *((PBYTE) output + (DWORD) output->Pin.Buffer + i);
+		}
+		szPin[output->Pin.Length]=0;
+		fReturn = TRUE;
+	}
+	__finally
+	{
+		if (pRequest) EIDFree(pRequest);
+		if (authBuffer) CoTaskMemFree(authBuffer);
+		if (pbAtr) SCardFreeMemory(hSCardContext, pbAtr);
+		if (hCard) SCardDisconnect(hCard, SCARD_LEAVE_CARD);
+		if (hSCardContext)	SCardReleaseContext(hSCardContext);
+
+	}
+	SetLastError(dwError);
+	return fReturn;
+}
+
+BOOL AskPassword(WCHAR* Pin)
 {
 	PinBuffer = Pin;
 
-	BOOL fStatus = (DialogBox(hInst, MAKEINTRESOURCE(IDD_PIN), hMainWnd, (DLGPROC)GoToProcPin)>0);
+	BOOL fStatus = (DialogBox(hInst, MAKEINTRESOURCE(IDD_PASSWORD), hMainWnd, (DLGPROC)GoToProcPin)>0);
 	return fStatus;
 }
 
 
+class CMyCertificate
+{
+public:
+	CMyCertificate(CContainer* pContainer)
+	{
+		_pContainer = pContainer;
+	}
 
+	virtual ~CMyCertificate()
+	{
+		if (_pContainer)
+		{
+			delete _pContainer;
+		}
+	}
+	void Release()
+	{
+		delete this;
+	}
+	HRESULT SetUsageScenario(__in CREDENTIAL_PROVIDER_USAGE_SCENARIO cpus,__in DWORD dwFlags){return S_OK;}
+	CContainer* GetContainer()
+	{
+		return _pContainer;
+	}
+private:
+	CContainer* _pContainer;
+};
 
+PCCERT_CONTEXT SelectCert(__in LPCWSTR szReader,__in LPCWSTR szCard)
+{
+	HCERTSTORE hStore = NULL;
+	PCCERT_CONTEXT pReturnedContext = NULL, pSelectedContext = NULL;
+	CContainerHolderFactory<CMyCertificate> MyCertificateList;
+	MyCertificateList.SetUsageScenario(CPUS_INVALID, 0);
+	MyCertificateList.ConnectNotification(szReader,szCard,0);
+	if (!MyCertificateList.HasContainerHolder())
+	{
+		goto cleanup;
+	}
+	//create a certificate store in memory
+	hStore = CertOpenStore(CERT_STORE_PROV_MEMORY,
+				X509_ASN_ENCODING,
+				NULL,
+				0,
+				NULL);
+
+	if (!hStore)
+	{
+		goto cleanup;
+	}
+
+	//add the certificate contexts to this store
+	for (DWORD i=0; i < MyCertificateList.ContainerHolderCount(); i++)
+	{
+		CContainer* container = MyCertificateList.GetContainerHolderAt(i)->GetContainer();
+		PCCERT_CONTEXT pCertContext = container->GetCertificate();
+		// see remark in CertAddCertificateContextToStore
+		// the certificate is cloned, and the reference count is not changed
+		if (!CertAddCertificateContextToStore( hStore,
+				pCertContext,
+				CERT_STORE_ADD_ALWAYS,
+				NULL) )
+		{
+			goto cleanup;
+		}
+		CertFreeCertificateContext(pCertContext);
+	}
+			
+	pSelectedContext = CryptUIDlgSelectCertificateFromStore(hStore, NULL, NULL, NULL,CRYPTUI_SELECT_LOCATION_COLUMN,0, NULL);
+	if (!pSelectedContext) goto cleanup;
+	// match certificate
+	// note : we are doing this to preservate the CERT_KEY_PROV_HANDLE_PROP_ID and CERT_KEY_CONTEXT_PROP_ID properties
+	for (DWORD i=0; i < MyCertificateList.ContainerHolderCount(); i++)
+	{
+		CContainer* container = MyCertificateList.GetContainerHolderAt(i)->GetContainer();
+		PCCERT_CONTEXT pCertContext = container->GetCertificate();
+		if (CertCompareCertificate(X509_ASN_ENCODING,pSelectedContext->pCertInfo,
+			pCertContext->pCertInfo))
+		{
+			pReturnedContext = pCertContext;
+			// found
+			break;
+		//true
+		}
+		CertFreeCertificateContext(pCertContext);
+	}
+cleanup:
+	if (pSelectedContext) 
+		CertFreeCertificateContext(pSelectedContext);
+	if (hStore) 
+		CertCloseStore(hStore,0);
+	MyCertificateList.DisconnectNotification(szReader);
+	return pReturnedContext;
+}
+/*
 PCCERT_CONTEXT SelectCerts(__in LPCWSTR szReaderName,__in LPCWSTR szCardName, 
 				__out LPWSTR szOutProviderName,__in DWORD dwOutProviderLength,
 				__out LPWSTR szOutContainerName,__in DWORD dwOutContainerLength,
@@ -186,7 +419,7 @@ PCCERT_CONTEXT SelectCerts(__in LPCWSTR szReaderName,__in LPCWSTR szCardName,
 
 
 
-		/* Enumerate all the containers */
+		// Enumerate all the containers 
 		while (CryptGetProvParam(HMainCryptProv,
 					PP_ENUMCONTAINERS,
 					(LPBYTE) szContainerName,
@@ -430,7 +663,7 @@ PCCERT_CONTEXT SelectCerts(__in LPCWSTR szReaderName,__in LPCWSTR szCardName,
 	}
 	return pSelectedContext;
 }
-
+*/
 PUI_CERTIFICATE_INFO _pCertificateInfo;
 
 void FreeCertificateInfo(PUI_CERTIFICATE_INFO pCertificateInfo);
@@ -664,3 +897,39 @@ BOOL DisplayTrace(HWND hTracingWindow, PCTSTR szMessage)
 	//SendDlgItemMessage(hTracingWindow, IDC_TRACE, EM_REPLACESEL, FALSE, (LPARAM)TEXT("\r\n"));
 	return TRUE;
 }
+
+VOID menu_UTIL_DisplayCSPInfoFromUserCertificate()
+{
+	PCCERT_CONTEXT returnedContext = NULL;
+	TCHAR szCertName[1024] = TEXT("");
+	TCHAR szComputerName[257];
+	DWORD dwSize = ARRAYSIZE(szComputerName);
+	HCERTSTORE hCertStore = NULL;
+	GetComputerName(szComputerName,&dwSize);
+	// open trusted root store
+	hCertStore = CertOpenStore(CERT_STORE_PROV_SYSTEM,0,NULL,CERT_SYSTEM_STORE_CURRENT_USER,_T("My"));
+	if (hCertStore)
+	{
+		PCCERT_CONTEXT pCertContext = NULL;
+		pCertContext = CertEnumCertificatesInStore(hCertStore,pCertContext);
+		while (pCertContext)
+		{
+			
+			// get the subject details for the cert
+			CertGetNameString(pCertContext,CERT_NAME_SIMPLE_DISPLAY_TYPE,0,NULL,szCertName,ARRAYSIZE(szCertName));
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"szCertName %s",szCertName);
+			PCRYPT_KEY_PROV_INFO info = NULL;
+			dwSize = 0;
+			if (CertGetCertificateContextProperty(pCertContext,CERT_KEY_PROV_INFO_PROP_ID,(PBYTE) info,&dwSize))
+			{
+				info = (PCRYPT_KEY_PROV_INFO) EIDAlloc(dwSize);
+				if (CertGetCertificateContextProperty(pCertContext,CERT_KEY_PROV_INFO_PROP_ID,(PBYTE) info,&dwSize))
+				{
+					EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Container %s CSP %s flag %d",info->pwszContainerName, info->pwszProvName, info->dwFlags);
+				}
+			}
+			pCertContext = CertEnumCertificatesInStore(hCertStore,pCertContext);
+		}
+		CertCloseStore(hCertStore,0);
+	}
+} 

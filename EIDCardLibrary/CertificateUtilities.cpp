@@ -56,7 +56,7 @@ BOOL SchGetProviderNameFromCardName(__in LPCTSTR szCardName, __out LPTSTR szProv
 }
 
 // the string must be freed using RpcStringFree
-LPTSTR GetUniqueIDString()
+PTSTR GetUniqueIDString()
 {
 	UUID pUUID;
 	LPTSTR sTemp = NULL;
@@ -64,7 +64,7 @@ LPTSTR GetUniqueIDString()
 	hr = UuidCreateSequential(&pUUID);
 	if (hr == RPC_S_OK)
 	{
-        hr = UuidToString(&pUUID, (RPC_WSTR *)&sTemp); 
+		hr = UuidToString(&pUUID, (RPC_WSTR *)&sTemp); 
 	}
 	return sTemp;
 }
@@ -290,7 +290,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 	BYTE SerialNumber[8];  
 	DWORD dwKeyType = 0;
 	DWORD cbPublicKeyInfo = 0;
-	BOOL pfCallerFreeProvOrNCryptKey;
+	BOOL pfCallerFreeProvOrNCryptKey = FALSE;
 	CRYPT_ALGORITHM_IDENTIFIER SigAlg;
 	CRYPT_OBJID_BLOB  Parameters;
 	CRYPTUI_WIZ_EXPORT_INFO WizInfo = {0};
@@ -358,10 +358,10 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 		// create container
 		if (!CryptAcquireContext(
 			&hCryptProvNewCertificate,
-			szContainerName,          
-			szProviderName,           
-			PROV_RSA_FULL,      
-			dwFlag))   
+			szContainerName,   
+			szProviderName,
+			PROV_RSA_FULL,
+			dwFlag))
 		{
 			dwError = GetLastError();
 			__leave;
@@ -415,26 +415,26 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 		if (!CertInfo.rgExtension) __leave;
 
 
-		       // Set Key Usage according to Public Key Type   
-       ZeroMemory(&KeyUsage, sizeof(KeyUsage));   
-       KeyUsage.cbData = 1;   
-       KeyUsage.pbData = &ByteData;   
+		// Set Key Usage according to Public Key Type   
+		ZeroMemory(&KeyUsage, sizeof(KeyUsage));   
+		KeyUsage.cbData = 1;   
+		KeyUsage.pbData = &ByteData;   
     
-       if (pCertificateInfo->dwKeyType == AT_SIGNATURE)   
-       {   
-          ByteData = CERT_DIGITAL_SIGNATURE_KEY_USAGE|   
-                     CERT_NON_REPUDIATION_KEY_USAGE|   
-                     CERT_KEY_CERT_SIGN_KEY_USAGE |   
-                     CERT_CRL_SIGN_KEY_USAGE;   
-       }   
+		if (pCertificateInfo->dwKeyType == AT_SIGNATURE)   
+		{   
+		   ByteData = CERT_DIGITAL_SIGNATURE_KEY_USAGE|   
+						CERT_NON_REPUDIATION_KEY_USAGE|   
+						CERT_KEY_CERT_SIGN_KEY_USAGE |   
+						CERT_CRL_SIGN_KEY_USAGE;   
+		}   
     
-       if (pCertificateInfo->dwKeyType == AT_KEYEXCHANGE)   
-       {   
-          ByteData = CERT_DIGITAL_SIGNATURE_KEY_USAGE |   
-                     CERT_DATA_ENCIPHERMENT_KEY_USAGE|   
-                     CERT_KEY_ENCIPHERMENT_KEY_USAGE |   
-                     CERT_KEY_AGREEMENT_KEY_USAGE;   
-       }
+		if (pCertificateInfo->dwKeyType == AT_KEYEXCHANGE)   
+		{   
+		   ByteData = CERT_DIGITAL_SIGNATURE_KEY_USAGE |   
+						CERT_DATA_ENCIPHERMENT_KEY_USAGE|   
+						CERT_KEY_ENCIPHERMENT_KEY_USAGE |   
+						CERT_KEY_AGREEMENT_KEY_USAGE;   
+		}
 
 
 		pbKeyUsage = AllocateAndEncodeObject(&KeyUsage,X509_KEY_USAGE,&dwSize);
@@ -444,34 +444,34 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 		CertInfo.rgExtension[CertInfo.cExtension].fCritical = FALSE;   
 		CertInfo.rgExtension[CertInfo.cExtension].Value.cbData = dwSize;   
 		CertInfo.rgExtension[CertInfo.cExtension].Value.pbData = pbKeyUsage;   
-       // Increase extension count   
-       CertInfo.cExtension++; 
+		// Increase extension count   
+		CertInfo.cExtension++; 
 	   //////////////////////////////////////////////////
 
 	   // Zero Basic Constraints structure   
-       ZeroMemory(&BasicConstraints, sizeof(BasicConstraints));   
+		ZeroMemory(&BasicConstraints, sizeof(BasicConstraints));   
     
-       // Self-signed is always a CA   
-       if (pCertificateInfo->bIsSelfSigned)   
-       {   
-          BasicConstraints.fCA = TRUE;   
-          BasicConstraints.fPathLenConstraint = TRUE;   
-          BasicConstraints.dwPathLenConstraint = 1;   
-       }   
-       else   
-       {   
-          BasicConstraints.fCA = pCertificateInfo->bIsCA;   
-       }   
+		// Self-signed is always a CA   
+		if (pCertificateInfo->bIsSelfSigned)   
+		{   
+		   BasicConstraints.fCA = TRUE;   
+		   BasicConstraints.fPathLenConstraint = TRUE;   
+		   BasicConstraints.dwPathLenConstraint = 1;   
+		}   
+		else   
+		{   
+		   BasicConstraints.fCA = pCertificateInfo->bIsCA;   
+		}   
 		pbBasicConstraints = AllocateAndEncodeObject(&BasicConstraints,X509_BASIC_CONSTRAINTS2,&dwSize);
 		if (!pbBasicConstraints) __leave;
 
-       // Set Basic Constraints extension   
-       CertInfo.rgExtension[CertInfo.cExtension].pszObjId = szOID_BASIC_CONSTRAINTS2;   
-       CertInfo.rgExtension[CertInfo.cExtension].fCritical = FALSE;   
-       CertInfo.rgExtension[CertInfo.cExtension].Value.cbData = dwSize;   
-       CertInfo.rgExtension[CertInfo.cExtension].Value.pbData = pbBasicConstraints;   
-       // Increase extension count   
-       CertInfo.cExtension++;  
+		// Set Basic Constraints extension   
+		CertInfo.rgExtension[CertInfo.cExtension].pszObjId = szOID_BASIC_CONSTRAINTS2;   
+		CertInfo.rgExtension[CertInfo.cExtension].fCritical = FALSE;   
+		CertInfo.rgExtension[CertInfo.cExtension].Value.cbData = dwSize;   
+		CertInfo.rgExtension[CertInfo.cExtension].Value.pbData = pbBasicConstraints;   
+		// Increase extension count   
+		CertInfo.cExtension++;  
 		//////////////////////////////////////////////////
 		if (pCertificateInfo->bHasClientAuthentication)
 			CertEnhKeyUsage.cUsageIdentifier++;
@@ -555,7 +555,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 				  hCryptProvNewCertificate,
 				  pCertificateInfo->dwKeyType,  
 				  X509_ASN_ENCODING,      
-				  pbPublicKeyInfo,       
+				  pbPublicKeyInfo,		
 				  &cbPublicKeyInfo))     
 			{
 				dwError = GetLastError();
@@ -570,7 +570,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 				  hCryptProvNewCertificate,
 				  pCertificateInfo->dwKeyType,   
 				  X509_ASN_ENCODING,      
-				  pbPublicKeyInfo,       
+				  pbPublicKeyInfo,		
 				  &cbPublicKeyInfo))     
 			{
 				dwError = GetLastError();
@@ -673,15 +673,15 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 
 			// sign certificate
 			if(!CryptSignAndEncodeCertificate(
-				  hCryptProvRootCertificate,                     // Crypto provider
+				  hCryptProvRootCertificate,    // Crypto provider
 				  AT_SIGNATURE,                 // Key spec
-				  X509_ASN_ENCODING,               // Encoding type
-				  X509_CERT_TO_BE_SIGNED, // Struct type
+				  X509_ASN_ENCODING,            // Encoding type
+				  X509_CERT_TO_BE_SIGNED,      // Struct type
 				  &CertInfo,                   // Struct info        
-				  &SigAlg,                        // Signature algorithm
-				  NULL,                           // Not used
-				  pbSignedEncodedCertReq,         // Pointer
-				  &cbEncodedCertReqSize))         // Length of the message
+				  &SigAlg,                     // Signature algorithm
+				  NULL,                        // Not used
+				  pbSignedEncodedCertReq,      // Pointer
+				  &cbEncodedCertReqSize))  // Length of the message
 			{
 				dwError = GetLastError();
 				__leave;
@@ -903,15 +903,16 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 		if (pbSignedEncodedCertReq) EIDFree(pbSignedEncodedCertReq);
 		if (pbPublicKeyInfo) EIDFree(pbPublicKeyInfo);
 		if (hCryptProvNewCertificate) CryptReleaseContext(hCryptProvNewCertificate,0);
-		if (hCryptProvRootCertificate) CryptReleaseContext(hCryptProvRootCertificate,0);
+		if (hCryptProvRootCertificate && pfCallerFreeProvOrNCryptKey) 
+			CryptReleaseContext(hCryptProvRootCertificate,0);
 		if (bDestroyContainer)
 		{
 			// if a temp container has been created, delete it
 			CryptAcquireContext(
 				&hCryptProvNewCertificate,
-				szContainerName,          
-				szProviderName,           
-				PROV_RSA_FULL,      
+				szContainerName,
+				szProviderName,
+				PROV_RSA_FULL,
 				CRYPT_DELETE_KEYSET);
 		}
 		
@@ -1106,7 +1107,7 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 	PWSTR szContainerName = NULL;
 	HCRYPTPROV hCardProv = NULL, hProv = NULL;
 	PCCERT_CONTEXT pCertContext = NULL;
-	BOOL fFreeProv;
+	BOOL fFreeProv = FALSE;
 	DWORD dwKeySpec = AT_KEYEXCHANGE;
 	HCRYPTKEY hKey = NULL, hCardKey = NULL;
 	PRSAPRIVKEY pbData = NULL;
@@ -1282,7 +1283,7 @@ BOOL ImportFileToSmartCard(PTSTR szFileName, PTSTR szPassword, PTSTR szReaderNam
 			EIDFree(pbData);
 		if (hKey)
 			CryptDestroyKey(hKey);
-		if (hProv)
+		if (hProv && fFreeProv)
 			CryptReleaseContext(hProv, 0);
 		if (pCertContext)
 			CertFreeCertificateContext(pCertContext);
@@ -1472,7 +1473,7 @@ PCCERT_CONTEXT FindCertificateFromHashInReader(PCRYPT_DATA_BLOB pCertInfo, SCARD
 	DWORD dwProviderSize = SCARD_AUTOALLOCATE;
 	__try
 	{
-		Status = SCardConnect(hSCardContext, szReader, SCARD_SHARE_SHARED, SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1, &hCard, &dwProto);
+		Status = SCardConnect(hSCardContext, szReader, SCARD_SHARE_SHARED, SCARD_PROTOCOL_Tx, &hCard, &dwProto);
 		if (Status != SCARD_S_SUCCESS)
 		{
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"SCardConnect 0x%08x",Status);

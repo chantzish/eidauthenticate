@@ -105,7 +105,7 @@ BOOL CStoredCredentialManager::GetUsernameFromCertContext(__in PCCERT_CONTEXT pC
 						if (*pszUsername)
 						{
 							wcscpy_s(*pszUsername, wcslen(Username) +1, Username);
-							EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Found %d %s",*pdwRid, *pszUsername);
+							EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Found 0x%x %s",*pdwRid, *pszUsername);
 							fReturn = TRUE;
 						}
 						else
@@ -951,13 +951,13 @@ BOOL CStoredCredentialManager::GetResponseFromCryptedChallenge(__in PBYTE pChall
 			__leave;
 		}
 		dwKeySpec = pProvInfo->dwKeySpec;
-		if (!CryptAcquireContext(&hProv, pProvInfo->pwszContainerName, pProvInfo->pwszProvName, pProvInfo->dwProvType, CRYPT_SILENT))
+		if (!CryptAcquireCertificatePrivateKey(pCertContext,CRYPT_ACQUIRE_SILENT_FLAG | CRYPT_ACQUIRE_USE_PROV_INFO_FLAG,NULL,&hProv,&dwKeySpec,&fCallerFreeProv))
 		{
 			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CryptAcquireContext", GetLastError());
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CryptAcquireCertificatePrivateKey", GetLastError());
+			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"PIV fallback");
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE, L"Keyspec %S container %s provider %s", (pProvInfo->dwKeySpec == AT_SIGNATURE ?"AT_SIGNATURE":"AT_KEYEXCHANGE"),
 					pProvInfo->pwszContainerName, pProvInfo->pwszProvName);
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"PIV fallback");
 			if (!CryptAcquireContext(&hProv, NULL, pProvInfo->pwszProvName, pProvInfo->dwProvType, CRYPT_SILENT))
 			{
 				dwError = GetLastError();
@@ -965,12 +965,7 @@ BOOL CStoredCredentialManager::GetResponseFromCryptedChallenge(__in PBYTE pChall
 				__leave;
 			}
 		}
-		/*if (!CryptAcquireCertificatePrivateKey(pCertContext,CRYPT_ACQUIRE_SILENT_FLAG,NULL,&hProv,&dwKeySpec,&fCallerFreeProv))
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CryptAcquireCertificatePrivateKey", GetLastError());
-			__leave;
-		}*/
+
 		if (!CryptGetUserKey(hProv, dwKeySpec, &hKey))
 		{
 			dwError = GetLastError();
@@ -1044,7 +1039,7 @@ BOOL CStoredCredentialManager::GetResponseFromCryptedChallenge(__in PBYTE pChall
 			CryptDestroyKey(hKey);
 		if (hCertKey)
 			CryptDestroyKey(hCertKey);
-		if (fCallerFreeProv || hProv) 
+		if (fCallerFreeProv && hProv) 
 			CryptReleaseContext(hProv,0);
 		if (pProvInfo) 
 			EIDFree(pProvInfo);
@@ -1092,20 +1087,14 @@ BOOL CStoredCredentialManager::GetResponseFromSignatureChallenge(__in PBYTE pbCh
 		}
 		*pdwResponseSize = 0;
 		dwKeySpec = pKeyProvInfo->dwKeySpec;
-		if (!CryptAcquireContext(&hProv, pKeyProvInfo->pwszContainerName, pKeyProvInfo->pwszProvName, pKeyProvInfo->dwProvType, CRYPT_SILENT))
+		if (!CryptAcquireCertificatePrivateKey(pCertContext,CRYPT_ACQUIRE_SILENT_FLAG | CRYPT_ACQUIRE_USE_PROV_INFO_FLAG,NULL,&hProv,&dwKeySpec,&fCallerFreeProv))
 		{
 			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%08x returned by CryptAcquireContext", GetLastError());
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CryptAcquireCertificatePrivateKey", GetLastError());
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE, L"Keyspec %S container %s provider %s", (pKeyProvInfo->dwKeySpec == AT_SIGNATURE ?"AT_SIGNATURE":"AT_KEYEXCHANGE"),
 					pKeyProvInfo->pwszContainerName, pKeyProvInfo->pwszProvName);
 			__leave;
 		}
-		/*if (!CryptAcquireCertificatePrivateKey(pCertContext,0,NULL,&hProv,&dwKeySpec,&fCallerFreeProv))
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Error 0x%x returned by CryptAcquireCertificatePrivateKey", GetLastError());
-			__leave;
-		}*/
 		dwPinLen = (DWORD) wcslen(szPin) + 1;
 		pbPin = (LPSTR) EIDAlloc(dwPinLen);
 		if (!pbPin)
@@ -1172,7 +1161,7 @@ BOOL CStoredCredentialManager::GetResponseFromSignatureChallenge(__in PBYTE pbCh
 			CryptDestroyKey(hCertKey);
 		if (hHash)
 			CryptDestroyHash(hHash);
-		if (fCallerFreeProv || hProv) 
+		if (fCallerFreeProv && hProv) 
 			CryptReleaseContext(hProv,0);
 	}
 	SetLastError(dwError);
@@ -1186,7 +1175,7 @@ typedef struct _KEY_BLOB {
   WORD   reserved;
   ALG_ID aiKeyAlg;
   ULONG cb;
-  BYTE Data[4096];
+  BYTE Data[CREDENTIALKEYLENGTH/8];
 } KEY_BLOB;
 
 // create a symetric key which can be used to crypt data and
@@ -1430,7 +1419,7 @@ BOOL CStoredCredentialManager::GetPasswordFromCryptedChallengeResponse(__in DWOR
 		{
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Container already existed !!");
 		}
-		fStatus = CryptImportKey(hProv,(PBYTE) &bKey,dwResponseSize,0,CRYPT_EXPORTABLE,&hKey);
+		fStatus = CryptImportKey(hProv,(PBYTE) &bKey,sizeof(KEY_BLOB),0,CRYPT_EXPORTABLE,&hKey);
 		if(!fStatus)
 		{
 			dwError = GetLastError();
