@@ -1,8 +1,6 @@
 // Microsoft Visual C++ generated resource script.
 //
 #include "resource.h"
-/////////////////////////////////////////////////////////////////////////////
-// Neutre resources
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
@@ -16,7 +14,10 @@
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
 
-#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEU)
+/////////////////////////////////////////////////////////////////////////////
+// Neutre (Par défaut) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEUD)
 LANGUAGE LANG_NEUTRAL, SUBLANG_DEFAULT
 #pragma code_page(1252)
 
@@ -128,6 +129,9 @@ BEGIN
         MENUITEM "Show Security Descriptor",    IDM_UTIL_SHOWSD
         MENUITEM "Delete certificate",          IDM_UTIL_DELETE
         MENUITEM "Clear all data on the card",  IDM_UTIL_CLEAR
+        MENUITEM "Get CSP Info from User certificate store", IDM_UTIL_CSPINFO
+        MENUITEM "Set force smartcard flag",    IDM_UTIL_SETSMARTCARDFLAG
+        MENUITEM "Unset smartcard flag",        IDM_UTIL_UNSETSMARTCARDFLAG
     END
     POPUP "Info"
     BEGIN
@@ -193,7 +197,7 @@ BEGIN
     COMBOBOX        IDC_KEYSIZE,189,69,60,81,CBS_DROPDOWNLIST | WS_TABSTOP
 END
 
-IDD_PIN DIALOGEX 65532, 65520, 169, 52
+IDD_PASSWORD DIALOGEX 65532, 65520, 169, 52
 STYLE DS_SETFONT | DS_CENTER | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 CAPTION "Password"
 FONT 8, "MS Sans Serif", 0, 0, 0x0
@@ -236,7 +240,7 @@ BEGIN
     IDC_EIDCARDLIBRARYTEST  "EIDCARDLIBRARYTEST"
 END
 
-#endif    // Neutre resources
+#endif    // Neutre (Par défaut) resources
 /////////////////////////////////////////////////////////////////////////////
 
 

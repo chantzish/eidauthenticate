@@ -19,19 +19,17 @@ void menu_CREDMGMT_CreateStoredCredential(BOOL fCrypt)
 	WCHAR szComputerName[256];
 	WCHAR szReader[256];
 	WCHAR szCard[256];
-	WCHAR szContainer[256];
-	WCHAR szProvider[256];
 	WCHAR szPin[256];
 	DWORD dwKeySpec = 0;
 	PCCERT_CONTEXT Context = NULL;
 
 	if (AskForCard(szReader,256,szCard,256)) {
-		if (Context = SelectCerts(szReader,szCard,szProvider, 256, szContainer,256, &dwKeySpec)) 
+		if (Context = SelectCert(szReader,szCard)) 
 		{
 			
 			if (AskUsername(szUserName, szComputerName))
 			{
-				if (AskPin(szPin))
+				if (AskPassword(szPin))
 				{
 					CStoredCredentialManager* manager = CStoredCredentialManager::Instance();
 					if (manager->CreateCredential(GetRidFromUsername(szUserName), Context,szPin,0, fCrypt, FALSE))
@@ -56,7 +54,7 @@ void menu_CREDMGMT_UpdateStoredCredential()
 	WCHAR szComputerName[256];
 	if (AskUsername(szUserName, szComputerName))
 	{
-		if (AskPin(szPassword))
+		if (AskPassword(szPassword))
 		{
 			CStoredCredentialManager* manager = CStoredCredentialManager::Instance();
 			if (manager->UpdateCredential(GetRidFromUsername(szUserName), szPassword, 0))
@@ -95,19 +93,17 @@ void menu_CREDMGMT_RetrieveStoredCredential()
 	WCHAR szComputerName[256];
 	WCHAR szReader[256];
 	WCHAR szCard[256];
-	WCHAR szContainer[256];
-	WCHAR szProvider[256];
 	WCHAR szPin[256];
 	DWORD dwKeySpec = 0;
 	PCCERT_CONTEXT pCertContext;
 	PWSTR szPassword;
 
 	if (AskForCard(szReader,256,szCard,256)) {
-		if (pCertContext = SelectCerts(szReader,szCard,szProvider, 256, szContainer,256, &dwKeySpec)) 
+		if (pCertContext = SelectCert(szReader,szCard)) 
 		{
 			if (AskUsername(szUserName, szComputerName))
 			{
-				if (AskPin(szPin))
+				if (AskPin(szPin, szReader, szCard))
 				{
 					CStoredCredentialManager* manager = CStoredCredentialManager::Instance();
 					if (manager->GetPassword(GetRidFromUsername(szUserName), pCertContext, szPin, &szPassword))

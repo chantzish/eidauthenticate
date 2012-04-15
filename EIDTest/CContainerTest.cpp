@@ -169,7 +169,7 @@ void menu_CREDENTIAL_AllocateLogonStruct()
 
 void menu_CRED_RP_Trigger()
 {
-	WCHAR szReader[256];
+	/*WCHAR szReader[256];
 	WCHAR szCard[256];
 	WCHAR szContainer[256];
 	WCHAR szProvider[256];
@@ -205,5 +205,6 @@ void menu_CRED_RP_Trigger()
 			}
 		}
 		CertFreeCertificateContext(pContext);
-	}
+	}*/
+	MessageBox(hMainWnd,_T("Success"),_T("Success"),0);
 }

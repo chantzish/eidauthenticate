@@ -203,9 +203,9 @@ extern "C"
 					break;
 				}
 				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Has Autorization for rid = 0x%x", pBuffer->dwRid);
-				pPointer = (PBYTE) pBuffer->szPassword - (ULONG) ClientBufferBase + (ULONG) pBuffer;
+				pPointer = (PBYTE) pBuffer->szPassword - (ULONG_PTR) ClientBufferBase + (ULONG_PTR) pBuffer;
 				pBuffer->szPassword = (PWSTR) pPointer;
-				pPointer = (PBYTE) pBuffer->pbCertificate - (ULONG) ClientBufferBase + (ULONG) pBuffer;
+				pPointer = (PBYTE) pBuffer->pbCertificate - (ULONG_PTR) ClientBufferBase + (ULONG_PTR) pBuffer;
 				pBuffer->pbCertificate = (PBYTE) pPointer;
 				pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, pBuffer->pbCertificate, pBuffer->dwCertificateSize);
 				if (!pCertContext)
@@ -302,7 +302,7 @@ extern "C"
 				break;
 			case EIDCMGetStoredCredentialRid:
 				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"EIDCMGetStoredCredentialRid");
-				pPointer = (PBYTE) pBuffer->pbCertificate - (ULONG) ClientBufferBase + (ULONG) pBuffer;
+				pPointer = (PBYTE) pBuffer->pbCertificate - (ULONG_PTR) ClientBufferBase + (ULONG_PTR) pBuffer;
 				pBuffer->pbCertificate = (PBYTE) pPointer;
 				pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, pBuffer->pbCertificate, pBuffer->dwCertificateSize);
 				if (!pCertContext)
@@ -326,7 +326,7 @@ extern "C"
 				}
 				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"copy back");
 				// copy error back to original buffer
-				MyLsaDispatchTable->CopyToClientBuffer(ClientRequest, sizeof(DWORD), ((PBYTE)&(pBuffer->dwRid))  + (ULONG) ClientBufferBase - (ULONG) pBuffer, &(pBuffer->dwRid));
+				MyLsaDispatchTable->CopyToClientBuffer(ClientRequest, sizeof(DWORD), ((PBYTE)&(pBuffer->dwRid))  + (ULONG_PTR) ClientBufferBase - (ULONG_PTR) pBuffer, &(pBuffer->dwRid));
 				break;
 			
 			default:
@@ -334,7 +334,7 @@ extern "C"
 			}
 			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Done in LSA memory - preparing response");
 			// copy error back to original buffer
-			statusError= MyLsaDispatchTable->CopyToClientBuffer(ClientRequest, sizeof(DWORD), ((PBYTE)&(pBuffer->dwError))  + (ULONG) ClientBufferBase - (ULONG) pBuffer, &(pBuffer->dwError));
+			statusError= MyLsaDispatchTable->CopyToClientBuffer(ClientRequest, sizeof(DWORD), ((PBYTE)&(pBuffer->dwError))  + (ULONG_PTR) ClientBufferBase - (ULONG_PTR) pBuffer, &(pBuffer->dwError));
 			if (STATUS_SUCCESS != statusError )
 			{
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CopyToClientBuffer failed");
@@ -456,20 +456,20 @@ extern "C"
 				response.dwError = ERROR_INTERNAL_ERROR;
 				__leave;
 			}
-			if ((ULONG) pGina->pbChallenge + pGina->dwChallengeSize > SubmitBufferLength)
+			if ((ULONG_PTR) pGina->pbChallenge + pGina->dwChallengeSize > SubmitBufferLength)
 			{
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pbChallenge");
 				response.dwError = ERROR_INVALID_PARAMETER;
 				__leave;
 			}
-			if ((ULONG) pGina->pbResponse + pGina->dwResponseSize > SubmitBufferLength)
+			if ((ULONG_PTR) pGina->pbResponse + pGina->dwResponseSize > SubmitBufferLength)
 			{
 				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"pbResponse");
 				response.dwError = ERROR_INVALID_PARAMETER;
 				__leave;
 			}
-			pGina->pbChallenge = pGina->pbChallenge + (ULONG) pGina;
-			pGina->pbResponse = pGina->pbResponse + (ULONG) pGina;
+			pGina->pbChallenge = pGina->pbChallenge + (ULONG_PTR) pGina;
+			pGina->pbResponse = pGina->pbResponse + (ULONG_PTR) pGina;
 			// check the PIN if using the base smart card provider to get the remaining pin attempts
 			// put the result in SubStatus
 						
@@ -791,7 +791,7 @@ extern "C"
 			if (!manager->GetPassword(dwRid,pCertContext, pPin, &szPassword))
 			{
 				DWORD dwError = GetLastError();
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"RetrieveStoredCredential failed %d", dwError);
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"RetrieveStoredCredential failed 0x%08x", dwError);
 				MyLsaDispatchTable->FreeLsaHeap(MyTokenInformation);
 				switch(dwError)
 				{

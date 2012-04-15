@@ -102,7 +102,7 @@ public:
   protected:
     CEIDProvider();
     __override ~CEIDProvider();
-    
+    HRESULT Initialize();
 private:
 	
 	

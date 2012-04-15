@@ -14,7 +14,7 @@ void test_SmartCardModule()
 	DWORD dwRemainingAttempts = 0;
 	if (AskForCard(szReader,ARRAYSIZE(szReader),szCard,ARRAYSIZE(szCard)))
 	{
-		if (AskPin(szPin))
+		if (AskPin(szPin, szReader, szCard))
 		{
 			BOOL fReturn = CheckPINandGetRemainingAttempts(szReader, szCard, szPin, &dwRemainingAttempts);
 			DWORD dwError = GetLastError();

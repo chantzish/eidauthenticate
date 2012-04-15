@@ -170,7 +170,7 @@ BOOL CContainerHolderFactory<T>::ConnectNotificationGeneric(__in LPCTSTR szReade
 								&DataSize,
 								0))
 						{
-							CreateItemFromCertificateBlob(szReaderName,szCardName,szProviderName,
+							CreateItemFromCertificateBlob(hProv, szReaderName,szCardName,szProviderName,
 								szWideContainerName, pKeySpecs[i],ActivityCount, Data, DataSize);
 						}
 						CryptDestroyKey(hKey);
@@ -203,7 +203,7 @@ BOOL CContainerHolderFactory<T>::ConnectNotificationGeneric(__in LPCTSTR szReade
 						&DataSize,
 						0))
 				{
-					CreateItemFromCertificateBlob(szReaderName,szCardName,szProviderName,
+					CreateItemFromCertificateBlob(hProv, szReaderName,szCardName,szProviderName,
 						szMainContainerName, pKeySpecs[i],ActivityCount, Data, DataSize);
 				}
 				CryptDestroyKey(hKey);
@@ -216,113 +216,159 @@ BOOL CContainerHolderFactory<T>::ConnectNotificationGeneric(__in LPCTSTR szReade
 	return TRUE;
 }
 
+template <typename T>
+BOOL CContainerHolderFactory<T>::CreateContainer(__in LPCTSTR szReaderName,__in LPCTSTR szCardName,
+															   __in LPCTSTR szProviderName, __in LPCTSTR szWideContainerName,
+															   __in DWORD KeySpec, __in USHORT ActivityCount, __in PCCERT_CONTEXT pCertContext)
+{
+	CContainer* pContainer = NULL;
+	pContainer = new CContainer(szReaderName,szCardName,szProviderName,szWideContainerName, KeySpec, ActivityCount, pCertContext);
+	this->Lock();
+	T* ContainerHolder = new T(pContainer);
+	ContainerHolder->SetUsageScenario(_cpus, _dwFlags);
+	_CredentialList.push_back(ContainerHolder);
+	this->Unlock();
+	return TRUE;
+}
 
 template <typename T>
-BOOL CContainerHolderFactory<T>::CreateItemFromCertificateBlob(__in LPCTSTR szReaderName,__in LPCTSTR szCardName,
+BOOL CContainerHolderFactory<T>::CreateItemFromCertificateBlob(__in HCRYPTPROV hProv,
+																__in LPCTSTR szReaderName,__in LPCTSTR szCardName,
 															   __in LPCTSTR szProviderName, __in LPCTSTR szWideContainerName,
 															   __in DWORD KeySpec, __in USHORT ActivityCount,
 															   __in PBYTE Data, __in DWORD DataSize)
 {
 	BOOL fReturn = FALSE;
 	PCCERT_CONTEXT pCertContext = NULL;
-	pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, Data, DataSize);
-	if (pCertContext)
+	BOOL fSuccess;
+	PTSTR szUsername = NULL;
+	DWORD dwError = 0;
+	__try
 	{
-		BOOL fAdd = TRUE;
+		pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, Data, DataSize);
+		if (!pCertContext)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CertCreateCertificateContext 0x%08x",dwError);
+			__leave;
+		}
+		
 		CRYPT_KEY_PROV_INFO KeyProvInfo;
-		KeyProvInfo.dwFlags = 0;
+		memset(&KeyProvInfo, 0, sizeof(CRYPT_KEY_PROV_INFO));
+		// this flag enable cache for futher call to CryptAcquireCertificatePrivateKey
+		KeyProvInfo.dwFlags = CERT_SET_KEY_CONTEXT_PROP_ID;
 		KeyProvInfo.dwKeySpec = KeySpec;
 		KeyProvInfo.dwProvType = PROV_RSA_FULL;
 		KeyProvInfo.pwszContainerName = (LPTSTR) szWideContainerName;
 		KeyProvInfo.pwszProvName = (LPTSTR) szProviderName;
-		KeyProvInfo.rgProvParam = 0;
-		KeyProvInfo.cProvParam = NULL;
-		CContainer* pContainer = NULL;
-		CertSetCertificateContextProperty(pCertContext, CERT_KEY_PROV_INFO_PROP_ID, 0, &KeyProvInfo);
+		fReturn = CertSetCertificateContextProperty(pCertContext, CERT_KEY_PROV_INFO_PROP_ID, 0, &KeyProvInfo);
+		if (!fReturn)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CertSetCertificateContextProperty CERT_KEY_PROV_INFO_PROP_ID 0x%08x",dwError);
+			__leave;
+		}
+
+		// we provide the context to cache it
+		CERT_KEY_CONTEXT keyContext;
+		memset(&keyContext, 0, sizeof(CERT_KEY_CONTEXT));
+		keyContext.cbSize = sizeof(CERT_KEY_CONTEXT);
+		keyContext.hCryptProv = hProv;
+		keyContext.dwKeySpec = KeySpec;
+		fReturn = CertSetCertificateContextProperty(pCertContext, CERT_KEY_CONTEXT_PROP_ID, 0, &keyContext);
+		if (!fReturn)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CertSetCertificateContextProperty CERT_KEY_CONTEXT_PROP_ID 0x%08x",dwError);
+			__leave;
+		}
+		// important : the hprov will be used later and free if the certificatecontext is free
+		// so we have to add 1 to the reference count
+		fReturn = CryptContextAddRef(hProv, NULL, 0);
+		if (!fReturn)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CryptContextAddRef 0x%08x",dwError);
+			__leave;
+		}
 
 		if (_cpus != CPUS_CREDUI && _cpus != CPUS_INVALID)
 		{
-			fAdd = IsTrustedCertificate(pCertContext);
-			if (!fAdd)
+			fSuccess = IsTrustedCertificate(pCertContext);
+			if (!fSuccess)
 			{
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Untrusted certificate 0x%08x",GetLastError());
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Untrusted certificate IsTrustedCertificate 0x%08x",dwError);
+				__leave;
 			}
 		}
 		else if (_cpus == CPUS_CREDUI)
 		{
-			fAdd = HasCertificateRightEKU(pCertContext);
-			if (!fAdd)
+			fSuccess = HasCertificateRightEKU(pCertContext);
+			if (!fSuccess)
 			{
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Untrusted certificate 0x%08x",GetLastError());
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Untrusted certificate HasCertificateRightEKU 0x%08x",dwError);
+				__leave;
 			}
 		}
-		if (fAdd)
+		// check if the Container meet the requirement
+		if ((_cpus == CPUS_LOGON) || (_cpus == CPUS_UNLOCK_WORKSTATION))
 		{
-			pContainer = new CContainer(szReaderName,szCardName,szProviderName,szWideContainerName, KeySpec, ActivityCount, pCertContext);
-			// check if the Container meet the requirement
-			if ((_cpus == CPUS_LOGON) || (_cpus == CPUS_UNLOCK_WORKSTATION)  && fAdd)
+			// check if the user has an account to this workstation
+			DWORD dwRid = LsaEIDGetRIDFromStoredCredential(pCertContext);	
+			if (!dwRid)
 			{
-				// check if the user has an account to this workstation
-				DWORD dwRid = pContainer->GetRid();
-				fAdd = dwRid > 0;
-				
-				if (!dwRid)
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"HasAccountOnCurrentComputer 0x%08x",dwError);
+				__leave;
+			}
+			szUsername = GetUsernameFromRid(dwRid);
+			if (!szUsername)
+			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetUsernameFromRid 0x%08x",dwError);
+				__leave;
+			}
+			if (((_dwFlags & CREDUIWIN_ENUMERATE_CURRENT_USER) || (_cpus == CPUS_UNLOCK_WORKSTATION)))
+			{
+				fSuccess = IsCurrentUser(szUsername);
+				if (!fSuccess)
 				{
-					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"HasAccountOnCurrentComputer 0x%08x",GetLastError());
+					dwError = GetLastError();
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"IsCurrentUser 0x%08x",dwError);
+					__leave;
 				}
-				else
+			}
+			if ((_dwFlags & CREDUIWIN_ENUMERATE_ADMINS))
+			{
+				fSuccess = IsAdmin(szUsername);
+				if (!fSuccess)
 				{
-					PTSTR szUsername = GetUsernameFromRid(dwRid);
-					if (szUsername)
-					{
-						if (((_dwFlags & CREDUIWIN_ENUMERATE_CURRENT_USER) || (_cpus == CPUS_UNLOCK_WORKSTATION)) && fAdd)
-						{
-							fAdd = IsCurrentUser(szUsername);
-							if (!fAdd)
-							{
-								EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"IsCurrentUser 0x%08x",GetLastError());
-							}
-						}
-						if ((_dwFlags & CREDUIWIN_ENUMERATE_ADMINS) && fAdd)
-						{
-							fAdd = IsAdmin(szUsername);
-							if (!fAdd)
-							{
-								EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"IsAdmin 0x%08x",GetLastError());
-							}
-						}
-					}
-					else
-					{
-						fAdd = FALSE;
-					}
+					dwError = GetLastError();
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"IsAdmin 0x%08x",dwError);
+					__leave;
 				}
 			}
 		}
-		if (fAdd)
-		{
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Creating container szReaderName='%s'", szReaderName);
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Creating container szCardName='%s'", szCardName);
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Creating container szProviderName='%s'", szProviderName);
-			EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Creating container szWideContainerName='%s' KeySpec=%d ActivityCount=%d",
-					szWideContainerName, KeySpec, ActivityCount);
-			this->Lock();
-			T* ContainerHolder = new T(pContainer);
-			ContainerHolder->SetUsageScenario(_cpus, _dwFlags);
-			_CredentialList.push_back(ContainerHolder);
-			this->Unlock();
-			fReturn = TRUE;
-		}
-		else
-		{
-			if (pContainer)
-				delete pContainer;
-		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Creating container szReaderName='%s'", szReaderName);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Creating container szCardName='%s'", szCardName);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Creating container szProviderName='%s'", szProviderName);
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Creating container szWideContainerName='%s' KeySpec=%d ActivityCount=%d",
+				szWideContainerName, KeySpec, ActivityCount);
+		fSuccess = CreateContainer(szReaderName, szCardName, szProviderName, szWideContainerName, KeySpec, ActivityCount, pCertContext);
+		if (!fSuccess) __leave;
+		fReturn = TRUE;
 	}
-	else
+	__finally
 	{
-		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Unable to CertCreateCertificateContext : %d",GetLastError());
+		if (szUsername) EIDFree(szUsername);
+		if (!fReturn)
+		{
+			if (pCertContext) CertFreeCertificateContext(pCertContext);
+		}
 	}
+	SetLastError(dwError);
 	return fReturn;
 }
 

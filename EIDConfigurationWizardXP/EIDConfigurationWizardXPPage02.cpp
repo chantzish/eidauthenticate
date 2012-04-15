@@ -51,7 +51,7 @@ void CheckIfCardHasADriver(HWND hWnd)
 			DWORD dwzCardsSize = SCARD_AUTOALLOCATE;
 			__try
 			{
-				lReturn = SCardConnect(hSC, szCurrentReader, SCARD_SHARE_SHARED, SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1, &hCard, &dwProtocol);
+				lReturn = SCardConnect(hSC, szCurrentReader, SCARD_SHARE_SHARED, SCARD_PROTOCOL_Tx, &hCard, &dwProtocol);
 				if ( SCARD_S_SUCCESS != lReturn )
 				{
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed SCardConnect 0x%08X",lReturn);

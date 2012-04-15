@@ -10,14 +10,11 @@ void menu_CREDENTIAL_Certificate()
 {
 	WCHAR szReader[256];
 	WCHAR szCard[256];
-	WCHAR szContainer[256];
-	WCHAR szProviderName[256];
 	PCCERT_CONTEXT pCertContext = NULL;
 	DWORD dwProviderNameLen = 256;
-	DWORD dwKeySpec;
 	if (AskForCard(szReader,256,szCard,256))
 	{
-		if (pCertContext = SelectCerts(szReader,szCard,szProviderName,256,szContainer,256, &dwKeySpec))
+		if (pCertContext = SelectCert(szReader,szCard))
 		{
 		
 			/*LPTSTR szUserName = GetUserNameFromCertificate(pCertContext);

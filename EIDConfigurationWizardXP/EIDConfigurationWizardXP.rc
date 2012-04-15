@@ -28,8 +28,8 @@ LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,5,0,0
- PRODUCTVERSION 0,5,0,0
+ FILEVERSION EIDAuthenticateVersionNumeric
+ PRODUCTVERSION EIDAuthenticateVersionNumeric
  FILEFLAGSMASK 0x0L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -46,11 +46,11 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "www.mysmartlogon.com"
             VALUE "FileDescription", "Configuration Wizard"
-            VALUE "FileVersion", "0.5.0.0"
+            VALUE "FileVersion", EIDAuthenticateVersionText
             VALUE "InternalName", "EIDConfigurationWizard.exe"
             VALUE "OriginalFilename", "EIDConfigurationWizard.exe"
             VALUE "ProductName", "EID Configuration Wizard"
-            VALUE "ProductVersion", "0.5.0.0"
+            VALUE "ProductVersion", EIDAuthenticateVersionText
         END
     END
     BLOCK "VarFileInfo"

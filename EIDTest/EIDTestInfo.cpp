@@ -289,7 +289,7 @@ void menu_INFO_ComputeHashSha1()
 	BYTE bHash[1024];
 	WCHAR szEncryptedPassword[2048];
 	DWORD dwError = 0;
-	if (AskPin(szPassword))
+	if (AskPassword(szPassword))
 	{
 		HCRYPTPROV hProv = NULL;
 		HCRYPTHASH hHash = NULL;
@@ -363,7 +363,7 @@ void menu_INFO_ComputeHashNT()
 	WCHAR szPassword[256];
 	BYTE bHash[16];
 	WCHAR szEncryptedPassword[2048];
-	if (AskPin(szPassword))
+	if (AskPassword(szPassword))
 	{
 		UNICODE_STRING MyPass = {(USHORT) (wcslen(szPassword) * sizeof(WCHAR)),(USHORT) (wcslen(szPassword) * sizeof(WCHAR)),szPassword};
 		SystemFunction007(&MyPass, bHash);

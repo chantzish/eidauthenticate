@@ -120,6 +120,45 @@ void CEIDProvider::Callback(EID_CREDENTIAL_PROVIDER_READER_STATE Message, __in L
 	}
 }
 
+HRESULT CEIDProvider::Initialize()
+{
+	// Create the CEIDCredential (for connected scenarios), the CMessageCredential
+    // (for disconnected scenarios), and the CEIDDetection (to detect commands, such
+    // as the connect/disconnect here).  We can get SetUsageScenario multiple times
+    // (for example, cancel back out to the CAD screen, and then hit CAD again), 
+    // but there's no point in recreating our creds, since they're the same all the
+    // time
+    HRESULT hr;
+    if (!_pMessageCredential)
+    {
+        // For the locked case, a more advanced credprov might only enumerate tiles for the 
+        // user whose owns the locked session, since those are the only creds that will work
+
+        _pMessageCredential = new CMessageCredential();
+        if (_pMessageCredential)
+        {
+  
+			hr = _pMessageCredential->Initialize(s_rgMessageCredProvFieldDescriptors, s_rgMessageFieldStatePairs, L"Please connect");
+			_CredentialList.Lock();
+			_CredentialList.SetUsageScenario(_cpus,_dwFlags);
+			_CredentialList.Unlock();
+			_pMessageCredential->SetUsageScenario(_cpus,_dwFlags);
+			_pSmartCardConnectionNotifier = new CSmartCardConnectionNotifier(this);
+        }
+        else
+        {
+            hr = E_OUTOFMEMORY;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"E_OUTOFMEMORY");
+        }
+    }
+    else
+    {
+        //everything's already all set up
+        hr = S_OK;
+    }
+	return hr;
+}
+
 // SetUsageScenario is the provider's cue that it's going to be asked for tiles
 // in a subsequent call.
 HRESULT CEIDProvider::SetUsageScenario(
@@ -138,41 +177,16 @@ HRESULT CEIDProvider::SetUsageScenario(
     case CPUS_CREDUI:
         _cpus = cpus;
 		_dwFlags = dwFlags;
-
-        // Create the CEIDCredential (for connected scenarios), the CMessageCredential
-        // (for disconnected scenarios), and the CEIDDetection (to detect commands, such
-        // as the connect/disconnect here).  We can get SetUsageScenario multiple times
-        // (for example, cancel back out to the CAD screen, and then hit CAD again), 
-        // but there's no point in recreating our creds, since they're the same all the
-        // time
+		if (_dwFlags & CREDUIWIN_AUTHPACKAGE_ONLY || _dwFlags & CREDUIWIN_IN_CRED_ONLY)
+		{
+			// postpone the initialization in SetSerialization
+			hr = S_OK;
+		}
+		else
+		{
+			hr = Initialize();
+		}
         
-        if (!_pMessageCredential)
-        {
-            // For the locked case, a more advanced credprov might only enumerate tiles for the 
-            // user whose owns the locked session, since those are the only creds that will work
-
-            _pMessageCredential = new CMessageCredential();
-            if (_pMessageCredential)
-            {
-  
-			    hr = _pMessageCredential->Initialize(s_rgMessageCredProvFieldDescriptors, s_rgMessageFieldStatePairs, L"Please connect");
-				_CredentialList.Lock();
-				_CredentialList.SetUsageScenario(cpus,dwFlags);
-				_CredentialList.Unlock();
-				_pMessageCredential->SetUsageScenario(cpus,dwFlags);
-				_pSmartCardConnectionNotifier = new CSmartCardConnectionNotifier(this);
-            }
-            else
-            {
-                hr = E_OUTOFMEMORY;
-				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"E_OUTOFMEMORY");
-            }
-        }
-        else
-        {
-            //everything's already all set up
-            hr = S_OK;
-        }
         break;
     case CPUS_CHANGE_PASSWORD:
 		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"E_NOTIMPL");
@@ -211,7 +225,7 @@ STDMETHODIMP CEIDProvider::SetSerialization(
     )
 {
 	EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"");
-	if (_dwFlags & CREDUIWIN_AUTHPACKAGE_ONLY)
+	if (_dwFlags & CREDUIWIN_AUTHPACKAGE_ONLY || _dwFlags & CREDUIWIN_IN_CRED_ONLY)
 	{
 		if (pcpcs->ulAuthenticationPackage > 0)
 		{
@@ -220,6 +234,10 @@ STDMETHODIMP CEIDProvider::SetSerialization(
 			if (pcpcs->ulAuthenticationPackage != ulAuthenticationPackage)
 			{
 				_fDontShowAnything = TRUE;
+			}
+			else
+			{
+				Initialize();
 			}
 		}
 	}

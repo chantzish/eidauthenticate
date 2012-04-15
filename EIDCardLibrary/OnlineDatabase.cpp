@@ -408,20 +408,21 @@ void UrlLogCertificateEncoder(__inout PCHAR *ppPointer, __inout PDWORD pdwRemain
 	**ppPointer = '\0';
 }
 
+#define UNKNOWN TEXT("Unknown")
 BOOL CommunicateTestNotOK(DWORD dwErrorCode, PTSTR szEmail, PTSTR szTracingFile, PCCERT_CONTEXT pCertContext)
 {
 	if (dwErrorCode) EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"enter");
 	BOOL fReturn = FALSE;
-	TCHAR szReaderName[256] = TEXT("Unknown");
-	TCHAR szCardName[256] = TEXT("Unknown");
-	TCHAR szProviderName[256] = TEXT("Unknown");
-	TCHAR szATR[256] = TEXT("Unknown");
-	TCHAR szATRMask[256] = TEXT("Unknown");
-	TCHAR szCspDll[256] = TEXT("Unknown");
-	TCHAR szOsInfo[256] = TEXT("Unknown");
-	TCHAR szHardwareInfo[256] = TEXT("Unknown");
-	TCHAR szFileVersion[256] = TEXT("Unknown");
-	TCHAR szCompany[256] = TEXT("Unknown");
+	TCHAR szReaderName[256] = UNKNOWN;
+	TCHAR szCardName[256] = UNKNOWN;
+	TCHAR szProviderName[256] = UNKNOWN;
+	TCHAR szATR[256] = UNKNOWN;
+	TCHAR szATRMask[256] = UNKNOWN;
+	TCHAR szCspDll[256] = UNKNOWN;
+	TCHAR szOsInfo[256] = UNKNOWN;
+	TCHAR szHardwareInfo[256] = UNKNOWN;
+	TCHAR szFileVersion[256] = UNKNOWN;
+	TCHAR szCompany[256] = UNKNOWN;
 	DWORD dwProviderNameLen = ARRAYSIZE(szProviderName);
 	DWORD dwSize;
 	CHAR szPostData[1000000]= "";
@@ -460,7 +461,7 @@ BOOL CommunicateTestNotOK(DWORD dwErrorCode, PTSTR szEmail, PTSTR szTracingFile,
 			}
 			RegCloseKey(hRegKeyCalais);
 		}
-		if (szCspDll[0] == 0)
+		if (_tcscmp(szCspDll,UNKNOWN) == 0)
 		{
 			// csp info
 			if (!RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Microsoft\\Cryptography\\Defaults\\Provider"), 0, KEY_READ, &hRegKeyCSP))
@@ -474,14 +475,14 @@ BOOL CommunicateTestNotOK(DWORD dwErrorCode, PTSTR szEmail, PTSTR szTracingFile,
 				RegCloseKey(hRegKeyCalais);
 			}
 		}
-		if (szCspDll[0] != 0)
+		if (_tcscmp(szCspDll,UNKNOWN) != 0)
 		{
 			DWORD dwHandle;
 			dwSize = GetFileVersionInfoSize(szCspDll, &dwHandle);
 			if (dwSize)
 			{
 				UINT uSize;
-				PVOID versionInfo = malloc(dwSize);
+				PVOID versionInfo = EIDAlloc(dwSize);
 				PWSTR pszFileVersion = NULL;
 				PWSTR pszCompany = NULL;
 				if (GetFileVersionInfo(szCspDll, dwHandle, dwSize, versionInfo))
@@ -525,10 +526,10 @@ BOOL CommunicateTestNotOK(DWORD dwErrorCode, PTSTR szEmail, PTSTR szTracingFile,
 					if (pszFileVersion != NULL) 
 						_stprintf_s(szCompany, ARRAYSIZE(szCompany),TEXT("%ls"),pszCompany);
 				}
-				free(versionInfo);
+				EIDFree(versionInfo);
 			}
 		}
-		if (wcscmp(szATR, TEXT("Unknown")) == 0)
+		if (wcscmp(szATR, UNKNOWN) == 0)
 		{
 			// ATR can be unknown, as for PIV card
 		}
@@ -650,7 +651,7 @@ BOOL OpenBrowserOnDatabase()
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed SCardReleaseContext 0x%08X",lReturn);
 			__leave;
 		}
-		lReturn = SCardConnect(hSC, szReader, SCARD_SHARE_SHARED, SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1, &hCard, &dwProtocol);
+		lReturn = SCardConnect(hSC, szReader, SCARD_SHARE_SHARED, SCARD_PROTOCOL_Tx, &hCard, &dwProtocol);
 		if ( SCARD_S_SUCCESS != lReturn )
 		{
 			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Failed SCardConnect 0x%08X",lReturn);

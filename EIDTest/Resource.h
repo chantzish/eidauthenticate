@@ -1340,7 +1340,7 @@
 #define stc11                           0x044a
 #define stc12                           0x044b
 #define stc13                           0x044c
-#define IDD_PIN                         1100
+#define IDD_PASSWORD                    1100
 #define stc14                           0x044d
 #define IDC_PIN                         1101
 #define stc15                           0x044e
@@ -1576,6 +1576,13 @@
 #define TCS_FOCUSNEVER                  0x8000
 #define IDM_ONLINE_OK                   40001
 #define IDM_CRED_LOGONSTRUCT            40002
+#define ID_UTILITIES_GETCSPINFOFROMUSERCERTIFICATESTORE 40003
+#define IDM_UTIL_CSPINFO                40004
+#define ID_UTILITIES_SETSMARTCARDFLAG   40005
+#define ID_UTILITIES_UNSETSMARTCARDFLAG 40006
+#define IDM_UTIL_SETSMARTCARDFLAG       40007
+#define IDM_UTIL_UNSETSMARTCARDFLAG     40008
+#define IDM_Util                        40009
 #define SC_SIZE                         0xF000
 #define SC_SEPARATOR                    0xF00F
 #define SC_MOVE                         0xF010
@@ -1606,7 +1613,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        101
-#define _APS_NEXT_COMMAND_VALUE         40003
+#define _APS_NEXT_COMMAND_VALUE         40010
 #define _APS_NEXT_CONTROL_VALUE         1000
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
