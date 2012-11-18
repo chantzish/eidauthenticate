@@ -55,5 +55,4 @@ BOOL LsaEIDHasStoredCredential(__in_opt PWSTR szUsername);
 
 DWORD LsaEIDGetRIDFromStoredCredential(__in PCCERT_CONTEXT pContext);
 
-BOOL MatchUserOrIsAdmin(__in DWORD dwRid, __in PVOID pClientInfo);
 //BOOL CanEncryptPassword(__in_opt HCRYPTPROV hProv, __in_opt DWORD dwKeySpec,  __in_opt PCCERT_CONTEXT pCertContext);

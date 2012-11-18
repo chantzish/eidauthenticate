@@ -90,23 +90,24 @@ INT_PTR CALLBACK	WndProc_06TESTRESULTOK(HWND hWnd, UINT message, WPARAM wParam, 
 					}*/
 				}	
 			case PSN_SETACTIVE:
-					PropSheet_SetWizButtons(hWnd, PSWIZB_BACK | PSWIZB_FINISH);
-					/*{
-					TCHAR szMessage[256] = TEXT("");
-					LoadString(g_hinst, IDS_05ACTIVATEREMOVE, szMessage, ARRAYSIZE(szMessage));
-					SetWindowText(GetDlgItem(hWnd,IDC_05REMOVEPOLICYLINK),szMessage);
-					LoadString(g_hinst, IDS_05ACTIVATEFORCE, szMessage, ARRAYSIZE(szMessage));
-					SetWindowText(GetDlgItem(hWnd,IDC_05FORCEPOLICYLINK),szMessage);
-					}*/
-					break;
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Activate");
+				PropSheet_SetWizButtons(hWnd, PSWIZB_BACK | PSWIZB_FINISH);
+				/*{
+				TCHAR szMessage[256] = TEXT("");
+				LoadString(g_hinst, IDS_05ACTIVATEREMOVE, szMessage, ARRAYSIZE(szMessage));
+				SetWindowText(GetDlgItem(hWnd,IDC_05REMOVEPOLICYLINK),szMessage);
+				LoadString(g_hinst, IDS_05ACTIVATEFORCE, szMessage, ARRAYSIZE(szMessage));
+				SetWindowText(GetDlgItem(hWnd,IDC_05FORCEPOLICYLINK),szMessage);
+				}*/
+				break;
 
-				case PSN_WIZFINISH:
-					if (pCredentialList)
-					{
-						delete pCredentialList;
-						pCredentialList = NULL;
-					}
-					break;
+			case PSN_WIZFINISH:
+				if (pCredentialList)
+				{
+					delete pCredentialList;
+					pCredentialList = NULL;
+				}
+				break;
 			}
 	}
 	return FALSE;

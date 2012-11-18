@@ -232,6 +232,7 @@ INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM
         switch(pnmh->code)
         {
 			case PSN_SETACTIVE :
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Activate");
 				//this is an interior page
 				PropSheet_SetWizButtons(hWnd, 0);
 				break;

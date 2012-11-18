@@ -426,6 +426,7 @@ BEGIN
                             "A CTL used to create this chain is not valid for this usage."
     IDS_CERT_TRUST_UNKOWN_ERROR "Unknown error"
     IDS_NO_CERTIFICATE      "There is no certificate"
+    IDS_04TRUSTENABLETIMEINVALID "Allow time invalid certificates"
     IDS_04TRUSTMAKETRUSTED  "Make this certificate trusted"
 END
 

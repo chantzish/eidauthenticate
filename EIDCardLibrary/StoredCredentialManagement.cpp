@@ -313,7 +313,19 @@ BOOL CStoredCredentialManager::CreateCredential(__in DWORD dwRid, __in PCCERT_CO
 				__leave;
 			}
 		}
-		usPasswordSize = (usPasswordLen ? usPasswordLen : (USHORT) (wcslen(szPassword) * sizeof(WCHAR)));
+		if (usPasswordLen > 0)
+		{
+			usPasswordSize = usPasswordLen;
+		}
+		else if (szPassword == NULL)
+		{
+			usPasswordSize = 0;
+		}
+		else
+		{
+			usPasswordSize = (USHORT) (wcslen(szPassword) * sizeof(WCHAR));
+		}
+		
 		if (!usPasswordSize) fEncryptPassword = FALSE;
 		if (fEncryptPassword)
 		{
@@ -512,7 +524,10 @@ BOOL CStoredCredentialManager::UpdateCredential(__in PLUID pLuid, __in PUNICODE_
 		}
 		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"using userName '%wZ'", UserName);
 
-		memcpy(szUser, UserName->Buffer,UserName->Length);
+		if (UserName->Buffer && UserName->Length)
+		{
+			memcpy(szUser, UserName->Buffer,UserName->Length);
+		}
 		szUser[UserName->Length/2] = L'\0';
 		dwError = NetUserGetInfo(szComputer, szUser, 3, (LPBYTE*) &pUserInfo);
 		if (NERR_Success != dwError)
@@ -521,7 +536,7 @@ BOOL CStoredCredentialManager::UpdateCredential(__in PLUID pLuid, __in PUNICODE_
 			__leave;
 		}
 		dwRid = pUserInfo->usri3_user_id;
-		if (!UpdateCredential(dwRid, Password->Buffer, Password->Length))
+		if (!UpdateCredential(dwRid, (Password->Length > 0 ? Password->Buffer:  NULL), Password->Length))
 		{
 			dwError = GetLastError();
 			__leave;

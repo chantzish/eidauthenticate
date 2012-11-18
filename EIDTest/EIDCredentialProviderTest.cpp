@@ -136,8 +136,8 @@ BOOL AddServerCertInfo(IN OUT PSCHANNEL_CRED pSchannelCred)
     BOOL fRet = FALSE;
  
     LPWSTR pwszSubjectName = NULL;
-    LPWSTR pwszMachineName  = NULL;
-    DWORD cchMachineName  = 0;
+    TCHAR szMachineName[256];
+    DWORD cchMachineName  = ARRAYSIZE(szMachineName);
  
     HCERTSTORE  hCertStore = NULL;
     PCCERT_CONTEXT*  ppCertContext   = NULL; // server cert array
@@ -159,28 +159,13 @@ BOOL AddServerCertInfo(IN OUT PSCHANNEL_CRED pSchannelCred)
 		if (!pwszSubjectName)
 		{
 			if( !GetComputerNameExW( ComputerNameNetBIOS,
-									NULL,
-									&cchMachineName) )
-			{
-				if( ERROR_MORE_DATA != GetLastError() )
-				{
-					__leave;
-				}
-			}
-	 
-			pwszMachineName = (LPWSTR) EIDAlloc( cchMachineName* sizeof(WCHAR) );
-			if( !pwszMachineName )
-			{  
-				__leave;
-			}
-	 
-			if( !GetComputerNameExW( ComputerNameNetBIOS,
-									pwszMachineName,
+									szMachineName,
 									&cchMachineName) )
 			{     
-				 __leave;
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"hCertStore null"); 
+				__leave;
 			}
-			pwszSubjectName = pwszMachineName;
+			pwszSubjectName = szMachineName;
 		} 
 	   
 	  
@@ -196,6 +181,7 @@ BOOL AddServerCertInfo(IN OUT PSCHANNEL_CRED pSchannelCred)
 	           
 			if(!hCertStore)
 			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"hCertStore null");
 				__leave;
 			}
 		}
@@ -204,7 +190,8 @@ BOOL AddServerCertInfo(IN OUT PSCHANNEL_CRED pSchannelCred)
 		memset(ppCertContext, 0, sizeof(PCCERT_CONTEXT) * 1);
 		if( !ppCertContext )
 		{
-				__leave;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"ppCertContext null");
+			__leave;
 		}
 	   
 		// Find server certificates using the server cert CN
@@ -220,6 +207,8 @@ BOOL AddServerCertInfo(IN OUT PSCHANNEL_CRED pSchannelCred)
 	   
 		if(!ppCertContext[0])
 		{    
+			MessageBox(hMainWnd,TEXT("Certificate must found. Do not forget to create it "),TEXT("Error"),0);
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"ppCertContext[0] null");
 			__leave;
 		}
 	 
@@ -236,12 +225,6 @@ BOOL AddServerCertInfo(IN OUT PSCHANNEL_CRED pSchannelCred)
 		{
 			CertCloseStore(hCertStore, 0);
 		}   
-	 
-		if (pwszMachineName)
-		{
-			EIDFree(pwszMachineName);
-			pwszSubjectName = NULL;
-		}
 	}
     return fRet;
 }
@@ -340,7 +323,12 @@ BOOL AuthenticateWithSSPI(PTSTR szPrincipal, PTSTR szPassword, PTSTR szSSP)
 
 			SchannelServerCred.dwVersion = SCHANNEL_CRED_VERSION;
 			SchannelClientCred.dwVersion = SCHANNEL_CRED_VERSION;
-			AddServerCertInfo(&SchannelServerCred);
+			if (!AddServerCertInfo(&SchannelServerCred))
+			{
+				err = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"AddServerCertInfo 0x%08x",err);
+				__leave;
+			}
 
 			pCredServer = &CredServer;
 			pCredClient = &CredClient;

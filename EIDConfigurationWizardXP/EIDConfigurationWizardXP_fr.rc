@@ -349,6 +349,7 @@ END
 STRINGTABLE
 BEGIN
     IDS_NODOMAINACCOUNT     "EIDAuthenticate ne fonctionne pas sur des comptes appartenant à un domaine. EIDAuthenticate ne fonctionne que sur les postes non connectés à un domaine ou avec un compte local."
+	IDS_04TRUSTENABLETIMEINVALID "Ignorer la validation temporelle"
 END
 
 #endif    // Français resources

@@ -247,6 +247,7 @@ END
 STRINGTABLE
 BEGIN
     IDS_NO_CERTIFICATE      "Il n'y a pas de certificat"
+    IDS_04TRUSTENABLETIMEINVALID "Ignorer la validation temporelle"
     IDS_04TRUSTMAKETRUSTED  "Faire confiance au certificat"
 END
 

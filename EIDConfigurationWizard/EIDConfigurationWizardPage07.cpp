@@ -50,6 +50,7 @@ INT_PTR CALLBACK	WndProc_07TESTRESULTNOTOK(HWND hWnd, UINT message, WPARAM wPara
 			switch(pnmh->code)
 			{
 				case PSN_SETACTIVE:
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Activate");
 					PropSheet_SetWizButtons(hWnd, PSWIZB_BACK | PSWIZB_FINISH);
 					SetErrorMessage(hWnd);
 					break;

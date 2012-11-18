@@ -114,6 +114,14 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 				TEXT("AllowCertificatesWithNoEKU"), REG_DWORD, &dwValue,sizeof(dwValue));
 			return 0;
 		}
+		else if (_tcscmp(pszCommandLine[0],TEXT("ENABLETIMEINVALID")) == 0)
+		{
+			DWORD dwValue = 1;
+			RegSetKeyValue(	HKEY_LOCAL_MACHINE, 
+				TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\SmartCardCredentialProvider"),
+				TEXT("AllowTimeInvalidCertificates"), REG_DWORD, &dwValue,sizeof(dwValue));
+			return 0;
+		}
 		else if (_tcscmp(pszCommandLine[0],TEXT("TRUST")) == 0)
 		{
 			if (iNumArgs < 2)
