@@ -224,15 +224,17 @@ PTSTR CContainerHolderTest::GetSolveDescription(DWORD dwCheckNum)
 	case CHECK_TRUST: 
 		if (!_IsTrusted)
 		{
-			switch (_dwTrustError)
+			if (_dwTrustError & CERT_TRUST_IS_UNTRUSTED_ROOT || _dwTrustError & CERT_TRUST_IS_PARTIAL_CHAIN)
 			{
-			case CERT_TRUST_IS_UNTRUSTED_ROOT:
-			case CERT_TRUST_IS_PARTIAL_CHAIN:
 				LoadString(g_hinst,IDS_04TRUSTMAKETRUSTED,szDescription, dwWords);
-				break;
-			case CERT_TRUST_IS_NOT_VALID_FOR_USAGE:
+			}
+			else if (_dwTrustError & CERT_TRUST_IS_NOT_VALID_FOR_USAGE)
+			{
 				LoadString(g_hinst,IDS_04TRUSTENABLENOEKU,szDescription, dwWords);
-				break;
+			}
+			else if (_dwTrustError & CERT_TRUST_IS_NOT_TIME_VALID)
+			{
+				LoadString(g_hinst,IDS_04TRUSTENABLETIMEINVALID,szDescription, dwWords);
 			}
 		}
 		break;
@@ -290,10 +292,8 @@ BOOL CContainerHolderTest::Solve(DWORD dwCheckNum)
 		}
 		break;
 	case CHECK_TRUST:
-		switch (_dwTrustError)
+		if (_dwTrustError & CERT_TRUST_IS_UNTRUSTED_ROOT || _dwTrustError & CERT_TRUST_IS_PARTIAL_CHAIN)
 		{
-		case CERT_TRUST_IS_UNTRUSTED_ROOT:
-		case CERT_TRUST_IS_PARTIAL_CHAIN:
 			if (IsElevated())
 			{
 				PCCERT_CONTEXT pCertContext = _pContainer->GetCertificate();
@@ -346,8 +346,9 @@ BOOL CContainerHolderTest::Solve(DWORD dwCheckNum)
 				}
 				CertFreeCertificateContext(pCertContext);
 			}
-			break;
-		case CERT_TRUST_IS_NOT_VALID_FOR_USAGE:
+		}
+		else if (_dwTrustError & CERT_TRUST_IS_NOT_VALID_FOR_USAGE)
+		{
 			if (IsElevated())
 			{
 				DWORD dwValue = 1;
@@ -388,7 +389,49 @@ BOOL CContainerHolderTest::Solve(DWORD dwCheckNum)
 					}
 				}
 			}
-			break;
+		}
+		else if (_dwTrustError & CERT_TRUST_IS_NOT_TIME_VALID)
+		{
+			if (IsElevated())
+			{
+				DWORD dwValue = 1;
+				dwError = RegSetKeyValue(HKEY_LOCAL_MACHINE, 
+					TEXT("SOFTWARE\\Policies\\Microsoft\\Windows\\SmartCardCredentialProvider"),
+					TEXT("AllowTimeInvalidCertificates"), REG_DWORD, &dwValue,sizeof(dwValue));
+				fReturn = (dwError == 0);
+			}
+			else
+			{
+				SHELLEXECUTEINFO shExecInfo;
+				TCHAR szName[1024];
+				GetModuleFileName(GetModuleHandle(NULL),szName, ARRAYSIZE(szName));
+				shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
+
+				shExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
+				shExecInfo.hwnd = NULL;
+				shExecInfo.lpVerb = TEXT("runas");
+				shExecInfo.lpFile = szName;
+				shExecInfo.lpParameters = TEXT("ENABLETIMEINVALID");
+				shExecInfo.lpDirectory = NULL;
+				shExecInfo.nShow = SW_NORMAL;
+				shExecInfo.hInstApp = NULL;
+
+				if (!ShellExecuteEx(&shExecInfo))
+				{
+					dwError = GetLastError();
+				}
+				else
+				{
+					if (WaitForSingleObject(shExecInfo.hProcess, INFINITE) == WAIT_OBJECT_0)
+					{
+						fReturn = TRUE;
+					}
+					else
+					{
+						dwError = GetLastError();
+					}
+				}
+			}
 		}
 	}
 	SetLastError(dwError);

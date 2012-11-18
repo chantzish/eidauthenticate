@@ -524,6 +524,7 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 			case PSN_SETACTIVE :
 				// list view
 				{
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Activate");
 //					ListView_DeleteAllItems(GetDlgItem(hWnd, IDC_04CHECKS));
 					ListView_DeleteAllItems(GetDlgItem(hWnd, IDC_04LIST));
 	
@@ -611,6 +612,12 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 							else
 							{
 								PropSheet_SetWizButtons(GetParent(hWnd), PSWIZB_BACK);
+								SetWindowText(GetDlgItem(hWnd,IDC_04C1_RATIONAL), L"");
+								SetWindowText(GetDlgItem(hWnd,IDC_04C2_RATIONAL), L"");
+								SetWindowText(GetDlgItem(hWnd,IDC_04C3_RATIONAL), L"");
+								SetWindowText(GetDlgItem(hWnd,IDC_04C1_LINK), L"");
+								SetWindowText(GetDlgItem(hWnd,IDC_04C2_LINK), L"");
+								SetWindowText(GetDlgItem(hWnd,IDC_04C3_LINK), L"");
 							}
 						}
 					}

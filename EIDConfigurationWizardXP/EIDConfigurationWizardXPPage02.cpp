@@ -148,6 +148,7 @@ INT_PTR CALLBACK	WndProc_02ENABLE(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 					PropSheet_SetWizButtons(GetParent(hWnd), PSWIZB_NEXT);
 				}*/
 				PropSheet_SetWizButtons(GetParent(hWnd), PSWIZB_NEXT);
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Activate");
 				break;
 			case PSN_WIZNEXT:
 				if (IsDlgButtonChecked(hWnd, IDC_02EXISTING) == BST_CHECKED)

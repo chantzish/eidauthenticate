@@ -72,31 +72,6 @@ BOOL LookUpErrorMessage(PWSTR buf, int cch, DWORD err)
     }
 }
 
-/**
- *  Display a messagebox giving an error code
- */
-void MessageBoxWin32Ex2(DWORD status, HWND hWnd, LPCSTR szFile, DWORD dwLine) {
-	LPVOID Error;
-	TCHAR szMessage[1024];
-	TCHAR szTitle[1024];
-	_stprintf_s(szTitle,ARRAYSIZE(szTitle),TEXT("%hs(%d)"),szFile, dwLine);
-	if (status >= WINHTTP_ERROR_BASE && status <= WINHTTP_ERROR_LAST)
-	{
-		// winhttp error message
-		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER| FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
-			GetModuleHandle(_T("winhttp.dll")),status,0,(LPTSTR)&Error,0,NULL);
-	}
-	else
-	{
-		// system error message
-		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_FROM_SYSTEM,
-			NULL,status,0,(LPTSTR)&Error,0,NULL);
-	}
-	_stprintf_s(szMessage,ARRAYSIZE(szMessage),TEXT("0x%08X - %s"),status,Error);
-	MessageBox(hWnd,szMessage, szTitle ,MB_ICONASTERISK);
-	LocalFree(Error);
-}
-
 BOOL IsTracingEnabled = FALSE;
 
 void NTAPI EnableCallback(
@@ -149,7 +124,7 @@ void EIDCardLibraryTraceEx(LPCSTR szFile, DWORD dwLine, LPCSTR szFunction, UCHAR
 	va_start (ap, szFormat);
 	ret = _vsnwprintf_s (Buffer, 256, 256, szFormat, ap);
 	va_end (ap);
-	if (ret <= 0) return;
+	if (ret < 0) return;
 	if (ret > 256) ret = 255;
 	Buffer[255] = L'\0';/*
 	if ((ret>2) && (ret< 254) && (Buffer[ret-1] != L'\n') && (Buffer[ret-2] != L'\n')) {
@@ -296,6 +271,31 @@ void EIDCardLibraryDumpMemoryEx(LPCSTR szFile, DWORD dwLine, LPCSTR szFunction, 
 	}
 }
 
+/**
+ *  Display a messagebox giving an error code
+ */
+void MessageBoxWin32Ex2(DWORD status, HWND hWnd, LPCSTR szFile, DWORD dwLine) {
+	LPVOID Error;
+	TCHAR szMessage[1024];
+	TCHAR szTitle[1024];
+	_stprintf_s(szTitle,ARRAYSIZE(szTitle),TEXT("%hs(%d)"),szFile, dwLine);
+	if (status >= WINHTTP_ERROR_BASE && status <= WINHTTP_ERROR_LAST)
+	{
+		// winhttp error message
+		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER| FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
+			GetModuleHandle(_T("winhttp.dll")),status,0,(LPTSTR)&Error,0,NULL);
+	}
+	else
+	{
+		// system error message
+		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_FROM_SYSTEM,
+			NULL,status,0,(LPTSTR)&Error,0,NULL);
+	}
+	_stprintf_s(szMessage,ARRAYSIZE(szMessage),TEXT("0x%08X - %s"),status,Error);
+	EIDCardLibraryTraceEx(szFile, dwLine, "MessageBoxWin32Ex2", WINEVENT_LEVEL_INFO, L"%s", szMessage);
+	MessageBox(hWnd,szMessage, szTitle ,MB_ICONASTERISK);
+	LocalFree(Error);
+}
 
 BOOL StartLogging()
 {

@@ -32,7 +32,8 @@
 // tile provides the user with a field to log in as the administrator.
 // Otherwise, the tile asks the user to connect first.
 //
-
+#define _SEC_WINNT_AUTH_TYPES 0
+#pragma comment(lib,"credui")
 #include "CEIDProvider.h"
 #include "CEIDCredential.h"
 #include "CMessageCredential.h"
@@ -241,6 +242,11 @@ STDMETHODIMP CEIDProvider::SetSerialization(
 			}
 		}
 	}
+	PSEC_WINNT_CREDUI_CONTEXT pCredUIContext = NULL;
+	SECURITY_STATUS status;
+	status= SspiUnmarshalCredUIContext(pcpcs->rgbSerialization, pcpcs->cbSerialization, &pCredUIContext);
+	//SspiGetCredUIContext(
+
     return S_OK;
 }
 
@@ -419,7 +425,7 @@ HRESULT CEIDProvider::GetCredentialCount(
 					*pdwCount = 0;
 				}
 			}
-			
+			if (!_pMessageCredential) *pdwCount = 0;
 			*pdwDefault = CREDENTIAL_PROVIDER_NO_DEFAULT;
 		}
 		_CredentialList.Unlock();

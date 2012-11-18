@@ -1,5 +1,6 @@
 #include <Windows.h>
 #include <WinWlx.h>
+#include <Wtsapi32.h>
 #include "global.h"
 #include "CWinlogon.h"
 #include "..\EIDCardLibrary\EIDCardLibrary.h"
@@ -7,7 +8,6 @@
 #include "..\EIDCardLibrary\Gpo.h"
 #include "WinLoginInterface.h"
 #include <crtdbg.h>
-
 
 PWSTR DuplicateString(PWSTR source)
 {
@@ -642,7 +642,7 @@ VOID CWinLogon::DisableRemovePolicy()
 VOID CWinLogon::ExecuteRemovePolicy()
 {
 	EIDCardLibraryTrace(WINEVENT_LEVEL_INFO, L"Enter");
-	STARTUPINFO si = { sizeof si, 0, _szDesktop };
+	/*STARTUPINFO si = { sizeof si, 0, _szDesktop };
 	PROCESS_INFORMATION pi;
 	ZeroMemory(&pi,sizeof(PROCESS_INFORMATION));
 	BOOL fMustRevertToSelf = FALSE;
@@ -682,6 +682,49 @@ VOID CWinLogon::ExecuteRemovePolicy()
 		if (pi.hProcess) CloseHandle(pi.hProcess);
 		if (pi.hThread) CloseHandle(pi.hThread);
 		if (fMustRevertToSelf) RevertToSelf();
+	}*/
+	DWORD dwSessionId = WTS_CURRENT_SESSION, dwSize;
+	__try
+	{
+		if (!GetTokenInformation(_hToken, TokenSessionId, &dwSessionId, sizeof(DWORD), &dwSize))
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetTokenInformation 0x%08x", GetLastError());
+			__leave;
+		}
+		switch(_dwRemovePolicyValue)
+		{
+		case 1: // lock
+			if (0 != GetSystemMetrics(SM_REMOTESESSION))
+			{
+				if (!WTSDisconnectSession(WTS_CURRENT_SERVER_HANDLE, dwSessionId, FALSE))
+				{
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"WTSDisconnectSession 0x%08x", GetLastError());
+					__leave;
+				}
+			}
+			else
+			{
+				if (!LockWorkStation())
+				{
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LockWorkStation 0x%08x", GetLastError());
+					__leave;
+				}
+			}
+			break;
+		case 2: // logoff
+			if (!WTSLogoffSession(WTS_CURRENT_SERVER_HANDLE, dwSessionId, FALSE))
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"WTSLogoffSession 0x%08x", GetLastError());
+				__leave;
+			}
+			break;
+		default:
+			__leave;
+		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"Success");
+	}
+	__finally
+	{
 	}
 }
 

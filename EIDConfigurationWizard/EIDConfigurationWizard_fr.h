@@ -2,6 +2,8 @@
 // Microsoft Visual C++ generated include file.
 // Used by EIDConfigurationWizard_fr.rc
 //
+#define IDS_STRING12                    12
+#define IDS_04TRUSTENABLETIMEINVALID    12
 #define IDC_07SHIELD                    151
 
 // Next default values for new objects

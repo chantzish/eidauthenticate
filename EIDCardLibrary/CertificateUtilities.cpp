@@ -59,13 +59,25 @@ BOOL SchGetProviderNameFromCardName(__in LPCTSTR szCardName, __out LPTSTR szProv
 PTSTR GetUniqueIDString()
 {
 	UUID pUUID;
-	LPTSTR sTemp = NULL;
+	PTSTR sTemp = NULL;
 	RPC_STATUS hr;
-	hr = UuidCreateSequential(&pUUID);
-	if (hr == RPC_S_OK)
+	DWORD dwError = 0;
+	hr = UuidCreate(&pUUID);
+	if (hr == RPC_S_OK || hr == RPC_S_UUID_LOCAL_ONLY)
 	{
 		hr = UuidToString(&pUUID, (RPC_WSTR *)&sTemp); 
+		if (hr != RPC_S_OK)
+		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"UuidToString 0x%08x",hr);
+			dwError = HRESULT_CODE(hr);
+		}
 	}
+	else
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"UuidCreate 0x%08x",hr);
+		dwError = HRESULT_CODE(hr);
+	}
+	SetLastError(dwError);
 	return sTemp;
 }
 
@@ -320,13 +332,24 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 	__try   
     { 
 
+		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"Enter");
+		if (pCertificateInfo == NULL)
+		{
+			dwError = ERROR_INVALID_PARAMETER;
+			EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"pCertificateInfo NULL");
+			__leave;
+		}
+
 		pCertificateInfo->pNewCertificate = NULL;
 		// prepare the container name based on the support
 		if (pCertificateInfo->dwSaveon == UI_CERTIFICATE_INFO_SAVEON_SMARTCARD)
 		{
+			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"UI_CERTIFICATE_INFO_SAVEON_SMARTCARD");
 			// provider name
 			if (!SchGetProviderNameFromCardName(pCertificateInfo->szCard, szProviderName, &dwProviderNameLen))
 			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"SchGetProviderNameFromCardName 0x%08X", dwError);
 				__leave;
 			}
 			// container name from card name
@@ -335,6 +358,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			if (!szContainerName)
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"EIDAlloc 0x%08X", dwError);
 				__leave;
 			}
 			_stprintf_s(szContainerName,(ulNameLen + 6), _T("\\\\.\\%s\\"), pCertificateInfo->szReader);
@@ -343,10 +367,17 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 		{
 			// container name = GUID
 			szContainerName = GetUniqueIDString();
-			if (!szContainerName) __leave;
+			if (!szContainerName) 
+			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"GetUniqueIDString 0x%08X", dwError);
+				__leave;
+			}
+			
 			// Provider  MS_ENHANCED_PROV
 			_stprintf_s(szProviderName,1024,_T("%s"),MS_ENHANCED_PROV);
 		}
+		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"szContainerName = %s", szContainerName);
 
 		dwFlag=CRYPT_NEWKEYSET;
 		switch(pCertificateInfo->dwSaveon)
@@ -364,6 +395,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			dwFlag))
 		{
 			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CryptAcquireContext 0x%08X", dwError);
 			__leave;
 		}
 		else
@@ -384,6 +416,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 		if (!CryptGenKey(hCryptProvNewCertificate, pCertificateInfo->dwKeyType, dwFlag, &hKey))
 		{
 			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CryptGenKey 0x%08X", dwError);
 			__leave;
 		}
 
@@ -392,17 +425,20 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 		if (!CertStrToName(X509_ASN_ENCODING,pCertificateInfo->szSubject,CERT_X500_NAME_STR,NULL,NULL,&SubjectIssuerBlob.cbData,NULL))
 		{
 			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CertStrToName 0x%08X", dwError);
 			__leave;
 		}
 		SubjectIssuerBlob.pbData = (PBYTE) EIDAlloc(SubjectIssuerBlob.cbData);
 		if (!SubjectIssuerBlob.pbData)
 		{
 			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"EIDAlloc 0x%08X", dwError);
 			__leave;
 		}
 		if (!CertStrToName(X509_ASN_ENCODING,pCertificateInfo->szSubject,CERT_X500_NAME_STR,NULL,(PBYTE)SubjectIssuerBlob.pbData,&SubjectIssuerBlob.cbData,NULL))
 		{
 			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CertStrToName 0x%08X", dwError);
 			__leave;
 		}
 
@@ -412,7 +448,12 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 		// max 10 extensions => we don't count them
 		CertInfo.rgExtension = (PCERT_EXTENSION) EIDAlloc(sizeof(CERT_EXTENSION) * 10);
 		CertInfo.cExtension = 0;
-		if (!CertInfo.rgExtension) __leave;
+		if (!CertInfo.rgExtension)
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"EIDAlloc 0x%08X", dwError);
+			__leave;
+		}
 
 
 		// Set Key Usage according to Public Key Type   
@@ -438,7 +479,12 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 
 
 		pbKeyUsage = AllocateAndEncodeObject(&KeyUsage,X509_KEY_USAGE,&dwSize);
-		if (!pbKeyUsage) __leave;
+		if (!pbKeyUsage) 
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"AllocateAndEncodeObject 0x%08X", dwError);
+			__leave;
+		}
 
 		CertInfo.rgExtension[CertInfo.cExtension].pszObjId = szOID_KEY_USAGE;   
 		CertInfo.rgExtension[CertInfo.cExtension].fCritical = FALSE;   
@@ -454,16 +500,22 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 		// Self-signed is always a CA   
 		if (pCertificateInfo->bIsSelfSigned)   
 		{   
-		   BasicConstraints.fCA = TRUE;   
-		   BasicConstraints.fPathLenConstraint = TRUE;   
-		   BasicConstraints.dwPathLenConstraint = 1;   
+			EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"SelfSigned");
+			BasicConstraints.fCA = TRUE;   
+			BasicConstraints.fPathLenConstraint = TRUE;   
+			BasicConstraints.dwPathLenConstraint = 1;   
 		}   
 		else   
 		{   
-		   BasicConstraints.fCA = pCertificateInfo->bIsCA;   
+			BasicConstraints.fCA = pCertificateInfo->bIsCA;   
 		}   
 		pbBasicConstraints = AllocateAndEncodeObject(&BasicConstraints,X509_BASIC_CONSTRAINTS2,&dwSize);
-		if (!pbBasicConstraints) __leave;
+		if (!pbBasicConstraints) 
+		{
+			dwError = GetLastError();
+			EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"AllocateAndEncodeObject 0x%08X", dwError);
+			__leave;
+		}
 
 		// Set Basic Constraints extension   
 		CertInfo.rgExtension[CertInfo.cExtension].pszObjId = szOID_BASIC_CONSTRAINTS2;   
@@ -486,7 +538,12 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 		if (CertEnhKeyUsage.cUsageIdentifier != 0)   
 		{
 			CertEnhKeyUsage.rgpszUsageIdentifier = (LPSTR*) EIDAlloc(sizeof(LPSTR)*CertEnhKeyUsage.cUsageIdentifier);
-			if (!CertEnhKeyUsage.rgpszUsageIdentifier) __leave;
+			if (!CertEnhKeyUsage.rgpszUsageIdentifier)
+			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"EIDAlloc 0x%08X", dwError);
+				__leave;
+			}
 			CertEnhKeyUsage.cUsageIdentifier = 0;
 			if (pCertificateInfo->bHasClientAuthentication)
 				CertEnhKeyUsage.rgpszUsageIdentifier[CertEnhKeyUsage.cUsageIdentifier++] = szOID_PKIX_KP_CLIENT_AUTH;
@@ -497,7 +554,12 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			if (pCertificateInfo->bHasEFS)
 				CertEnhKeyUsage.rgpszUsageIdentifier[CertEnhKeyUsage.cUsageIdentifier++] = szOID_KP_EFS;
 			pbEnhKeyUsage = AllocateAndEncodeObject(&CertEnhKeyUsage,X509_ENHANCED_KEY_USAGE,&dwSize);
-			if (!pbEnhKeyUsage) __leave;
+			if (!pbEnhKeyUsage)
+			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"AllocateAndEncodeObject 0x%08X", dwError);
+				__leave;
+			}
 
 		   // Set Basic Constraints extension   
 		   CertInfo.rgExtension[CertInfo.cExtension].pszObjId = szOID_ENHANCED_KEY_USAGE;   
@@ -519,6 +581,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			if (!pNewCertificateContext)
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CertCreateSelfSignCertificate 0x%08X", dwError);
 				__leave;
 			}
 		}
@@ -542,6 +605,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			if (!CryptGenRandom(hCryptProvNewCertificate, 8, SerialNumber))   
 			{   
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CryptGenRandom 0x%08X", dwError);
 				__leave;
 			}   
 
@@ -559,11 +623,13 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 				  &cbPublicKeyInfo))     
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CryptExportPublicKeyInfo 0x%08X", dwError);
 				__leave;	
 			}
 			pbPublicKeyInfo = (PCERT_PUBLIC_KEY_INFO) EIDAlloc(cbPublicKeyInfo);
 			if (!pbPublicKeyInfo) {
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"EIDAlloc 0x%08X", dwError);
 				__leave;
 			}
 			if(!CryptExportPublicKeyInfo(
@@ -574,6 +640,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 				  &cbPublicKeyInfo))     
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CryptExportPublicKeyInfo 0x%08X", dwError);
 				__leave;
 			}
 			CertInfo.SubjectPublicKeyInfo = *pbPublicKeyInfo;
@@ -581,21 +648,24 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			if (!CryptCreateHash(hCryptProvNewCertificate, CALG_SHA1, 0, 0, &hHash))   
 			{   
 			  dwError = GetLastError();
+			  EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CryptCreateHash 0x%08X", dwError);
 			  __leave;   
 			}   
 
 			// Hash Public Key Info   
 			if (!CryptHashData(hHash, (LPBYTE)pbPublicKeyInfo, dwSize, 0))   
 			{   
-			  dwError = GetLastError();
-			  __leave;   
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CryptHashData 0x%08X", dwError);
+				__leave;   
 			}   
 
 			// Get Size of Hash   
 			if (!CryptGetHashParam(hHash, HP_HASHVAL, NULL, &dwSize, 0))   
 			{   
-			  dwError = GetLastError();
-			  __leave;   
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CryptGetHashParam 0x%08X", dwError);
+				__leave;   
 			}   
 
 			// Allocate Memory for Key Identifier (hash of Public Key info)   
@@ -603,6 +673,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			if (!pbKeyIdentifier)   
 			{   
 			  dwError = GetLastError();
+			  EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"EIDAlloc 0x%08X", dwError);
 			  __leave;   
 			}   
 
@@ -610,6 +681,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			if (!CryptGetHashParam(hHash, HP_HASHVAL, pbKeyIdentifier, &dwSize, 0))   
 			{   
 			  dwError = GetLastError();
+			  EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CryptGetHashParam 0x%08X", dwError);
 			  __leave;   
 			}   
 
@@ -623,16 +695,18 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 									   (LPVOID)&CertKeyIdentifier,   
 									   NULL, &dwSize))
 			{   
-			  dwError = GetLastError();
-			  __leave;   
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CryptEncodeObject 0x%08X", dwError);
+				__leave;   
 			}   
 
 			// Allocate Memory for Subject Key Identifier Blob   
 			SubjectKeyIdentifier = (LPBYTE)EIDAlloc(dwSize);   
 			if (!SubjectKeyIdentifier)   
 			{   
-			  dwError = GetLastError();
-			  __leave;   
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"EIDAlloc 0x%08X", dwError);
+				__leave;   
 			}   
 
 			// Get Subject Key Identifier Extension   
@@ -641,8 +715,9 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 									   (LPVOID)&CertKeyIdentifier,   
 									   SubjectKeyIdentifier, &dwSize))
 			{   
-			  dwError = GetLastError();
-			  __leave;   
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CryptEncodeObject 0x%08X", dwError);
+				__leave;   
 			}   
 
 			// Set Subject Key Identifier   
@@ -667,6 +742,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 					&hCryptProvRootCertificate,&dwKeyType,&pfCallerFreeProvOrNCryptKey))
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CryptAcquireCertificatePrivateKey 0x%08X", dwError);
 				//MessageBox(0,_T("need admin privilege ?"),_T("test"),0);
 				__leave;
 			}
@@ -684,12 +760,14 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 				  &cbEncodedCertReqSize))  // Length of the message
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CryptSignAndEncodeCertificate 0x%08X", dwError);
 				__leave;
 			}
 			pbSignedEncodedCertReq = (PBYTE) EIDAlloc(cbEncodedCertReqSize);
 			if (!pbSignedEncodedCertReq) 
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"EIDAlloc 0x%08X", dwError);
 				__leave;
 			}
 			if(!CryptSignAndEncodeCertificate(
@@ -704,6 +782,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 				  &cbEncodedCertReqSize))         // Length of the message
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CryptSignAndEncodeCertificate 0x%08X", dwError);
 				__leave;
 			}
 			// create context
@@ -712,6 +791,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			if (!pNewCertificateContext)
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CertCreateCertificateContext 0x%08X", dwError);
 				__leave;
 			}
 		}
@@ -734,16 +814,18 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 
 			CertSetCertificateContextProperty(pNewCertificateContext,CERT_KEY_PROV_INFO_PROP_ID,0,&KeyProvInfo);
 		}
-
+		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"certificate generated");
 		// save the certificate
 		///////////////////////
 		switch (pCertificateInfo->dwSaveon)
 		{
 		case UI_CERTIFICATE_INFO_SAVEON_USERSTORE: // user store
+			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"UI_CERTIFICATE_INFO_SAVEON_USERSTORE");
 			hCertStore = CertOpenStore(CERT_STORE_PROV_SYSTEM,0,NULL,CERT_SYSTEM_STORE_CURRENT_USER,_T("My"));
 			if (!hCertStore)
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CertOpenStore 0x%08X", dwError);
 				__leave;
 			}
 			if (CertAddCertificateContextToStore(hCertStore,pNewCertificateContext,CERT_STORE_ADD_ALWAYS,NULL))
@@ -753,16 +835,19 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			else
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CertAddCertificateContextToStore 0x%08X", dwError);
 				__leave;
 			}
 			break;
 		case UI_CERTIFICATE_INFO_SAVEON_SYSTEMSTORE: // machine store
+			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"UI_CERTIFICATE_INFO_SAVEON_SYSTEMSTORE");
 			// set security -> admin and system
 			// create SYSTEM SID
 
 			if (!AllocateAndInitializeSid(&sia, 1, SECURITY_LOCAL_SYSTEM_RID,0, 0, 0, 0, 0, 0, 0, &pSidSystem))
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"AllocateAndInitializeSid 0x%08X", dwError);
 				__leave;
 			}
 
@@ -770,6 +855,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			if (!AllocateAndInitializeSid(&sia, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0,0, 0, &pSidAdmins))
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"AllocateAndInitializeSid 0x%08X", dwError);
 				__leave;
 			}
 			EXPLICIT_ACCESS ea[2];
@@ -795,42 +881,53 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			// create a DACL
 			dwError = SetEntriesInAcl(2, ea, NULL, &pDacl);
 			if (dwError != ERROR_SUCCESS)
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"SetEntriesInAcl 0x%08X", dwError);
 				__leave;
+			}
 			pSD = (PSECURITY_DESCRIPTOR) EIDAlloc(SECURITY_DESCRIPTOR_MIN_LENGTH);
 			if (!pSD)
 			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"EIDAlloc 0x%08X", dwError);
 				__leave;
 			}
 			if (!InitializeSecurityDescriptor(pSD, SECURITY_DESCRIPTOR_REVISION))
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"InitializeSecurityDescriptor 0x%08X", dwError);
 				__leave;
 			}
 			// Add the ACL to the security descriptor.
 			if (!SetSecurityDescriptorDacl(pSD,TRUE,pDacl,FALSE))
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"SetSecurityDescriptorDacl 0x%08X", dwError);
 				__leave;
 			}
 			if (!SetSecurityDescriptorOwner(pSD,pSidAdmins,FALSE))
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"SetSecurityDescriptorOwner 0x%08X", dwError);
 				__leave;
 			}
 			if (!SetSecurityDescriptorGroup (pSD,pSidAdmins,FALSE))
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"SetSecurityDescriptorGroup 0x%08X", dwError);
 				__leave;
 			}
 			if(!CryptSetProvParam(hCryptProvNewCertificate,PP_KEYSET_SEC_DESCR,(BYTE*)pSD,DACL_SECURITY_INFORMATION))
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CryptSetProvParam 0x%08X", dwError);
 				__leave;
 			}
 			hCertStore = CertOpenStore(CERT_STORE_PROV_SYSTEM,0,NULL,CERT_SYSTEM_STORE_LOCAL_MACHINE,_T("Root"));
 			if (!hCertStore)
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CertOpenStore 0x%08X", dwError);
 				__leave;
 			}
 			if (CertAddCertificateContextToStore(hCertStore,pNewCertificateContext,CERT_STORE_ADD_ALWAYS,NULL))
@@ -840,14 +937,17 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			else
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CertAddCertificateContextToStore 0x%08X", dwError);
 				__leave;
 			}
 			break;		
 		case UI_CERTIFICATE_INFO_SAVEON_SYSTEMSTORE_MY:
+			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"UI_CERTIFICATE_INFO_SAVEON_SYSTEMSTORE_MY");
 			hCertStore = CertOpenStore(CERT_STORE_PROV_SYSTEM,0,NULL,CERT_SYSTEM_STORE_LOCAL_MACHINE,_T("My"));
 			if (!hCertStore)
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CertOpenStore 0x%08X", dwError);
 				__leave;
 			}
 			if (CertAddCertificateContextToStore(hCertStore,pNewCertificateContext,CERT_STORE_ADD_ALWAYS,NULL))
@@ -857,11 +957,12 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			else
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CertAddCertificateContextToStore 0x%08X", dwError);
 				__leave;
 			}
 			break;
 		case UI_CERTIFICATE_INFO_SAVEON_FILE: // file
-			
+			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"UI_CERTIFICATE_INFO_SAVEON_FILE");
 			WizInfo.dwSize = sizeof(CRYPTUI_WIZ_EXPORT_INFO);
 			WizInfo.dwSubjectChoice=CRYPTUI_WIZ_EXPORT_CERT_CONTEXT;
 			WizInfo.pCertContext=pNewCertificateContext;
@@ -871,9 +972,11 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			
 			break;
 		case UI_CERTIFICATE_INFO_SAVEON_SMARTCARD: // smart card
+			EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"UI_CERTIFICATE_INFO_SAVEON_SMARTCARD");
 			if (!CryptSetKeyParam(hKey, KP_CERTIFICATE,pNewCertificateContext->pbCertEncoded, 0))
 			{
 				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_ERROR,L"CryptSetKeyParam 0x%08X", dwError);
 				__leave;
 			}
 			break;
@@ -885,6 +988,7 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 		// don't destroy the container is creation is successfull
 		if (pCertificateInfo->dwSaveon != UI_CERTIFICATE_INFO_SAVEON_FILE) 
 			bDestroyContainer = FALSE;
+		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"Success");
 		fReturn = TRUE;
 	}
 	__finally
@@ -931,6 +1035,10 @@ BOOL CreateCertificate(PUI_CERTIFICATE_INFO pCertificateInfo)
 			LocalFree(pDacl);
 		if (pSD)
 			EIDFree(pSD);
+	}
+	if (!fReturn)
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_INFO,L"Leaving with error 0x%08X", dwError);
 	}
 	SetLastError(dwError);
 	return fReturn;

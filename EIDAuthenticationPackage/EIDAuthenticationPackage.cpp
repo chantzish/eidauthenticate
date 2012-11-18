@@ -130,6 +130,84 @@ extern "C"
 		return Destination;
 	}
 
+	
+	BOOL MatchUserOrIsAdmin(__in DWORD dwRid)
+	{
+		BOOL fReturn = FALSE;
+		SECPKG_CLIENT_INFO ClientInfo;
+		//HANDLE hToken = ((SECPKG_CLIENT_INFO*)pClientInfo)->ClientToken;
+		NTSTATUS status;
+		PSECURITY_LOGON_SESSION_DATA pLogonSessionData = NULL;
+		DWORD dwError = 0;
+		PSID AdministratorsGroup = NULL; 
+		HANDLE hProcess = NULL;
+		HANDLE hToken = NULL;
+		__try
+		{
+			if (STATUS_SUCCESS != MyLsaDispatchTable->GetClientInfo(&ClientInfo))
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetClientInfo");
+				__leave;
+			}
+			status = LsaGetLogonSessionData(&(ClientInfo.LogonId), &pLogonSessionData);
+			if (status != STATUS_SUCCESS)
+			{
+				dwError = LsaNtStatusToWinError(status);
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaGetLogonSessionData 0x%08x",status);
+				__leave;
+			}
+			if (dwRid == *GetSidSubAuthority(pLogonSessionData->Sid, *GetSidSubAuthorityCount(pLogonSessionData->Sid) -1))
+			{
+				// is current user = TRUE
+				fReturn = TRUE;
+				__leave;
+			}
+			// is admin ?
+			SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
+		
+			fReturn = AllocateAndInitializeSid(&NtAuthority,
+						2,
+						SECURITY_BUILTIN_DOMAIN_RID,
+						DOMAIN_ALIAS_RID_ADMINS,
+						0, 0, 0, 0, 0, 0,
+						&AdministratorsGroup); 
+			if(!fReturn) 
+			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"AllocateAndInitializeSid 0x%08x",dwError);
+				__leave;
+			}
+			status = MyLsaDispatchTable->OpenTokenByLogonId(&(ClientInfo.LogonId), &hToken);
+			if (status != STATUS_SUCCESS)
+			{
+				dwError = LsaNtStatusToWinError(status);
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"OpenTokenByLogonId 0x%08x",status);
+				__leave;
+			}
+			if (!CheckTokenMembership(hToken, AdministratorsGroup, &fReturn)) 
+			{
+				dwError = GetLastError();
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CheckTokenMembership 0x%08x",dwError);
+				__leave;
+			}
+			// fReturn is TRUE if the token contains admin
+			if (!fReturn)
+			{
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Access denied for rid 0x%x", dwRid);
+			}
+		}
+		__finally
+		{
+			if (hProcess) CloseHandle(hProcess);
+			if (hToken) CloseHandle(hToken);
+			if (pLogonSessionData) LsaFreeReturnBuffer(pLogonSessionData);
+			if (AdministratorsGroup) FreeSid(AdministratorsGroup); 
+		}
+		SetLastError(dwError);
+		return fReturn;
+	}
+
+
 	NTSTATUS NTAPI LsaApInitializePackage(
 	  __in      ULONG AuthenticationPackageId,
 	  __in      PLSA_DISPATCH_TABLE LsaDispatchTable,
@@ -172,7 +250,6 @@ extern "C"
 	{
 		PBYTE pPointer;
 		BOOL fStatus;
-		SECPKG_CLIENT_INFO ClientInfo;
 		NTSTATUS status = STATUS_INVALID_MESSAGE;
 		NTSTATUS statusError;
 		PCCERT_CONTEXT pCertContext = NULL;
@@ -192,12 +269,7 @@ extern "C"
 			{
 			case EIDCMCreateStoredCredential:
 				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"EIDCMCreateStoredCredential");
-				if (STATUS_SUCCESS != MyLsaDispatchTable->GetClientInfo(&ClientInfo))
-				{
-					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetClientInfo");
-					break;
-				}
-				if (!MatchUserOrIsAdmin(pBuffer->dwRid, &(ClientInfo)))
+				if (!MatchUserOrIsAdmin(pBuffer->dwRid))
 				{
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Not autorized");
 					break;
@@ -226,13 +298,9 @@ extern "C"
 				break;
 			case EIDCMRemoveStoredCredential:
 				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"EIDCMRemoveStoredCredential");
-				if (STATUS_SUCCESS != MyLsaDispatchTable->GetClientInfo(&ClientInfo))
+				if (!MatchUserOrIsAdmin(pBuffer->dwRid))
 				{
-					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetClientInfo");
-					break;
-				}
-				if (!MatchUserOrIsAdmin(pBuffer->dwRid, &(ClientInfo)))
-				{
+					pBuffer->dwError = GetLastError();
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Not autorized");
 					break;
 				}
@@ -247,12 +315,7 @@ extern "C"
 				break;
 			case EIDCMHasStoredCredential:
 				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"EIDCMHasStoredCredential");
-				if (STATUS_SUCCESS != MyLsaDispatchTable->GetClientInfo(&ClientInfo))
-				{
-					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetClientInfo");
-					break;
-				}
-				if (!MatchUserOrIsAdmin(pBuffer->dwRid, &(ClientInfo)))
+				if (!MatchUserOrIsAdmin(pBuffer->dwRid))
 				{
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Not autorized");
 					break;
@@ -272,13 +335,9 @@ extern "C"
 				break;
 			case EIDCMRemoveAllStoredCredential:
 				EIDCardLibraryTrace(WINEVENT_LEVEL_VERBOSE,L"EIDCMRemoveAllStoredCredential");
-				if (STATUS_SUCCESS != MyLsaDispatchTable->GetClientInfo(&ClientInfo))
+				if (!MatchUserOrIsAdmin(0))
 				{
-					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"GetClientInfo");
-					break;
-				}
-				if (!MatchUserOrIsAdmin(0, &(ClientInfo)))
-				{
+					pBuffer->dwError = GetLastError();
 					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Not autorized");
 					break;
 				}

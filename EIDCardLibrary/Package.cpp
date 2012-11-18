@@ -31,7 +31,7 @@
 #include <sspi.h>
 #include <ntsecpkg.h>
 #include <Wtsapi32.h>
-
+#include <security.h>
 
 #include <CodeAnalysis/warnings.h>
 #pragma warning(push)
@@ -381,7 +381,18 @@ HRESULT RetrieveNegotiateAuthPackage(ULONG * pulAuthPackage)
 
         ULONG ulAuthPackage;
         LSA_STRING lsaszPackageName;
-		LsaInitString(&lsaszPackageName, AUTHENTICATIONPACKAGENAME);
+		
+		TCHAR szExeName[256];
+		DWORD dwNumChar = GetModuleFileName(NULL, szExeName, ARRAYSIZE(szExeName));
+		// mstsc.exe
+		if (dwNumChar >= 9 && _tcsicmp(szExeName + dwNumChar - 9, TEXT("mstsc.exe")) == 0)
+		{
+			LsaInitString(&lsaszPackageName, NEGOSSP_NAME_A);
+		}
+		else
+		{
+			LsaInitString(&lsaszPackageName, AUTHENTICATIONPACKAGENAME);
+		}
 
         status = LsaLookupAuthenticationPackage(hLsa, &lsaszPackageName, &ulAuthPackage);
         if (SUCCEEDED(HRESULT_FROM_NT(status)))
@@ -1233,62 +1244,6 @@ BOOL LsaEIDHasStoredCredential(__in_opt PWSTR szUsername)
 	{
 		if (hLsa) LsaClose(hLsa);
 		if (pBuffer) EIDFree(pBuffer);
-	}
-	SetLastError(dwError);
-	return fReturn;
-}
-
-BOOL MatchUserOrIsAdmin(__in DWORD dwRid, __in PVOID pClientInfo)
-{
-	BOOL fReturn = FALSE;
-	LUID LogonId = ((SECPKG_CLIENT_INFO*)pClientInfo)->LogonId;
-	HANDLE hToken = ((SECPKG_CLIENT_INFO*)pClientInfo)->ClientToken;
-	NTSTATUS status;
-	PSECURITY_LOGON_SESSION_DATA pLogonSessionData = NULL;
-	DWORD dwError = 0;
-	PSID AdministratorsGroup = NULL; 
-	__try
-	{
-		status = LsaGetLogonSessionData(&LogonId, &pLogonSessionData);
-		if (status != STATUS_SUCCESS)
-		{
-			dwError = LsaNtStatusToWinError(status);
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"LsaGetLogonSessionData 0x%08x",status);
-			__leave;
-		}
-		if (dwRid == *GetSidSubAuthority(pLogonSessionData->Sid, *GetSidSubAuthorityCount(pLogonSessionData->Sid) -1))
-		{
-			// is current user = TRUE
-			fReturn = TRUE;
-			__leave;
-		}
-		// is admin ?
-		SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
-		
-		fReturn = AllocateAndInitializeSid(&NtAuthority,
-					2,
-					SECURITY_BUILTIN_DOMAIN_RID,
-					DOMAIN_ALIAS_RID_ADMINS,
-					0, 0, 0, 0, 0, 0,
-					&AdministratorsGroup); 
-		if(!fReturn) 
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"AllocateAndInitializeSid 0x%08x",dwError);
-			__leave;
-		}
-		if (!CheckTokenMembership(hToken, AdministratorsGroup, &fReturn)) 
-		{
-			dwError = GetLastError();
-			EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CheckTokenMembership 0x%08x",dwError);
-			__leave;
-		}
-		fReturn = TRUE;
-	}
-	__finally
-	{
-		if (pLogonSessionData) LsaFreeReturnBuffer(pLogonSessionData);
-		if (AdministratorsGroup) FreeSid(AdministratorsGroup); 
 	}
 	SetLastError(dwError);
 	return fReturn;

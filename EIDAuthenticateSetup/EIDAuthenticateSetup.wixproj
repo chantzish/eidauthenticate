@@ -98,11 +98,11 @@
     <PostBuildEvent>"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign /f $(SolutionDir)\CodeSigning\certificate.pfx /p vletoux /t http://timestamp.comodoca.com/authenticode /d EIDAuthenticate "$(TargetPath)"</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
-    <PreBuildEvent>"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign /f $(SolutionDir)\CodeSigning\certificate.pfx /p vletoux /t http://timestamp.comodoca.com/authenticode "$(TargetDir)EIDAuthenticationPackage.dll"
-"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign /f $(SolutionDir)\CodeSigning\certificate.pfx /p vletoux /t http://timestamp.comodoca.com/authenticode "$(TargetDir)EIDCredentialProvider.dll"
-"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign /f $(SolutionDir)\CodeSigning\certificate.pfx /p vletoux /t http://timestamp.comodoca.com/authenticode "$(TargetDir)EIDConfigurationWizard.exe"
-"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign /f $(SolutionDir)\CodeSigning\certificate.pfx /p vletoux /t http://timestamp.comodoca.com/authenticode "$(TargetDir)EIDConfigurationWizardElevated.exe"
-"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign /f $(SolutionDir)\CodeSigning\certificate.pfx /p vletoux /t http://timestamp.comodoca.com/authenticode "$(TargetDir)EIDPasswordChangeNotification.dll"</PreBuildEvent>
+    <PreBuildEvent>"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign  /d EIDAuthenticate /f $(SolutionDir)\CodeSigning\certificate.pfx /p vletoux /t http://timestamp.comodoca.com/authenticode "$(TargetDir)EIDAuthenticationPackage.dll"
+"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign  /d EIDAuthenticate /f $(SolutionDir)\CodeSigning\certificate.pfx /p vletoux /t http://timestamp.comodoca.com/authenticode "$(TargetDir)EIDCredentialProvider.dll"
+"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign  /d EIDAuthenticate /f $(SolutionDir)\CodeSigning\certificate.pfx /p vletoux /t http://timestamp.comodoca.com/authenticode "$(TargetDir)EIDConfigurationWizard.exe"
+"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign  /d EIDAuthenticate /f $(SolutionDir)\CodeSigning\certificate.pfx /p vletoux /t http://timestamp.comodoca.com/authenticode "$(TargetDir)EIDConfigurationWizardElevated.exe"
+"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0a\Bin\signtool.exe" sign  /d EIDAuthenticate /f $(SolutionDir)\CodeSigning\certificate.pfx /p vletoux /t http://timestamp.comodoca.com/authenticode "$(TargetDir)EIDPasswordChangeNotification.dll"</PreBuildEvent>
   </PropertyGroup>
   <!--
 	To modify your build process, add your task inside one of the targets below and uncomment it.

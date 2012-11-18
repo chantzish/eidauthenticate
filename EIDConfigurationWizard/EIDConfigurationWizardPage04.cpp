@@ -443,6 +443,7 @@ INT_PTR CALLBACK	WndProc_04CHECKS(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 			case PSN_SETACTIVE :
 				// list view
 				{
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Activate");
 					ListView_DeleteAllItems(GetDlgItem(hWnd, IDC_04CHECKS));
 					ListView_DeleteAllItems(GetDlgItem(hWnd, IDC_04LIST));
 	

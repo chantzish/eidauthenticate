@@ -242,6 +242,7 @@ STRINGTABLE
 BEGIN
     IDS_NO_CERTIFICATE      "Сертификаты не существуют"
     IDS_04TRUSTMAKETRUSTED  "Сделать этот сертификат доверенным"
+	IDS_04TRUSTENABLETIMEINVALID "Allow time invalid certificates"
 END
 
 #endif    // Russe (Russe) resources

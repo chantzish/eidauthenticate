@@ -109,10 +109,17 @@ BOOL CreateRootCertificate()
 	CertificateInfo.fReturnCerticateContext = TRUE;
 	CertificateInfo.szSubject = szSubject;
 	fReturn = CreateCertificate(&CertificateInfo);
+	DWORD dwError = GetLastError();
 	if (fReturn)
 	{
 		pRootCertificate = CertificateInfo.pNewCertificate;
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"OK");
 	}
+	else
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CreateCertificate 0x%08X", dwError);
+	}
+	SetLastError(dwError);
 	return fReturn;
 }
 
@@ -134,6 +141,16 @@ BOOL CreateSmartCardCertificate(PCCERT_CONTEXT pCertificate, PWSTR szReader, PWS
 	GetSystemTime(&(CertificateInfo.EndTime));
 	CertificateInfo.EndTime.wYear += 10;
 	fReturn = CreateCertificate(&CertificateInfo);
+	DWORD dwError = GetLastError();
+	if (fReturn)
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"OK");
+	}
+	else
+	{
+		EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"CreateCertificate 0x%08X", dwError);
+	}
+	SetLastError(dwError);
 	return fReturn;
 }
 
@@ -208,6 +225,7 @@ INT_PTR CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 				{
 					CheckDlgButton(hWnd,IDC_03_CREATE,BST_CHECKED);
 				}
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Activate");
 				break;
 			case PSN_WIZBACK:
 				if (pRootCertificate)
@@ -219,16 +237,20 @@ INT_PTR CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 			case PSN_WIZNEXT:
 				if (IsDlgButtonChecked(hWnd,IDC_03DELETE))
 				{
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"IDC_03DELETE");
 					// delete all data
 					if (!ClearCard(szReader, szCard))
 					{
-						MessageBoxWin32Ex(GetLastError(),hWnd);
+						DWORD dwError = GetLastError();
+						if (dwError != SCARD_W_CANCELLED_BY_USER)
+							MessageBoxWin32Ex(dwError,hWnd);
 						SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
 						return TRUE;
 					}
 				}
 				if (IsDlgButtonChecked(hWnd,IDC_03_CREATE))
 				{
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"IDC_03_CREATE");
 					// create self signed certificate as root
 					DWORD dwReturn = -1;
 					if (CreateRootCertificate())
@@ -239,7 +261,9 @@ INT_PTR CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 						}
 						else
 						{
-							MessageBoxWin32Ex(GetLastError(),hWnd);
+							DWORD dwError = GetLastError();
+							if (dwError != SCARD_W_CANCELLED_BY_USER)
+								MessageBoxWin32Ex(dwError,hWnd);
 							SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
 							return TRUE;
 						}
@@ -255,6 +279,7 @@ INT_PTR CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 				}
 				else if (IsDlgButtonChecked(hWnd,IDC_03USETHIS))
 				{
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"IDC_03USETHIS");
 					if (!pRootCertificate)
 					{
 						SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
@@ -262,20 +287,25 @@ INT_PTR CALLBACK	WndProc_03NEW(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 					}
 					if (!CreateSmartCardCertificate(pRootCertificate, szReader, szCard))
 					{
-						MessageBoxWin32Ex(GetLastError(),hWnd);
+						DWORD dwError = GetLastError();
+						if (dwError != SCARD_W_CANCELLED_BY_USER)
+							MessageBoxWin32Ex(dwError,hWnd);
 						SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
 						return TRUE;
 					}
 				}
 				else if (IsDlgButtonChecked(hWnd,IDC_03IMPORT))
 				{
+					EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"IDC_03IMPORT");
 					TCHAR szFileName[1024] = TEXT("");
 					TCHAR szPassword[1024] = TEXT("");
 					GetWindowText(GetDlgItem(hWnd,IDC_03FILENAME),szFileName,ARRAYSIZE(szFileName));
 					GetWindowText(GetDlgItem(hWnd,IDC_03IMPORTPASSWORD),szPassword,ARRAYSIZE(szPassword));
 					if (!ImportFileToSmartCard(szFileName, szPassword, szReader, szCard))
 					{
-						MessageBoxWin32Ex(GetLastError(),hWnd);
+						DWORD dwError = GetLastError();
+						if (dwError != SCARD_W_CANCELLED_BY_USER)
+							MessageBoxWin32Ex(dwError,hWnd);
 						SetWindowLongPtr(hWnd,DWLP_MSGRESULT,-1);
 						return TRUE;
 					}

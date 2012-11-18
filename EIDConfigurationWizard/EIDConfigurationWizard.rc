@@ -287,6 +287,7 @@ END
 STRINGTABLE
 BEGIN
     IDS_NO_CERTIFICATE      "There is no certificate"
+    IDS_04TRUSTENABLETIMEINVALID "Allow time invalid certificates"
     IDS_04TRUSTMAKETRUSTED  "Make this certificate trusted"
 END
 

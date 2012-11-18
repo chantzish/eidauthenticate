@@ -3,6 +3,7 @@
 // Used by EIDConfigurationWizard.rc
 //
 #define IDS_NO_CERTIFICATE              11
+#define IDS_04TRUSTENABLETIMEINVALID    12
 #define IDS_04TRUSTMAKETRUSTED          13
 #define IDS_04SIGNATUREONLYOK           16
 #define IDS_04SIGNATUREONLYNOK          17

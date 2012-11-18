@@ -120,6 +120,7 @@ INT_PTR CALLBACK	WndProc_05PASSWORD(HWND hWnd, UINT message, WPARAM wParam, LPAR
         switch(pnmh->code)
         {
 			case PSN_SETACTIVE :
+				EIDCardLibraryTrace(WINEVENT_LEVEL_WARNING,L"Activate");
 				//this is an interior page
 				ListView_DeleteAllItems(GetDlgItem(hWnd, IDC_05LIST));
 				PopulateListViewListData(GetDlgItem(hWnd, IDC_05LIST));	
